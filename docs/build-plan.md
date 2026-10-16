@@ -22,23 +22,77 @@ Grading: working tool 25 · valid QC statistics 25 · design for a real user 25 
 ## Build stages
 
 Data comes before charts, statistics before the app, and the first deploy happens before midnight.
-Before starting a task, check it out in `CONTRACT.yaml` (`status: in_progress`, your name, the time).
-When it's finished, check it in (`status: done` plus a one-line result) in the same commit as the work.
 
-### Stage 0 — Setup and spec · Fri 4:00–5:00 PM · H-01
+**Status:** Stage 0 ✅ (waiting on everyone reading SPEC section 4) · Stage 1 ✅ · **next: Stage 2**
+
+### How to run a stage yourself
+
+**1. One-time setup** (Python 3.12):
+
+```bash
+git clone https://github.com/DanielDistor/classhackathon.git   # or: git pull, if you already have it
+cd classhackathon
+python3 -m pip install numpy pandas scipy lifelines pytest shiny
+python3 data/simulate.py      # optional: rebuilds the test data (identical output every time)
+```
+
+**2. Claim the task.** Open `CONTRACT.yaml`, find the stage's task (e.g. `H-03`), and set
+`status: in_progress`, `owner: "<your name>"` and `started_at: "<YYYY-MM-DD HH:MM>"`.
+Commit and push that one change right away so nobody else picks the same task.
+
+**3. Build it with your agent.** Open your coding agent (Claude Code, Cursor, Copilot…) **inside the repo
+folder**. It reads `CLAUDE.md` / `AGENTS.md` and then `SPEC.md` on its own. Give it **one** task:
+
+```text
+Do CONTRACT task H-03 only. Read SPEC.md section 4 and data/README.md first.
+Write plain Python functions in app/qc.py: derived columns (temp_rise_c, sag_rate_v_per_min),
+I-MR limits from a baseline of the first 30 flights (sigma = MRbar / 1.128), and an EWMA chart
+(lambda 0.2, L 3, time-varying limits). No plotting, no Shiny. Write tests in tests/ FIRST:
+the SPEC section 4 known answers, constant data raises an error, n = 1 raises an error,
+and on data/motor_drift D-07's EWMA on temp_rise_c first signals at flight 74.
+Run pytest and paste the output. Do not commit.
+```
+
+In Claude Code you can also type `/superagent do H-03`.
+
+**4. Check it before you trust it.** Run the task's `definition_of_done` from `CONTRACT.yaml`
+yourself, e.g.:
+
+```bash
+python3 -m pytest tests -q
+```
+
+If a number looks off, ask the agent: *"Show me this calculation by hand on the known-answer data."*
+Someone on the team must be able to explain every number.
+
+**5. Check it in and push.** In `CONTRACT.yaml`, set `status: done` and write a one-line
+`result` with what the test printed. Then:
+
+```bash
+git add <the files you changed> CONTRACT.yaml    # name them; never `git add .`
+git commit -m "H-03: <title>; check in"
+git pull --rebase && git push
+```
+
+Tell the group chat which stage is finished.
+
+### Stage 0 — Setup and spec · Fri 4:00–5:00 PM · H-01 ✅
 - [x] Copy the starter bundle into our repo
-- [ ] Fill in every `FILL IN` line of `SPEC.md`
-- **Done when:** everyone can say the method sentence in SPEC section 4 without reading it.
+- [x] Fill in every `FILL IN` line of `SPEC.md`
+- [ ] **Everyone:** read SPEC section 4 and be able to explain the method without reading it
 
-### Stage 1 — Make the data · 5:00–7:00 PM · H-02
-- [ ] `data/simulate.py` with a fixed random seed generates three datasets. Each is a folder holding `flights.csv` and `components.csv`:
+### Stage 1 — Make the data · 5:00–7:00 PM · H-02 ✅
+- [x] `data/simulate.py` with a fixed random seed generates three datasets. Each is a folder holding `flights.csv` and `components.csv`:
   - `data/healthy/`: stable fleet; charts should stay in control
   - `data/motor_drift/`: drone D-07's motor temperature rise drifts up 0.20 °C per flight after flight 60 and it crashes at flight 95 (EWMA should flag flight 74); D-03 has a one-off vibration spike (prop strike)
   - `data/bad_battery_lot/`: batteries from lot B wear out about 40% sooner
-- [ ] `data/README.md` codebook: every file and column, units, and how a technician measures it
-- **Done when:** the CSVs load and a quick plot shows D-07 drifting.
+- [x] `data/README.md` codebook: every file and column, units, and how a technician measures it
+- **Done:** CSVs load; a check found the EWMA flags D-07 at flight 74 and the I chart flags D-03 at flight 80.
 
-### Stage 2 — Control charts, tested · 7:00–10:00 PM · H-03
+### Stage 2 — Control charts, tested · 7:00–10:00 PM · H-03 ← **next**
+- [ ] **Decide first:** D-06 raises a false alarm on the healthy fleet because its first 30 flights ran
+  cool by chance (see `data/README.md`, Known quirks). Keep the 30-flight baseline and explain it in
+  the demo (recommended), or use 50 flights.
 - [ ] `app/qc.py`: derived columns, I-MR chart, EWMA chart (plain functions, with no plotting or UI code inside)
 - [ ] `tests/`: the known answers in SPEC section 4, a constant-data case, and D-07 flagged before its crash
 - **Done when:** `pytest` passes.
