@@ -26,10 +26,10 @@
       "checksum": "61939823fbcc7e8de3b61ab105331baf"
     },
     "README.md": {
-      "checksum": "f7fe372b2b012724eae71596c15dc218"
+      "checksum": "c846a31fad4bed13eb3af90a778db934"
     },
     "app.py": {
-      "checksum": "c52cb29eef4d6a9f0f4def3196f6d0a0"
+      "checksum": "6e861e70a0ddd386c4a34994a21aa1b6"
     },
     "charts.py": {
       "checksum": "ff1e72c076482299a04d24428bd89e30"
@@ -47,13 +47,13 @@
       "checksum": "2cdfe8684fb6c5572c2f4eb9cb08447b"
     },
     "intro.py": {
-      "checksum": "94d324394ff8bb1f78e053e73eaa6497"
+      "checksum": "80aff796f64fc7c943d1308dd1e5e77b"
     },
     "qc.py": {
       "checksum": "b8bb46fe7fcf31b84e45e131d329b24c"
     },
     "styles.css": {
-      "checksum": "c7e1d9f5194609edec6a6e919e53b482"
+      "checksum": "5ba8780dcc6c4e9df42cd9eb8c007fc9"
     }
   }
 }

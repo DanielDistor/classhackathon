@@ -147,14 +147,12 @@ TERMS = [
 ]
 
 TABS = [
-    ("Fleet status", "Which drones can fly, which have a warning, and which must not fly, with a health "
-                     "bar and the reason for each. Start here each morning; click a drone to open it."),
+    ("Fleet status", "All 10 drones at a glance, drawn green (can fly), amber (warning) or red (do not fly), "
+                     "each with a health bar and the reason. Start here each morning; click a drone to open it."),
     ("Drone detail", "Four control charts for one drone (motor temperature, vibration, battery voltage) "
                      "and a table explaining every number."),
     ("Part reliability", "How long motors, propellers and batteries last, when to replace them, and whether "
                          "a supplier batch is bad."),
-    ("The data", "The raw records behind everything: the flight logbook and the parts history, "
-                 "filterable by drone."),
 ]
 
 STEPS = [

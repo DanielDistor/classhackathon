@@ -305,3 +305,35 @@ details.more summary { cursor: pointer; color: var(--accent-ink); font-weight: 6
 .grid-2 > * { min-width: 0; }
 .mini-cap { font-size: 0.74rem !important; color: var(--ink-3) !important; margin: 8px 0 0 !important; }
 .shiny-data-frame td, .shiny-data-frame th { white-space: nowrap; }
+
+/* ---------- v5: the hangar (2 rows of drone cards) ---------- */
+.fleet-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-bottom: 14px;
+                 background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 18px; }
+.sum-item { display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; }
+.sum-item b { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.sum-item .sym { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px;
+                 color: #fff; font-weight: 700; font-size: 0.85rem; }
+.sum-item.go .sym { background: var(--go); } .sum-item.watch .sym { background: #c98500; }
+.sum-item.ground .sym { background: var(--ground); }
+.sum-hint { margin-left: auto; color: var(--ink-3); font-size: 0.85rem; }
+.hangar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1100px) { .hangar { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .hangar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.drone-card { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 8px;
+              background: var(--card); border: 1.5px solid var(--line); border-top-width: 6px; border-radius: 14px;
+              padding: 12px 14px 12px; transition: transform .12s, box-shadow .12s, border-color .12s; }
+.drone-card:hover, .drone-card:focus-visible { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15,42,68,.12); }
+.drone-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.drone-card.go { border-top-color: var(--go); }
+.drone-card.watch { border-top-color: #d99a00; background: #fffcf2; }
+.drone-card.ground { border-top-color: var(--ground); background: #fff7f7; }
+.drone-card.na { border-top-color: var(--na); }
+.dc-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.dc-id { font-weight: 800; font-size: 1.15rem; letter-spacing: -0.01em; }
+.dc-top .pill { font-size: 0.72rem; padding: 2px 8px; }
+.dc-icon { width: 100%; max-width: 132px; height: auto; margin: 2px auto; display: block; }
+.dc-health { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+.dc-health span { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+.dc-why { font-size: 0.78rem; color: var(--ink-2); line-height: 1.35; min-height: 3.1em;
+          display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.dc-open { font-size: 0.8rem; font-weight: 650; color: var(--accent-ink); }

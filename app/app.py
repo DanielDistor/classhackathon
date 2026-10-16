@@ -66,6 +66,27 @@ def health_bar(health: float, status: str, big: bool = True) -> str:
             f'<div class="hbar-fill" style="width:{max(pct, 1)}%"></div></div>')
 
 
+STATUS_SYMBOL = {"go": "✓", "watch": "!", "ground": "✕", "not enough data": "?"}
+STATUS_COLOR = {"go": "#0a7d32", "watch": "#c98500", "ground": "#c62f2f", "not enough data": "#5f6670"}
+
+
+def drone_icon(status: str) -> str:
+    """A small top-view quadcopter drawn in the status colour, with the status symbol on its body."""
+    c = STATUS_COLOR[status]
+    arms = ((28, 28), (92, 28), (92, 92), (28, 92))
+    g = "".join(f'<line x1="60" y1="60" x2="{x}" y2="{y}" stroke="#9aa3ad" stroke-width="7" stroke-linecap="round"/>'
+                for x, y in arms)
+    g += "".join(f'<circle cx="{x}" cy="{y}" r="22" fill="{c}" fill-opacity="0.13" stroke="{c}" '
+                 f'stroke-opacity="0.55" stroke-width="2" stroke-dasharray="4 3"/>'
+                 f'<line x1="{x - 18}" y1="{y + 5}" x2="{x + 18}" y2="{y - 5}" stroke="#6b7682" stroke-width="3.5" '
+                 f'stroke-linecap="round" opacity="0.6"/><circle cx="{x}" cy="{y}" r="6.5" fill="#3a4450"/>'
+                 for x, y in arms)
+    g += (f'<rect x="42" y="44" width="36" height="32" rx="9" fill="{c}"/>'
+          f'<text x="60" y="66.5" text-anchor="middle" font-size="19" font-weight="700" fill="#fff">'
+          f'{STATUS_SYMBOL[status]}</text>')
+    return f'<svg class="dc-icon" viewBox="0 0 120 120" aria-hidden="true">{g}</svg>'
+
+
 def pct_text(health: float) -> str:
     return "–" if isinstance(health, float) and math.isnan(health) else f"{round(health * 100)}%"
 
@@ -95,7 +116,7 @@ dashboard = ui.div(
         ui.navset_pill(
             ui.nav_panel(
                 "Fleet status",
-                ui.div(ui.output_ui("fleet_kpis"), ui.output_ui("fleet_health"), class_="pt-3"),
+                ui.div(ui.output_ui("fleet_summary"), ui.output_ui("fleet_cards"), class_="pt-3"),
             ),
             ui.nav_panel(
                 "Drone detail",
@@ -144,20 +165,6 @@ dashboard = ui.div(
                            ui.output_ui("due_table"), class_="panel"),
                     class_="pt-3",
                 ),
-            ),
-            ui.nav_panel(
-                "The data",
-                ui.div(
-                    ui.div(
-                        ui.input_radio_buttons("data_table", "Show",
-                                               {"flights": "Flight logbook (flights.csv): one row per flight",
-                                                "components": "Parts history (components.csv): one row per part"},
-                                               inline=True),
-                        ui.input_select("data_drone", "Drone", []),
-                        class_="data-controls"),
-                    ui.output_ui("data_note"),
-                    ui.output_data_frame("data_grid"),
-                    class_="pt-3"),
             ),
             id="tabs",
         ),
@@ -219,82 +226,39 @@ def server(input, output, session):
         ui.update_select("drone", choices=sorted(st["drone_id"]),
                          selected=st["drone_id"].iloc[0] if len(st) else None)
 
-    # ---------- The data tab ----------
-    FRIENDLY = {
-        "flight_id": "Flight", "drone_id": "Drone", "datetime": "Take-off", "flight_min": "Minutes flown",
-        "payload_kg": "Package (kg)", "ambient_temp_c": "Air temp (°C)", "battery_id": "Battery",
-        "battery_cycles": "Battery charges", "voltage_start_v": "Volts at take-off", "voltage_end_v": "Volts at landing",
-        "motor_temp_max_c": "Hottest motor (°C)", "vibration_rms": "Vibration (m/s²)", "preflight_pass": "Checklist passed",
-        "preflight_fail_item": "Checklist problem", "inflight_event": "In-flight alert", "component_id": "Part",
-        "component_type": "Type", "lot": "Batch", "install_date": "Installed", "end_date": "Removed",
-        "life_value": "Used for (h or charges)", "status": "Failed (1) / not yet (0)", "failure_mode": "What happened",
-    }
-
-    @reactive.effect
-    def _data_drones():
-        ui.update_select("data_drone", choices=["All drones"] + sorted(flights()["drone_id"].unique()))
-
-    @reactive.calc
-    def data_view() -> pd.DataFrame:
-        df = (pd.read_csv(DATA / input.dataset() / "flights.csv") if input.data_table() == "flights"
-              else components())
-        if input.data_drone() and input.data_drone() != "All drones":
-            df = df[df["drone_id"] == input.data_drone()]
-        return df
-
-    @render.ui
-    def data_note():
-        df = data_view()
-        what = ("Each row is one flight: readings from before take-off, the flight controller's log, and right "
-                "after landing." if input.data_table() == "flights" else
-                "Each row is one motor, propeller or battery, from install until it failed, was removed, or today.")
-        return ui.p(f"{len(df):,} rows. {what} Column meanings and units: data/README.md in the repo. "
-                    "Click a column header to sort.", class_="section-note")
-
-    @render.data_frame
-    def data_grid():
-        df = data_view().rename(columns=FRIENDLY)
-        return render.DataGrid(df, width="100%", height="560px", filters=True)
-
     # ---------- Fleet status tab ----------
     @render.ui
-    def fleet_kpis():
+    def fleet_summary():
         st = status()
-        meaning = {"go": "every chart in control",
-                   "watch": "a warning sign in the last 10 flights: fly, but inspect soon",
-                   "ground": "a reading is out of limits now, or it crashed: inspect or repair first"}
-        boxes = []
+        parts = []
         for s_ in ("go", "watch", "ground"):
-            ids = st.loc[st["status"] == s_, "drone_id"].tolist()
-            chips = "".join(f'<button class="chip {s_}" data-drone="{escape(d)}">{escape(d)}</button>' for d in ids)
-            boxes.append(ui.div(
-                ui.div(ui.span(STATUS_WORD[s_], class_="label"), ui.span(str(len(ids)), class_="count"), class_="kpi-top"),
-                ui.div(ui.HTML(chips or '<span class="none">none</span>'), class_="chips"),
-                ui.div(meaning[s_], class_="hint"), class_=f"kpi {s_}"))
-        return ui.div(*boxes, class_="kpis")
+            n = int((st["status"] == s_).sum())
+            parts.append(f'<span class="sum-item {s_}"><span class="sym">{STATUS_SYMBOL[s_]}</span>'
+                         f'<b>{n}</b> {STATUS_WORD[s_].lower()}</span>')
+        return ui.HTML(f'<div class="fleet-summary">{"".join(parts)}'
+                       '<span class="sum-hint">Click a drone to see why.</span></div>')
 
     @render.ui
-    def fleet_health():
-        rows = []
-        for r in status().itertuples():
-            driver = ("crashed on its last flight" if r.health_driver == "crash"
-                      else f"closest to a limit: {r.health_driver}" if r.health_driver else "")
-            rows.append(
-                f'<button class="drone-row" data-drone="{escape(r.drone_id)}" '
-                f'aria-label="Open {escape(r.drone_id)}">'
-                f'<div class="dr-id">{escape(r.drone_id)}</div>'
-                f'<div class="dr-status">{pill(r.status)}</div>'
-                f'<div class="dr-bar">{health_bar(r.health, r.status)}'
-                f'<div class="dr-why">{escape(r.reason)}</div></div>'
-                f'<div class="dr-pct">{pct_text(r.health)}<span>{escape(driver)}</span></div>'
-                f'<div class="dr-go">›</div></button>')
+    def fleet_cards():
+        cards = []
+        for r in status().sort_values("drone_id").itertuples():
+            cls = STATUS_CLASS[r.status]
+            short = r.reason.split(";")[0]
+            cards.append(
+                f'<button class="drone-card {cls}" data-drone="{escape(r.drone_id)}" '
+                f'aria-label="{escape(r.drone_id)}: {escape(STATUS_WORD[r.status])}. Open its details">'
+                f'<div class="dc-top"><span class="dc-id">{escape(r.drone_id)}</span>{pill(r.status)}</div>'
+                f'{drone_icon(r.status)}'
+                f'<div class="dc-health">{health_bar(r.health, r.status, big=False)}'
+                f'<span>{pct_text(r.health)}</span></div>'
+                f'<div class="dc-why">{escape(short[0].upper() + short[1:])}</div>'
+                f'<div class="dc-open">Details ›</div></button>')
         legend = ("<b>Health</b> = how much room is left before the nearest control limit, on the drone's "
-                  "most-stretched chart. 100% = right at its normal; 0% = at a limit, or crashed. "
-                  "The colour is the status: Do not fly = latest reading outside a limit, EWMA outside its limit "
-                  "now, or a crash · Warning = a signal in the last 10 flights · Can fly = every chart in control. "
-                  "Click a drone to see its charts.")
-        return ui.div(ui.HTML(f'<div class="drone-list">{"".join(rows)}</div>'),
-                      ui.HTML(f'<p class="rule-note">{legend}</p>'), class_="panel")
+                  "most-stretched chart: 100% = right at its normal, 0% = at a limit or crashed. "
+                  "<b>Can fly</b> = every chart in control · <b>Warning</b> = a warning sign in the last 10 flights, "
+                  "fly but inspect soon · <b>Do not fly</b> = a reading is out of limits now, or it crashed.")
+        return ui.div(ui.HTML(f'<div class="hangar">{"".join(cards)}</div>'),
+                      ui.HTML(f'<p class="rule-note">{legend}</p>'))
 
     # ---------- Drone detail tab ----------
     @reactive.calc

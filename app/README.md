@@ -26,14 +26,14 @@ python3 -m pip install -r requirements.txt   # Python 3.12
    | Healthy fleet | `data/healthy/` | Nothing (the comparison) |
 
 3. **The views of that fleet:**
-   - **Fleet status:** which drones **Can fly**, have a **Warning**, or must **Not fly**, listed by name, then one
-     row per drone with a **health bar** and the reason. Click any drone to open it.
+   - **Fleet status:** a count of drones that **Can fly**, have a **Warning**, or must **Not fly**, then all 10
+     drones as cards in two rows: each drawn in its status colour with a ✓ / ! / ✕ symbol, a **health bar** and
+     the reason. Click a card to open that drone.
    - **Drone detail:** a status banner, a table of the numbers behind every chart (baseline mean, limits,
      latest value, room left, signals), and four control charts (an EWMA and an I chart of motor temperature
      rise, plus I charts of vibration and battery voltage sag).
    - **Part reliability:** per part type, the Weibull fit, B10 "replace at" age, reliability curves with the
      Kaplan-Meier check, the battery-batch comparison, and the parts already past their B10 age.
-   - **The data:** both files (flight logbook, parts history) as a sortable, filterable table, with a drone filter.
 
 ## Files
 
