@@ -70,9 +70,9 @@ def pct_text(health: float) -> str:
 
 
 controls = ui.div(
-    ui.div(ui.span("1", class_="step-num"), ui.span("Choose a fleet's records", class_="ctl-title"),
-           ui.span("Three invented test fleets: same 10 drones, each with one planted problem (or none).",
-                   class_="ctl-sub"), class_="ctl-head"),
+    ui.div(ui.span("1", class_="step-num"), ui.span("Demo: pick a test fleet", class_="ctl-title"),
+           ui.span("A real startup would see its own fleet here. These are three invented fleets: the same "
+                   "10 drones, each with one planted problem (or none).", class_="ctl-sub"), class_="ctl-head"),
     ui.input_radio_buttons(
         "dataset", None,
         {k: ui.TagList(ui.span(name, class_="ds-name"), ui.span(desc, class_="ds-desc"))
@@ -97,6 +97,51 @@ dashboard = ui.div(
             ui.nav_panel(
                 "Fleet health",
                 ui.div(ui.output_ui("fleet_kpis"), ui.output_ui("fleet_health"), class_="pt-3"),
+            ),
+            ui.nav_panel(
+                "Log a flight",
+                ui.div(
+                    ui.p("Enter one flight's readings. The tool adds it to this fleet's logbook and tells you "
+                         "straight away whether the drone should fly again. Fields start with this drone's "
+                         "typical recent readings: replace them with what you measured.", class_="section-note"),
+                    ui.div(
+                        ui.input_select("log_drone", "Drone", []),
+                        ui.input_text("log_when", "Take-off time (YYYY-MM-DDTHH:MM)", ""),
+                        class_="log-top"),
+                    ui.div(
+                        ui.div(ui.div(ui.span("1", class_="step-num"), ui.h3("Before take-off"), class_="moment-head"),
+                               ui.input_select("log_item", "Checklist: anything failed?",
+                                               {"none": "Nothing, all passed", "prop_chip": "Propeller chipped",
+                                                "loose_arm": "Arm loose", "connector": "Connector loose"}),
+                               ui.input_select("log_battery", "Battery fitted", []),
+                               ui.input_numeric("log_cycles", "Battery charge count", None, min=0, step=1),
+                               ui.input_numeric("log_vstart", "Battery voltage at take-off (V)", None, step=0.01),
+                               ui.input_numeric("log_payload", "Package weight (kg)", None, step=0.01),
+                               ui.input_numeric("log_ambient", "Air temperature (°C)", None, step=0.1),
+                               class_="info-card log-card"),
+                        ui.div(ui.div(ui.span("2", class_="step-num"), ui.h3("During the flight"), class_="moment-head"),
+                               ui.p("Copy these from the flight controller's log after landing.", class_="moment-who"),
+                               ui.input_numeric("log_minutes", "Minutes flown", None, step=0.1),
+                               ui.input_numeric("log_vib", "Vibration (m/s², RMS)", None, step=0.01),
+                               ui.input_select("log_event", "Any alert?",
+                                               {"none": "None", "warning": "Warning", "return_home": "Returned home on its own",
+                                                "crash": "Crashed"}),
+                               class_="info-card log-card"),
+                        ui.div(ui.div(ui.span("3", class_="step-num"), ui.h3("Right after landing"), class_="moment-head"),
+                               ui.input_numeric("log_motor", "Hottest motor (°C, infrared thermometer)", None, step=0.1),
+                               ui.input_numeric("log_vend", "Battery voltage at landing (V)", None, step=0.01),
+                               class_="info-card log-card"),
+                        class_="grid-3"),
+                    ui.div(ui.input_action_button("log_submit", "Log this flight and check the drone",
+                                                  class_="btn-continue btn-log"), class_="log-actions"),
+                    ui.output_ui("log_result"),
+                    ui.div(ui.output_ui("log_count"),
+                           ui.download_button("log_download", "Download this fleet's logbook (flights.csv)",
+                                              class_="btn-outline-primary"),
+                           ui.input_action_link("log_clear", "Remove the flights I logged"),
+                           class_="panel log-footer"),
+                    class_="pt-3",
+                ),
             ),
             ui.nav_panel(
                 "Drone detail",
@@ -189,9 +234,19 @@ def server(input, output, session):
         ui.update_navset("tabs", selected="Drone detail")
 
     # ---------- data ----------
+    logged = reactive.value({})       # dataset -> list of flight records logged this session
+    log_message = reactive.value(None)  # ("ok", drone) or ("error", text)
+
+    @reactive.calc
+    def raw_flights() -> pd.DataFrame:
+        f = pd.read_csv(DATA / input.dataset() / "flights.csv")
+        for rec in logged.get().get(input.dataset(), []):
+            f = qc.append_flight(f, rec)
+        return f
+
     @reactive.calc
     def flights() -> pd.DataFrame:
-        f = pd.read_csv(DATA / input.dataset() / "flights.csv")
+        f = raw_flights()
         return qc.add_derived(f)
 
     @reactive.calc
@@ -205,6 +260,104 @@ def server(input, output, session):
         st = status()
         ui.update_select("drone", choices=sorted(st["drone_id"]),
                          selected=st["drone_id"].iloc[0] if len(st) else None)
+
+    # ---------- Log a flight ----------
+    @reactive.effect
+    def _log_drones():
+        drones = sorted(raw_flights()["drone_id"].unique())
+        current = input.log_drone() if input.log_drone() in drones else drones[0]
+        ui.update_select("log_drone", choices=drones, selected=current)
+
+    @reactive.effect
+    @reactive.event(input.log_drone, input.dataset, logged)
+    def _log_defaults():
+        """Refill the form with this drone's typical readings, ready for its next flight."""
+        drone = input.log_drone()
+        f = raw_flights()
+        mine = f[f["drone_id"] == drone].sort_values("datetime")
+        if mine.empty:
+            return
+        recent = mine.tail(10)
+        last = mine.iloc[-1]
+        # the drone swaps between its two batteries, so the next one is the one used two flights ago
+        nxt = mine.iloc[-2] if len(mine) > 1 else last
+        batteries = list(dict.fromkeys(mine["battery_id"].iloc[::-1]))[:4]
+        ui.update_text("log_when", value=(pd.Timestamp(last["datetime"]) + pd.Timedelta(hours=4)).strftime("%Y-%m-%dT%H:%M"))
+        ui.update_select("log_battery", choices=batteries, selected=nxt["battery_id"])
+        ui.update_numeric("log_cycles", value=int(nxt["battery_cycles"]) + 1)
+        ui.update_numeric("log_vstart", value=round(float(recent["voltage_start_v"].median()), 2))
+        ui.update_numeric("log_payload", value=round(float(recent["payload_kg"].median()), 2))
+        ui.update_numeric("log_ambient", value=round(float(recent["ambient_temp_c"].median()), 1))
+        ui.update_numeric("log_minutes", value=round(float(recent["flight_min"].median()), 1))
+        ui.update_numeric("log_vib", value=round(float(recent["vibration_rms"].median()), 2))
+        ui.update_numeric("log_motor", value=round(float(recent["motor_temp_max_c"].median()), 1))
+        ui.update_numeric("log_vend", value=round(float(recent["voltage_end_v"].median()), 2))
+        ui.update_select("log_item", selected="none")
+        ui.update_select("log_event", selected="none")
+
+    @reactive.effect
+    @reactive.event(input.log_submit)
+    def _log_submit():
+        entry = dict(
+            drone_id=input.log_drone(), datetime=input.log_when(), preflight_fail_item=input.log_item(),
+            battery_id=input.log_battery(), battery_cycles=input.log_cycles(), voltage_start_v=input.log_vstart(),
+            payload_kg=input.log_payload(), ambient_temp_c=input.log_ambient(), flight_min=input.log_minutes(),
+            vibration_rms=input.log_vib(), inflight_event=input.log_event(), motor_temp_max_c=input.log_motor(),
+            voltage_end_v=input.log_vend())
+        try:
+            rec = qc.make_flight_record(raw_flights(), entry)
+        except ValueError as err:
+            log_message.set(("error", str(err)))
+            return
+        store = dict(logged.get())
+        store[input.dataset()] = store.get(input.dataset(), []) + [rec]
+        logged.set(store)
+        log_message.set(("ok", rec["drone_id"], rec["flight_id"]))
+
+    @reactive.effect
+    @reactive.event(input.log_clear)
+    def _log_clear():
+        store = dict(logged.get())
+        store.pop(input.dataset(), None)
+        logged.set(store)
+        log_message.set(None)
+
+    @reactive.effect
+    @reactive.event(input.dataset)
+    def _log_reset_message():
+        log_message.set(None)
+
+    @render.ui
+    def log_result():
+        msg = log_message.get()
+        if msg is None:
+            return None
+        if msg[0] == "error":
+            return ui.div(ui.HTML(f"<p><b>Not logged.</b> {escape(msg[1])}</p>"), class_="banner ground")
+        _, drone, fid = msg
+        row = status().set_index("drone_id").loc[drone]
+        cls = STATUS_CLASS[row["status"]]
+        verdict = {"go": "can fly again", "watch": "can fly, but keep an eye on it",
+                   "ground": "should not fly until it is inspected",
+                   "not enough data": "needs more logged flights before the tool can judge it"}[row["status"]]
+        return ui.div(
+            ui.div(ui.h3(f"Logged {fid}. {drone} {verdict}."), ui.HTML(pill(row["status"])), class_="banner-head"),
+            ui.HTML(f'<div class="banner-health">{health_bar(row["health"], row["status"])}'
+                    f'<span>{pct_text(row["health"])} health</span></div>'),
+            ui.p(row["reason"][0].upper() + row["reason"][1:] + "."),
+            ui.HTML(f'<button class="link-btn" data-drone="{escape(drone)}">See {escape(drone)}\'s charts ›</button>'),
+            class_=f"banner {cls}")
+
+    @render.ui
+    def log_count():
+        n = len(logged.get().get(input.dataset(), []))
+        return ui.p(f"You've logged {n} flight{'s' if n != 1 else ''} for this fleet in this session. "
+                    "The app doesn't keep them after you close it, so download the logbook to save them.",
+                    class_="rule-note m-0")
+
+    @render.download(filename=lambda: f"flights_{input.dataset()}.csv")
+    def log_download():
+        yield raw_flights().to_csv(index=False, lineterminator="\n")
 
     # ---------- Fleet health tab ----------
     @render.ui

@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 21:10"
+updated: "2026-10-16 21:20"
 
 tasks:
   - id: H-01
@@ -162,3 +162,21 @@ tasks:
       testme script and the H-03 tests both pass with no extra steps; git
       grep -i "api_key" finds no real key; the Devpost entry links the repo.
     result: ""
+
+  - id: H-09
+    title: Log a flight - technicians enter before/during/after readings in the app
+    points: "5 - Tool Design: scope matches the prompt (help technicians log wear-and-tear before and during flight)"
+    status: done
+    owner: "Claude + DanielDistor"
+    started_at: "2026-10-16 21:20"
+    owns: ["app/qc.py", "app/app.py", "app/styles.css", "tests/test_logging.py"]
+    notes: >
+      Agreed with the team 2026-10-16 after checking the dashboard against the prompt:
+      it analysed logs but gave technicians no way to log. Entries are checked against
+      physically possible ranges, added to the fleet on screen, and downloadable as
+      flights.csv (Posit Connect keeps no files between sessions; no database by SPEC).
+    definition_of_done: >
+      python3 -m pytest tests -q passes including tests/test_logging.py, and in the
+      running app a logged flight for a drone updates its status and health bar and
+      the logbook downloads with the new row.
+    result: "Log a flight view - pytest 70 passed incl. tests/test_logging.py (14 tests); in the running app a 60 C motor entry for D-01 grounded it (temperature rise 42.1 vs limits 14.3-22.7), a 260 V typo was refused, and the downloaded logbook had 1002 rows."

@@ -535,3 +535,106 @@ def check_components(components: pd.DataFrame) -> pd.DataFrame:
     if not components["status"].isin([0, 1]).all():
         raise ValueError("column 'status' must be 1 (failed) or 0 (still working / removed early)")
     return components
+
+
+# --------------------------------------------------------------------------
+# Logging a new flight (the "help technicians log" part of the prompt)
+# --------------------------------------------------------------------------
+
+#: Physically possible ranges for a typed entry. These only catch typos and impossible
+#: readings (a 6-cell battery is 25.2 V full); they are NOT control limits.
+ENTRY_RANGES = {
+    "flight_min": (1, 60, "minutes"),
+    "payload_kg": (0, 5, "kg"),
+    "ambient_temp_c": (-30, 50, "°C"),
+    "battery_cycles": (0, 3000, "charges"),
+    "voltage_start_v": (18, 26, "V"),
+    "voltage_end_v": (15, 26, "V"),
+    "motor_temp_max_c": (-30, 150, "°C"),
+    "vibration_rms": (0, 30, "m/s²"),
+}
+#: Plain names for the form fields, used in error messages.
+ENTRY_LABELS = {
+    "flight_min": "Minutes flown", "payload_kg": "Package weight", "ambient_temp_c": "Air temperature",
+    "battery_cycles": "Battery charge count", "voltage_start_v": "Battery voltage at take-off",
+    "voltage_end_v": "Battery voltage at landing", "motor_temp_max_c": "Hottest motor temperature",
+    "vibration_rms": "Vibration",
+}
+PREFLIGHT_ITEMS = ("none", "prop_chip", "loose_arm", "connector")
+INFLIGHT_EVENTS = ("none", "warning", "return_home", "crash")
+
+
+def make_flight_record(flights: pd.DataFrame, entry: dict) -> dict:
+    """Check one typed flight entry and turn it into a flights.csv row.
+
+    entry holds drone_id, datetime ("YYYY-MM-DDTHH:MM"), the before-flight fields
+    (preflight_fail_item, battery_id, battery_cycles, voltage_start_v, payload_kg,
+    ambient_temp_c), the during-flight fields from the flight log (flight_min,
+    vibration_rms, inflight_event) and the after-landing fields (motor_temp_max_c,
+    voltage_end_v). Raises ValueError naming the first field that is impossible.
+    The new flight_id continues the drone's numbering; preflight_pass is derived.
+    """
+    import re
+
+    drone = str(entry.get("drone_id", "")).strip()
+    if not re.fullmatch(r"D-\d{2}", drone):
+        raise ValueError(f"drone id must look like D-07, got {drone!r}")
+    try:
+        when = pd.Timestamp(entry.get("datetime"))
+    except (TypeError, ValueError):
+        raise ValueError("datetime must look like 2026-10-01T09:00") from None
+    if pd.isna(when):
+        raise ValueError("datetime is required")
+    mine = flights[flights["drone_id"] == drone]
+    if len(mine) and when <= pd.Timestamp(mine["datetime"].max()):
+        raise ValueError(f"the flight must come after {drone}'s last logged flight ({mine['datetime'].max()})")
+
+    crashed = entry.get("inflight_event") == "crash"
+    rec_vals = {}
+    for field, (lo, hi, unit) in ENTRY_RANGES.items():
+        v = entry.get(field)
+        if v is None or (isinstance(v, float) and math.isnan(v)) or v == "":
+            if field == "motor_temp_max_c" and crashed:
+                rec_vals[field] = float("nan")
+                continue
+            raise ValueError(f"{ENTRY_LABELS[field]} ({field}) is required")
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            raise ValueError(f"{ENTRY_LABELS[field]} ({field}) must be a number, got {v!r}") from None
+        if not lo <= v <= hi:
+            raise ValueError(f"{ENTRY_LABELS[field]} ({field}) = {v:g} {unit} is impossible; "
+                             f"expected {lo} to {hi} {unit}. Check for a typo.")
+        rec_vals[field] = v
+    if rec_vals["voltage_end_v"] >= rec_vals["voltage_start_v"]:
+        raise ValueError("Battery voltage at landing (voltage_end_v) must be below the voltage at "
+                         "take-off (voltage_start_v): a battery can't gain charge in flight")
+    if rec_vals["battery_cycles"] != int(rec_vals["battery_cycles"]):
+        raise ValueError("battery_cycles must be a whole number")
+    item = entry.get("preflight_fail_item", "none")
+    if item not in PREFLIGHT_ITEMS:
+        raise ValueError(f"preflight_fail_item must be one of {', '.join(PREFLIGHT_ITEMS)}")
+    event = entry.get("inflight_event", "none")
+    if event not in INFLIGHT_EVENTS:
+        raise ValueError(f"inflight_event must be one of {', '.join(INFLIGHT_EVENTS)}")
+    battery = str(entry.get("battery_id", "")).strip()
+    if not battery:
+        raise ValueError("battery_id is required")
+
+    seq = (int(mine["flight_id"].str.rsplit("-", n=1).str[-1].astype(int).max()) + 1) if len(mine) else 1
+    return {
+        "flight_id": f"F-{drone[2:]}-{seq:03d}", "drone_id": drone,
+        "datetime": when.strftime("%Y-%m-%dT%H:%M"),
+        "flight_min": rec_vals["flight_min"], "payload_kg": rec_vals["payload_kg"],
+        "ambient_temp_c": rec_vals["ambient_temp_c"], "battery_id": battery,
+        "battery_cycles": int(rec_vals["battery_cycles"]),
+        "voltage_start_v": rec_vals["voltage_start_v"], "voltage_end_v": rec_vals["voltage_end_v"],
+        "motor_temp_max_c": rec_vals["motor_temp_max_c"], "vibration_rms": rec_vals["vibration_rms"],
+        "preflight_pass": int(item == "none"), "preflight_fail_item": item, "inflight_event": event,
+    }
+
+
+def append_flight(flights: pd.DataFrame, record: dict) -> pd.DataFrame:
+    """Return a new flights table with one more row (the input is not modified)."""
+    row = pd.DataFrame([record])[[c for c in flights.columns if c in record]]
+    return pd.concat([flights, row], ignore_index=True)
