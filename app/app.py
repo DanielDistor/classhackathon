@@ -25,9 +25,12 @@ from intro import intro_page
 
 HERE = Path(__file__).resolve().parent
 DATA = HERE / "data"  # a copy of the repo's data/ folder; manifestme.sh refreshes it
-# The dashboard always shows the fleet with problems. The healthy fleet (data/healthy/) stays behind
-# the scenes: the tests use it to prove no healthy drone is grounded, and the demo write-up shows it.
-DATASET = "problem_fleet"
+DATASETS = {  # folder in data/ -> (name, what's in it)
+    "problem_fleet": ("Fleet with problems", "The main demo. D-07's motor wears out (crash on flight 95), "
+                      "D-03 hits something on flight 80, and batteries from supplier lot B die early."),
+    "healthy": ("Healthy fleet", "The same 10 drones with nothing wrong, for comparison: the tool "
+                "should not raise alarms here."),
+}
 STATUS_ORDER = {"ground": 0, "watch": 1, "not enough data": 2, "go": 3}
 STATUS_CLASS = {"ground": "ground", "watch": "watch", "go": "go", "not enough data": "na",
                 "neutral": "neutral"}
@@ -94,6 +97,19 @@ def card_text(status: str, reason: str) -> str:
 
 
 
+controls = ui.div(
+    ui.div(ui.span("Which fleet?", class_="ctl-title"),
+           ui.span("Both are invented test data: the same 10 drones flying for September 2026.", class_="ctl-sub"),
+           class_="ctl-head"),
+    ui.input_radio_buttons(
+        "dataset", None,
+        {k: ui.TagList(ui.span(name, class_="ds-name"), ui.span(desc, class_="ds-desc"))
+         for k, (name, desc) in DATASETS.items()},
+        selected="problem_fleet", inline=True),
+    class_="controls",
+)
+
+
 def drone_detail_body() -> ui.Tag:
     """What the pop-up shows when a drone card is clicked."""
     return ui.div(
@@ -126,6 +142,7 @@ dashboard = ui.div(
         class_="topbar",
     ),
     ui.div(
+        controls,
         ui.navset_pill(
             ui.nav_panel(
                 "Fleet status",
@@ -199,7 +216,7 @@ def server(input, output, session):
     # ---------- data ----------
     @reactive.calc
     def flights() -> pd.DataFrame:
-        f = pd.read_csv(DATA / DATASET / "flights.csv")
+        f = pd.read_csv(DATA / input.dataset() / "flights.csv")
         return qc.add_derived(f)
 
     @reactive.calc
@@ -220,6 +237,14 @@ def server(input, output, session):
             parts.append(f'<span class="sum-item {s_}"><span class="sym">{STATUS_SYMBOL[s_]}</span>'
                          f'<b>{n}</b> {STATUS_WORD[s_].lower()}</span>')
         note = ""
+        n_watch = int((st["status"] == "watch").sum())
+        if input.dataset() == "healthy":
+            note = ('<p class="fleet-note"><b>Nothing was planted in this fleet.</b> '
+                    + (f"The {n_watch} warning{'s are' if n_watch != 1 else ' is'} ordinary chance readings: "
+                       if n_watch else "")
+                    + "each control limit is set so a normal reading crosses it only about 3 times in 1,000, "
+                    "and the tool checks 10 drones × 3 charts over their last 10 flights (300 checks), so one or "
+                    "two chance warnings are expected. No drone is marked Do not fly.</p>")
         return ui.HTML(f'<div class="fleet-summary">{"".join(parts)}'
                        f'<span class="sum-hint">Click a drone to see why.</span>{note}</div>')
 
@@ -297,7 +322,7 @@ def server(input, output, session):
     # ---------- Parts replacement tab ----------
     @reactive.calc
     def components() -> pd.DataFrame:
-        return qc.check_components(pd.read_csv(DATA / DATASET / "components.csv"))
+        return qc.check_components(pd.read_csv(DATA / input.dataset() / "components.csv"))
 
     @reactive.calc
     def by_type() -> pd.DataFrame:
@@ -397,7 +422,7 @@ def server(input, output, session):
 
     @reactive.calc
     def plan() -> pd.DataFrame:
-        return qc.replacement_plan(components(), pd.read_csv(DATA / DATASET / "flights.csv"), by_type())
+        return qc.replacement_plan(components(), pd.read_csv(DATA / input.dataset() / "flights.csv"), by_type())
 
     @render.ui
     def parts_by_drone():

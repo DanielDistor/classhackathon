@@ -104,7 +104,7 @@ SCENARIOS = [
                  ("Lot C", "Apr 2026 onward", 400)],
     },
     {
-        "num": "2", "file": "healthy", "name": "Healthy fleet (behind the scenes, for testing)",
+        "num": "2", "file": "healthy", "name": "Healthy fleet (for comparison)",
         "what": "The same 10 drones and the same flights, with nothing planted. Parts wear at their normal rate "
                 "and every battery batch is fine.",
         "expect": "Almost every drone Can fly. A couple show a Warning from ordinary random variation, which "
@@ -342,8 +342,7 @@ def intro_page() -> ui.Tag:
                      " Both are the same 10 drones flying the same 1,000 flights in September 2026. The only "
                      "difference is the problems we planted, so we know the right answer and can check the "
                      "tool finds it, like testing a smoke alarm once with smoke and once without."),
-                ui.p("The dashboard shows the fleet with problems. The healthy fleet works behind the scenes: "
-                     "our tests run the tool on it to prove no healthy drone is ever grounded."),
+                ui.p("The dashboard opens on the fleet with problems; the cards at the top switch to the healthy one."),
                 class_="callout"),
             ui.div(*scenario_cards(), class_="grid-2"),
 

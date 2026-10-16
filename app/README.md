@@ -18,9 +18,12 @@ python3 -m pip install -r requirements.txt   # Python 3.12
    picture), what's recorded before, during and after each flight, example rows from both data files, the
    three test datasets, key terms, and the views. **Continue** opens the dashboard; the header link
    goes back.
-2. **The dashboard shows the fleet with problems** (`data/problem_fleet/`): D-07's motor wears out and it crashes on
-   flight 95, D-03 has a prop strike on flight 80, and batteries from supplier lot B wear out about 40% sooner. The
-   healthy fleet (`data/healthy/`) is not shown; the tests run the tool on it to prove no healthy drone is grounded.
+2. **Which fleet?** Two cards at the top pick one of two invented test fleets (the same 10 drones):
+
+   | Card | Folder | What's planted |
+   |---|---|---|
+   | Fleet with problems (shown first) | `data/problem_fleet/` | D-07's motor wears out and it crashes on flight 95; D-03 has a prop strike on flight 80; batteries from supplier lot B wear out about 40% sooner |
+   | Healthy fleet | `data/healthy/` | Nothing (the comparison; a note explains its one or two chance warnings) |
 
 3. **Two views:**
    - **Fleet status:** a count of drones that **Can fly**, have a **Warning**, or must **Not fly**, then all 10
