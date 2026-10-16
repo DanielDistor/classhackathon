@@ -42,6 +42,20 @@ N_BASELINE = 30
 #: Fewest baseline points we accept before refusing to draw limits.
 MIN_BASELINE = 20
 
+#: The 8 Nelson / Western Electric statistical process control (SPC) rules.
+#: Rule 1 flags an immediate 3-sigma excursion (ground); Rules 2-8 flag non-random
+#: patterns, sustained shifts, and trends (watch / warning).
+SPC_RULES: dict[int, str] = {
+    1: "1 point beyond 3σ",
+    2: "9 points in a row on the same side of the center line",
+    3: "6 points in a row steadily increasing or decreasing",
+    4: "14 points in a row alternating up and down",
+    5: "2 of 3 points beyond 2σ on the same side",
+    6: "4 of 5 points beyond 1σ on the same side",
+    7: "15 points in a row within 1σ of the center line",
+    8: "8 points in a row beyond 1σ on either side",
+}
+
 
 class ImrLimits(NamedTuple):
     """Limits for an I-MR chart, all in the units of the charted variable.
@@ -100,19 +114,90 @@ def imr_limits(values: Iterable[float], n_baseline: int = N_BASELINE,
                      n_baseline=len(base))
 
 
+def spc_rules(values: Iterable[float], center: float, sigma: float) -> pd.DataFrame:
+    """Evaluate the 8 Nelson / Western Electric SPC tests at every point.
+
+    Returns a DataFrame with boolean columns ``rule_1`` .. ``rule_8``, plus:
+      - ``signal_ground``: ``rule_1`` (a point beyond 3 sigma)
+      - ``signal_watch``: any of ``rule_2`` .. ``rule_8`` (non-random run/trend/zone pattern)
+      - ``signal_any``: any of ``rule_1`` .. ``rule_8``
+      - ``rules_triggered``: comma-separated rule numbers triggered at each point (e.g. ``"1, 5"``)
+    """
+    xs = _clean(values, minimum=1)
+    if not (math.isfinite(center) and math.isfinite(sigma) and sigma > 0):
+        raise ValueError(f"need a finite center and a positive sigma, got {center}, {sigma}")
+    z = (xs - center) / sigma
+    n = len(xs)
+    r1 = np.abs(z) > 3.0
+    r2 = np.zeros(n, dtype=bool)
+    r3 = np.zeros(n, dtype=bool)
+    r4 = np.zeros(n, dtype=bool)
+    r5 = np.zeros(n, dtype=bool)
+    r6 = np.zeros(n, dtype=bool)
+    r7 = np.zeros(n, dtype=bool)
+    r8 = np.zeros(n, dtype=bool)
+
+    for i in range(n):
+        if i >= 8:
+            w = z[i - 8:i + 1]
+            if np.all(w > 0) or np.all(w < 0):
+                r2[i] = True
+        if i >= 5:
+            d = np.diff(xs[i - 5:i + 1])
+            if np.all(d > 0) or np.all(d < 0):
+                r3[i] = True
+        if i >= 13:
+            d = np.diff(xs[i - 13:i + 1])
+            if np.all(d != 0) and np.all(np.sign(d[:-1]) == -np.sign(d[1:])):
+                r4[i] = True
+        if i >= 1:
+            w = z[max(0, i - 2):i + 1]
+            if (np.sum(w > 2.0) >= 2 and z[i] > 2.0) or (np.sum(w < -2.0) >= 2 and z[i] < -2.0):
+                r5[i] = True
+        if i >= 3:
+            w = z[max(0, i - 4):i + 1]
+            if (np.sum(w > 1.0) >= 4 and z[i] > 1.0) or (np.sum(w < -1.0) >= 4 and z[i] < -1.0):
+                r6[i] = True
+        if i >= 14:
+            w = z[i - 14:i + 1]
+            if np.all(np.abs(w) < 1.0):
+                r7[i] = True
+        if i >= 7:
+            w = z[i - 7:i + 1]
+            if np.all(np.abs(w) > 1.0) and np.any(w > 1.0) and np.any(w < -1.0):
+                r8[i] = True
+
+    cols = {"rule_1": r1, "rule_2": r2, "rule_3": r3, "rule_4": r4,
+            "rule_5": r5, "rule_6": r6, "rule_7": r7, "rule_8": r8}
+    watch = r2 | r3 | r4 | r5 | r6 | r7 | r8
+    triggered = [
+        ", ".join(str(k) for k in range(1, 9) if cols[f"rule_{k}"][i])
+        for i in range(n)
+    ]
+    return pd.DataFrame({
+        **cols,
+        "signal_ground": r1,
+        "signal_watch": watch,
+        "signal_any": r1 | watch,
+        "rules_triggered": triggered,
+    })
+
+
 def imr_chart(values: Iterable[float], n_baseline: int = N_BASELINE,
               min_baseline: int = MIN_BASELINE) -> pd.DataFrame:
-    """Compute an I-MR chart: one row per point.
+    """Compute an I-MR chart with all 8 SPC tests: one row per point.
 
     Columns: t (1, 2, ...), value, mr (blank for t = 1), center, lcl, ucl,
     mr_ucl, baseline (True for the points the limits came from),
-    signal_i (value beyond lcl/ucl), signal_mr (mr above mr_ucl).
+    signal_i (Rule 1: value beyond lcl/ucl), signal_mr (mr above mr_ucl),
+    rule_1 .. rule_8, signal_ground, signal_watch, signal_any, rules_triggered.
     """
     xs = _clean(values, minimum=2)
     lim = imr_limits(xs, n_baseline, min_baseline)
     mr = np.r_[np.nan, np.abs(np.diff(xs))]
     t = np.arange(1, len(xs) + 1)
-    return pd.DataFrame({
+    rules = spc_rules(xs, lim.center, lim.sigma_hat)
+    base = pd.DataFrame({
         "t": t,
         "value": xs,
         "mr": mr,
@@ -121,9 +206,10 @@ def imr_chart(values: Iterable[float], n_baseline: int = N_BASELINE,
         "ucl": lim.ucl,
         "mr_ucl": lim.mr_ucl,
         "baseline": t <= lim.n_baseline,
-        "signal_i": (xs > lim.ucl) | (xs < lim.lcl),
+        "signal_i": rules["rule_1"],
         "signal_mr": np.nan_to_num(mr, nan=0.0) > lim.mr_ucl,
     })
+    return pd.concat([base, rules], axis=1)
 
 
 def ewma_chart(values: Iterable[float], lam: float = 0.2, L: float = 3.0,
@@ -257,13 +343,15 @@ def fleet_status(flights: pd.DataFrame, recent: int = RECENT_FLIGHTS,
     """Decide go / watch / ground for every drone in the flights table.
 
     For each drone it runs the charts in MONITORED: an EWMA on motor temperature
-    rise (slow wear), and I charts on vibration and voltage sag (sudden changes),
-    with limits from that drone's own first `n_baseline` readings, then applies:
+    rise (slow wear), and I charts with all 8 SPC tests on vibration and voltage
+    sag, with limits from that drone's own first `n_baseline` readings, then applies:
 
       ground  the drone's latest flight was a crash, OR its latest reading is
-              outside an I-chart limit, OR its EWMA is outside its limit now
+              outside an I-chart 3σ limit (SPC Rule 1), OR its EWMA is outside
+              its 3σ control limit now
       watch   no ground reason, but a chart signalled within the last
-              `recent` readings
+              `recent` readings, OR an SPC run/trend/zone test (Rules 2-8) is
+              active on the latest reading
       go      every chart in control over the last `recent` readings
       not enough data
               fewer than `min_baseline` readings (or no variation), so no
@@ -300,6 +388,11 @@ def fleet_status(flights: pd.DataFrame, recent: int = RECENT_FLIGHTS,
                         if len(hit):
                             watch.append(f"{name} was outside its normal range on flight "
                                          f"{', '.join(map(str, hit))}")
+                        elif not r.baseline and im["signal_watch"].iloc[-1]:
+                            rnums = [k for k in range(2, 9) if r[f"rule_{k}"]]
+                            rdesc = SPC_RULES[rnums[0]]
+                            watch.append(f"{name} triggered SPC rule {rnums[0]} ({rdesc}) on flight "
+                                         f"{s.flight_no.iloc[-1]}")
                 else:
                     ew = ewma_chart(s["value"], n_baseline=n_baseline, min_baseline=min_baseline)
                     e = ew.iloc[-1]
@@ -316,6 +409,14 @@ def fleet_status(flights: pd.DataFrame, recent: int = RECENT_FLIGHTS,
                         if len(hit):
                             watch.append(f"{name} trend (EWMA) was outside its limits on flight "
                                          f"{', '.join(map(str, hit))}, now back inside")
+                        else:
+                            im = imr_chart(s["value"], n_baseline, min_baseline)
+                            r = im.iloc[-1]
+                            if not r.baseline and im["signal_watch"].iloc[-1]:
+                                rnums = [k for k in range(2, 9) if r[f"rule_{k}"]]
+                                rdesc = SPC_RULES[rnums[0]]
+                                watch.append(f"{name} triggered SPC rule {rnums[0]} ({rdesc}) on flight "
+                                             f"{s.flight_no.iloc[-1]}")
         except ValueError as err:
             rows.append(dict(drone_id=drone, status="not enough data", reason=str(err),
                              last_flight_no=last_no, n_flights=len(d),

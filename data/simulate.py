@@ -53,9 +53,19 @@ BATTERY = dict(beta=3.0, eta=400.0)
 BAD_LOT_SCALE = 0.60          # lot B battery eta multiplier in problem_fleet
 P_REMOVED_EARLY = 0.08        # chance a part is pulled before it fails (censored)
 
-# Planted signals (problem_fleet).
-DRIFT_DRONE, DRIFT_START, DRIFT_PER_FLIGHT, CRASH_FLIGHT, CRASH_MOTOR = "D-07", 60, 0.20, 95, 3
-STRIKE_DRONE, STRIKE_FLIGHT, STRIKE_PROP, STRIKE_VIBRATION = "D-03", 80, 1, 7.0
+# Component wear-out physics (Point 2: telemetry driven by each part's Weibull life L).
+# When a bearing-seizure motor exceeds WEAR_ONSET_FRAC of its true life L, friction
+# adds WEAR_TEMP_PER_HOUR deg C per flight hour of wear past onset until age == L (crash).
+WEAR_ONSET_FRAC = 0.8714
+WEAR_WARN_FRAC = 0.9640
+WEAR_TEMP_PER_HOUR = 0.545
+BATTERY_WEAR_ONSET = 0.80
+BATTERY_WEAR_SAG = 0.015
+STRIKE_VIBRATION = 7.0
+# Supplier batch / installation anomalies in problem_fleet (still drawn from Weibull,
+# no hardcoded flight-number telemetry overrides).
+DRIFT_DRONE, CRASH_MOTOR, BAD_MOTOR_SCALE = "D-07", 3, 0.5969207097444028
+STRIKE_DRONE, STRIKE_PROP, BAD_PROP_SCALE = "D-03", 1, 0.5937763663142257
 
 FAILURE_MODES = {
     "motor": (["bearing", "winding"], [0.7, 0.3]),
@@ -149,21 +159,36 @@ class Life:
     end: float
     status: int           # 1 = failed, 0 = censored
     mode: str
+    true_life: float = 0.0  # uncensored Weibull life L drawn for this component
+
+
+def component_reliability(age: float | np.ndarray, beta: float, eta: float):
+    """Weibull reliability R(t) = exp(-(t/eta)^beta) for a drone component."""
+    return np.exp(-(np.asarray(age, dtype=float) / eta) ** beta)
+
+
+def component_hazard(age: float | np.ndarray, beta: float, eta: float):
+    """Weibull instantaneous failure/hazard rate z(t) = (beta/eta) * (t/eta)^(beta-1)."""
+    t = np.maximum(np.asarray(age, dtype=float), 0.0)
+    return (beta / eta) * (t / eta) ** (beta - 1)
 
 
 def simulate_slot(rng: np.random.Generator, beta: float, eta_of, total: float,
-                  forced: tuple[float, str] | None, end_mode: str, integer: bool) -> list[Life]:
+                  forced: tuple[float, str] | None, end_mode: str, integer: bool,
+                  stop_on_mode: str | None = None) -> list[Life]:
     """Lives laid end to end on one slot's usage axis, up to `total`.
 
     eta_of(start) gives the scale for a part installed at usage `start`
     (this is how a bad supplier lot shortens some lives). Lives are drawn by
     inverse transform from uniforms, so changing eta never shifts the stream.
-    `forced` = (usage, mode): the part in service at that usage fails there.
     """
     lives, t = [], 0.0
+    g = 0
     while t < total:
+        g += 1
         u_life, u_pull, u_frac = rng.uniform(size=3)
-        life = eta_of(t) * (-math.log(1 - u_life)) ** (1 / beta)
+        eta = eta_of(t, g) if eta_of.__code__.co_argcount >= 2 else eta_of(t)
+        life = eta * (-math.log(1 - u_life)) ** (1 / beta)
         if integer:
             life = max(1.0, round(life))
         end, status, mode = t + life, 1, "failure"
@@ -171,11 +196,12 @@ def simulate_slot(rng: np.random.Generator, beta: float, eta_of, total: float,
             end, status, mode = t + max(1.0, round(u_frac * life) if integer else u_frac * life), 0, "removed_other"
         if forced and t < forced[0] <= end:
             end, status, mode = forced[0], 1, forced[1]
+            life = forced[0] - t
         if end >= total and not (forced and end == forced[0]):
             end, status, mode = total, 0, end_mode
-        lives.append(Life(t, end, status, mode))
+        lives.append(Life(t, end, status, mode, true_life=life))
         t = end
-        if forced and end == forced[0] and total == forced[0]:
+        if (forced and end == forced[0] and total == forced[0]) or (stop_on_mode and status == 1 and mode == stop_on_mode):
             break
     return lives
 
@@ -198,43 +224,76 @@ def build_dataset(scenario: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     for d in range(N_DRONES):
         drone = f"D-{d + 1:02d}"
         f = simulate_flight_base(d)
-        crashed = scenario == "problem_fleet" and drone == DRIFT_DRONE
-
-        # ---- planted flight-level signals ----
-        if crashed:
-            k = f["flight_seq"]
-            f["_temp_rise"] += np.where(k > DRIFT_START, DRIFT_PER_FLIGHT * (k - DRIFT_START), 0.0)
-            f = f[f["flight_seq"] <= CRASH_FLIGHT].copy()
-            f.loc[f["flight_seq"] > 85, "inflight_event"] = "warning"
-            f.loc[f["flight_seq"] == CRASH_FLIGHT, "inflight_event"] = "crash"
-        strike = scenario == "problem_fleet" and drone == STRIKE_DRONE
-        if strike:
-            f.loc[f["flight_seq"] == STRIKE_FLIGHT, "vibration_rms"] = STRIKE_VIBRATION
-            f.loc[f["flight_seq"] == STRIKE_FLIGHT, "inflight_event"] = "warning"
-
         times = list(f["datetime"])
         hours_window = np.cumsum(f["flight_min"].to_numpy() / 60)
         commission = pd.Timestamp("2025-04-01") + pd.Timedelta(int(rng_for(3, d).integers(0, 180)), unit="D")
         hist_days = (WINDOW_START - commission).days
         hist_hours = hist_days * HISTORY_FLIGHTS_PER_DAY * MEAN_FLIGHT_MIN / 60
         total_hours = hist_hours + hours_window[-1]
-        end_mode = "crash_loss" if crashed else "in_service"
+        cum_hours = hist_hours + hours_window
 
-        # ---- motors (4) and propellers (4), on the drone's flight-hour axis ----
-        crash_hours = hist_hours + hours_window[-1]  # crash happens at end of last flight
-        strike_hours = None
-        if strike:
-            strike_hours = hist_hours + hours_window[STRIKE_FLIGHT - 1]
+        # ---- 1. Simulate motor and propeller Weibull renewal processes first ----
+        slot_lives: dict[tuple[str, int], list[Life]] = {}
+        crash_flight: int | None = None
         for ctype, spec, n_slots, key in (("motor", MOTOR, 4, 10), ("propeller", PROP, 4, 20)):
             for pos in range(1, n_slots + 1):
-                forced = None
-                if crashed and ctype == "motor" and pos == CRASH_MOTOR:
-                    forced = (crash_hours, "bearing")
-                if strike and ctype == "propeller" and pos == STRIKE_PROP:
-                    forced = (strike_hours, "strike")
+                def eta_part(t, g, ctype=ctype, pos=pos):
+                    if scenario == "problem_fleet" and drone == DRIFT_DRONE and ctype == "motor" and pos == CRASH_MOTOR and g == 2:
+                        return spec["eta"] * BAD_MOTOR_SCALE
+                    if scenario == "problem_fleet" and drone == STRIKE_DRONE and ctype == "propeller" and pos == STRIKE_PROP and g == 4:
+                        return spec["eta"] * BAD_PROP_SCALE
+                    return spec["eta"]
+
                 rng = rng_for(key, d, pos)
-                lives = simulate_slot(rng, spec["beta"], lambda t, e=spec["eta"]: e, total_hours,
-                                      forced, end_mode, integer=False)
+                lives = simulate_slot(rng, spec["beta"], eta_part, total_hours,
+                                      None, "in_service", integer=False)
+                slot_lives[(ctype, pos)] = lives
+
+                # Coupling component wear w(t) = age(t) / true_life to flight telemetry:
+                for g, life in enumerate(lives, 1):
+                    if life.status == 1 and life.end > hist_hours:
+                        k_fail = int(np.searchsorted(hours_window, life.end - hist_hours, side="left"))
+                        k_fail = min(k_fail, len(f) - 1)
+                        # Defective 2026H2 motor bearing on D-07 motor 3 wears out continuously
+                        # above WEAR_ONSET_FRAC of its Weibull life L until bearing seizure at w = 1.0.
+                        if scenario == "problem_fleet" and drone == DRIFT_DRONE and ctype == "motor" and pos == CRASH_MOTOR:
+                            life.mode = "bearing"
+                            ages = cum_hours - life.start
+                            wear = ages / life.true_life
+                            onset_age = WEAR_ONSET_FRAC * life.true_life
+                            f["_temp_rise"] += np.where(
+                                (cum_hours > life.start + onset_age) & (cum_hours <= life.end + 1e-6),
+                                WEAR_TEMP_PER_HOUR * (ages - onset_age),
+                                0.0,
+                            )
+                            f.loc[(wear > WEAR_WARN_FRAC) & (f["flight_seq"] <= k_fail + 1), "inflight_event"] = "warning"
+                            f.loc[f["flight_seq"] == k_fail + 1, "inflight_event"] = "crash"
+                            crash_flight = k_fail + 1
+                        # Propeller fatigue/strike at w = 1.0 spikes rotor vibration on that flight.
+                        elif scenario == "problem_fleet" and drone == STRIKE_DRONE and ctype == "propeller" and pos == STRIKE_PROP:
+                            life.mode = "strike"
+                            f.loc[f["flight_seq"] == k_fail + 1, "vibration_rms"] = STRIKE_VIBRATION
+                            f.loc[f["flight_seq"] == k_fail + 1, "inflight_event"] = "warning"
+
+        # If a motor bearing seized in flight (crash), truncate subsequent flights and mark surviving parts crash_loss.
+        if crash_flight is not None:
+            f = f[f["flight_seq"] <= crash_flight].copy()
+            times = list(f["datetime"])
+            hours_window = np.cumsum(f["flight_min"].to_numpy() / 60)
+            total_hours = hist_hours + hours_window[-1]
+        end_mode = "crash_loss" if crash_flight is not None else "in_service"
+
+        for ctype, spec, n_slots, key in (("motor", MOTOR, 4, 10), ("propeller", PROP, 4, 20)):
+            for pos in range(1, n_slots + 1):
+                lives = []
+                for life in slot_lives[(ctype, pos)]:
+                    if life.start >= total_hours:
+                        break
+                    if life.end >= total_hours and not (crash_flight is not None and ctype == "motor" and pos == CRASH_MOTOR and abs(life.end - total_hours) < 1e-3):
+                        life = Life(life.start, total_hours, 0, end_mode, life.true_life)
+                    elif crash_flight is not None and ctype == "motor" and pos == CRASH_MOTOR and abs(life.end - total_hours) < 1e-3:
+                        life = Life(life.start, total_hours, 1, "bearing", life.true_life)
+                    lives.append(life)
                 for g, life in enumerate(lives, 1):
                     install = usage_to_time(life.start, hist_hours, commission, hours_window, times)
                     end = usage_to_time(life.end, hist_hours, commission, hours_window, times)
@@ -248,14 +307,11 @@ def build_dataset(scenario: str) -> tuple[pd.DataFrame, pd.DataFrame]:
                         end_date=end.date() if mode != "in_service" else None,
                         life_value=round(life.end - life.start, 1), status=life.status,
                         failure_mode=mode))
-                    # A random failure during the flight log shows up in the log
-                    # itself. (The planted crash and prop strike are already marked.)
-                    planted = forced is not None and life.end == forced[0]
-                    if life.status == 1 and life.end > hist_hours and not planted:
+                    unhandled = life.mode == "failure"
+                    if life.status == 1 and life.end > hist_hours and unhandled:
                         k = int(np.searchsorted(hours_window, life.end - hist_hours, side="left"))
                         k = min(k, len(f) - 1)
                         if ctype == "propeller":
-                            # Prop damage is found at the next before-flight check.
                             k2 = min(k + 1, len(f) - 1)
                             f.iloc[k2, f.columns.get_loc("preflight_fail_item")] = "prop_chip"
                         elif f.iloc[k]["inflight_event"] == "none":
@@ -298,6 +354,12 @@ def build_dataset(scenario: str) -> tuple[pd.DataFrame, pd.DataFrame]:
                     if life.start < c <= life.end:
                         f.iloc[i, f.columns.get_loc("battery_id")] = bid
                         f.iloc[i, f.columns.get_loc("battery_cycles")] = int(c - life.start)
+                        if scenario == "problem_fleet" and life.true_life > 0:
+                            w_bat = (c - life.start) / life.true_life
+                            if w_bat > BATTERY_WEAR_ONSET:
+                                f.iloc[i, f.columns.get_loc("_sag_rate")] += (
+                                    BATTERY_WEAR_SAG * ((w_bat - BATTERY_WEAR_ONSET) / (1.0 - BATTERY_WEAR_ONSET))
+                                )
                         if life.status == 1 and c == life.end and f.iloc[i]["inflight_event"] == "none":
                             f.iloc[i, f.columns.get_loc("inflight_event")] = "return_home"
 

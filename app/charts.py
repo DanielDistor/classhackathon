@@ -18,6 +18,7 @@ SURFACE = "#fcfcfb"
 INK, INK_2 = "#0b0b0b", "#52514e"
 GRID = "#e4e3df"
 SERIES = "#2a78d6"     # categorical slot 1: the charted variable
+WARNING = "#c98500"    # status colour: SPC watch rules 2-8 (diamond marker)
 CRITICAL = "#d03b3b"   # status colour: out-of-control points (always with an X marker)
 
 plt.rcParams.update({
@@ -68,11 +69,16 @@ def ewma_axes(ax, chart: pd.DataFrame, flight_no: pd.Series, title: str, unit: s
 
 
 def i_axes(ax, chart: pd.DataFrame, flight_no: pd.Series, title: str, unit: str) -> None:
-    """Draw the I half of qc.imr_chart() output: readings, limits, signals."""
+    """Draw the I half of qc.imr_chart() output: readings, limits, and SPC signals."""
     x = pd.Series(flight_no).reset_index(drop=True)
     _frame(ax, title, unit, int(chart["baseline"].sum()))
     ax.plot(x, chart["value"], color=SERIES, lw=1.2, marker="o", ms=2.5)
     _limits(ax, x, chart["lcl"], chart["ucl"])
+    if "signal_watch" in chart.columns:
+        wmask = (chart["signal_watch"] & ~chart["signal_i"] & ~chart["baseline"]).to_numpy()
+        if wmask.any():
+            ax.scatter(x[wmask], chart["value"][wmask], s=32, marker="D", color=WARNING,
+                       edgecolor=SURFACE, linewidth=0.8, zorder=3, label="SPC watch (rules 2–8)")
     _signals(ax, x, chart["value"], chart["signal_i"].to_numpy())
 
 

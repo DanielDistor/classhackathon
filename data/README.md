@@ -90,10 +90,9 @@ only the failures, makes parts look short-lived. The Weibull fit must treat `sta
 These details are for checking the tool's numbers. A real fleet would not come with them.
 
 - **Temperature rise** = drone-specific level (about 18 °C, varying by ±1 °C between drones) + 1.2 °C per kg of
-  package above 1.5 kg + 0.1 °C per flight minute above 22 + noise (sd 1.2 °C). Total sd ≈ 1.4 °C. The package
-  weight shapes the simulation but is not logged: the tool doesn't need it, so the technician isn't asked for it.
-- **Vibration** = about 3.0 m/s² for each drone (±0.2 between drones) + noise (sd 0.25).
-- **Voltage sag** = 0.17 V/min + 0.02 V/min per kg above 1.5 kg + noise (sd 0.008).
+  payload above 1.5 kg + 0.1 °C per flight minute above 22 + noise (sd 1.2 °C), plus physical bearing wear-out heat when a motor with a seizing bearing exceeds 87% of its Weibull life $L$ (`WEAR_TEMP_PER_HOUR = 0.545 °C/h` until bearing seizure at $w = 1.0$).
+- **Vibration** = about 3.0 m/s² for each drone (±0.2 between drones) + noise (sd 0.25), plus a rotor imbalance spike (`7.0 m/s²`) when a propeller suffers a structural strike at $w = 1.0$.
+- **Voltage sag** = 0.17 V/min + 0.02 V/min per kg above 1.5 kg + noise (sd 0.008), plus end-of-life internal-resistance sag (`+0.015 V/min` ramp) when a battery exceeds 80% of its Weibull cycle life $L$ in `problem_fleet`.
 - **Ambient temperature** is a shared daily level (mean 17 °C, sd 4) plus a midday bump of up to 3 °C.
 - **Failures during the flight log** appear in it: a random motor or battery failure marks that flight
   `return_home`. Propeller damage is found at inspection and recorded in `components.csv`.

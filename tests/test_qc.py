@@ -15,8 +15,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.qc import (add_derived, chart_margin, check_flights, drone_series, ewma_chart, fleet_status,
-                    imr_chart, imr_limits)
+from app.qc import (SPC_RULES, add_derived, chart_margin, check_flights, drone_series, ewma_chart,
+                    fleet_status, imr_chart, imr_limits, spc_rules)
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 
@@ -282,3 +282,70 @@ def test_health_problem_fleet_d07_is_zero_and_healthy_fleet_is_not():
 def test_health_missing_when_not_enough_data():
     st = fleet_status(synthetic_flights(n=10)).set_index("drone_id")
     assert math.isnan(st.loc["D-01", "health"])
+
+
+# ---------------------------------------------------------------- 4. 8 SPC rules & ground vs watch split
+
+def test_spc_rules_known_answers_all_8_rules():
+    # Center = 0, sigma = 1 so values are z-scores directly.
+    assert len(SPC_RULES) == 8
+
+    # Rule 1: 1 point beyond 3 sigma
+    r1 = spc_rules([0.0, 2.9, 3.1, -3.2], center=0.0, sigma=1.0)
+    assert list(r1["rule_1"]) == [False, False, True, True]
+    assert list(r1["signal_ground"]) == [False, False, True, True]
+
+    # Rule 2: 9 points in a row on the same side of center line
+    r2 = spc_rules([0.2] * 8 + [0.2, -0.2], center=0.0, sigma=1.0)
+    assert list(r2["rule_2"]) == [False] * 8 + [True, False]
+    assert r2["signal_watch"].iloc[8] and not r2["signal_ground"].iloc[8]
+
+    # Rule 3: 6 points in a row steadily increasing or decreasing
+    r3 = spc_rules([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.4], center=0.0, sigma=1.0)
+    assert list(r3["rule_3"]) == [False] * 5 + [True, False]
+
+    # Rule 4: 14 points in a row alternating up and down
+    alt = [0.2 if i % 2 == 0 else -0.2 for i in range(15)]
+    r4 = spc_rules(alt, center=0.0, sigma=1.0)
+    assert list(r4["rule_4"]) == [False] * 13 + [True, True]
+
+    # Rule 5: 2 of 3 points beyond 2 sigma on the same side
+    r5 = spc_rules([0.0, 2.2, 0.5, 2.3, -2.5], center=0.0, sigma=1.0)
+    assert list(r5["rule_5"]) == [False, False, False, True, False]
+
+    # Rule 6: 4 of 5 points beyond 1 sigma on the same side
+    r6 = spc_rules([1.2, 1.3, 0.2, 1.4, 1.5], center=0.0, sigma=1.0)
+    assert list(r6["rule_6"]) == [False, False, False, False, True]
+
+    # Rule 7: 15 points in a row within 1 sigma of center line
+    r7 = spc_rules([0.1, -0.1] * 7 + [0.2, 1.5], center=0.0, sigma=1.0)
+    assert list(r7["rule_7"]) == [False] * 14 + [True, False]
+
+    # Rule 8: 8 points in a row beyond 1 sigma on either side
+    r8 = spc_rules([1.5, -1.5] * 4 + [0.2], center=0.0, sigma=1.0)
+    assert list(r8["rule_8"]) == [False] * 7 + [True, False]
+    assert r8["rules_triggered"].iloc[7] == "8"
+
+
+def test_spc_rules_refuses_bad_sigma():
+    with pytest.raises(ValueError):
+        spc_rules([1.0, 2.0], center=0.0, sigma=0.0)
+
+
+def test_fleet_status_watch_on_spc_rules_2_to_8():
+    # A sustained +0.8 sigma shift on the last 9 flights stays well inside +/- 3 sigma (no Rule 1),
+    # but triggers SPC Rule 2 (9 points in a row on the same side) -> status is "watch", not "ground".
+    df = synthetic_flights(n=45)
+    df.loc[36:, "vibration_rms"] = 3.25
+    st = fleet_status(df).set_index("drone_id")
+    assert st.loc["D-01", "status"] == "watch"
+    assert "SPC rule 2" in st.loc["D-01", "reason"]
+
+
+def test_natural_battery_wear_triggers_spc_watch_on_d03():
+    # In problem_fleet, D-03's slot-1 battery reaches 98% of its Weibull life by flight 99,
+    # naturally raising voltage sag enough to trigger SPC Rule 2 (watch) without crossing 3 sigma.
+    st = fleet_status(load("problem_fleet")).set_index("drone_id")
+    assert st.loc["D-03", "status"] == "watch"
+    assert "SPC rule 2" in st.loc["D-03", "reason"]
+

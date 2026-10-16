@@ -27,5 +27,14 @@ def test_app_module_builds():
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         assert type(mod.app).__name__ == "App"
+        html = str(mod.app.ui)
+        # Dashboard is the active landing tab, not the intro essay
+        assert "Drone Fleet Health &amp; Part Wear Monitor" in html
+        assert "Weibull Reliability &amp; B10 Thresholds" in html
+        assert "compare_lots" not in html and "lot_plot" not in html
+        detail_html = str(mod.drone_detail_body())
+        assert "drone_parts_wear" in detail_html
+        assert "drone_charts" in detail_html
     finally:
         sys.path.remove(str(ROOT / "app"))
+
