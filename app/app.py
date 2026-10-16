@@ -26,14 +26,15 @@ from intro import intro_page
 HERE = Path(__file__).resolve().parent
 DATA = HERE / "data"  # a copy of the repo's data/ folder; manifestme.sh refreshes it
 DATASETS = {  # folder in data/ -> (name, what's in it)
-    "healthy": ("Normal fleet", "No planted problems: every drone wears normally."),
-    "motor_drift": ("Worn motor", "D-07's motor wears out and it crashes on flight 95. D-03 has a prop strike on flight 80."),
-    "bad_battery_lot": ("Bad battery batch", "Batteries from supplier lot B wear out about 40% sooner."),
+    "problem_fleet": ("Fleet with problems", "The main demo. D-07's motor wears out (crash on flight 95), "
+                      "D-03 hits something on flight 80, and batteries from supplier lot B die early."),
+    "healthy": ("Healthy fleet", "The same 10 drones with nothing wrong, for comparison: the tool "
+                "should not raise alarms here."),
 }
 STATUS_ORDER = {"ground": 0, "watch": 1, "not enough data": 2, "go": 3}
 STATUS_CLASS = {"ground": "ground", "watch": "watch", "go": "go", "not enough data": "na",
                 "neutral": "neutral"}
-STATUS_WORD = {"ground": "Ground", "watch": "Watch", "go": "Go", "not enough data": "Not enough data"}
+STATUS_WORD = {"ground": "Do not fly", "watch": "Warning", "go": "Can fly", "not enough data": "Not enough data"}
 
 # (column, chart title, units, decimals, EWMA too?)
 DRONE_CHARTS = [
@@ -70,14 +71,14 @@ def pct_text(health: float) -> str:
 
 
 controls = ui.div(
-    ui.div(ui.span("1", class_="step-num"), ui.span("Choose a fleet's records", class_="ctl-title"),
-           ui.span("Three invented test fleets: same 10 drones, each with one planted problem (or none).",
-                   class_="ctl-sub"), class_="ctl-head"),
+    ui.div(ui.span("Which fleet?", class_="ctl-title"),
+           ui.span("Both are invented test data: the same 10 drones flying for September 2026.", class_="ctl-sub"),
+           class_="ctl-head"),
     ui.input_radio_buttons(
         "dataset", None,
         {k: ui.TagList(ui.span(name, class_="ds-name"), ui.span(desc, class_="ds-desc"))
          for k, (name, desc) in DATASETS.items()},
-        selected="healthy", inline=True),
+        selected="problem_fleet", inline=True),
     class_="controls",
 )
 
@@ -85,24 +86,22 @@ dashboard = ui.div(
     CLICK_JS,
     ui.div(
         ui.div(ui.span("Drone Fleet Reliability Monitor", class_="title"),
-               ui.span("go / watch / ground before every flight", class_="subtitle")),
+               ui.span("which drones can fly today, and why", class_="subtitle")),
         ui.input_action_link("about", "About this tool and the datasets"),
         class_="topbar",
     ),
     ui.div(
         controls,
-        ui.div(ui.span("2", class_="step-num"), ui.span("Choose a view of that fleet", class_="ctl-title"),
-               class_="ctl-head views-head"),
         ui.navset_pill(
             ui.nav_panel(
-                "Fleet health",
+                "Fleet status",
                 ui.div(ui.output_ui("fleet_kpis"), ui.output_ui("fleet_health"), class_="pt-3"),
             ),
             ui.nav_panel(
                 "Drone detail",
                 ui.div(
                     ui.div(ui.input_select("drone", "Drone", [], width="220px"),
-                           ui.p("Pick a drone here, or click one on the Fleet health view.", class_="ctl-sub"),
+                           ui.p("Pick a drone here, or click one on the Fleet status view.", class_="ctl-sub"),
                            class_="drone-pick"),
                     ui.output_ui("drone_banner"),
                     ui.div(ui.h4("The numbers behind the charts"), ui.output_ui("drone_numbers"),
@@ -145,6 +144,20 @@ dashboard = ui.div(
                            ui.output_ui("due_table"), class_="panel"),
                     class_="pt-3",
                 ),
+            ),
+            ui.nav_panel(
+                "The data",
+                ui.div(
+                    ui.div(
+                        ui.input_radio_buttons("data_table", "Show",
+                                               {"flights": "Flight logbook (flights.csv): one row per flight",
+                                                "components": "Parts history (components.csv): one row per part"},
+                                               inline=True),
+                        ui.input_select("data_drone", "Drone", []),
+                        class_="data-controls"),
+                    ui.output_ui("data_note"),
+                    ui.output_data_frame("data_grid"),
+                    class_="pt-3"),
             ),
             id="tabs",
         ),
@@ -206,17 +219,59 @@ def server(input, output, session):
         ui.update_select("drone", choices=sorted(st["drone_id"]),
                          selected=st["drone_id"].iloc[0] if len(st) else None)
 
-    # ---------- Fleet health tab ----------
+    # ---------- The data tab ----------
+    FRIENDLY = {
+        "flight_id": "Flight", "drone_id": "Drone", "datetime": "Take-off", "flight_min": "Minutes flown",
+        "payload_kg": "Package (kg)", "ambient_temp_c": "Air temp (°C)", "battery_id": "Battery",
+        "battery_cycles": "Battery charges", "voltage_start_v": "Volts at take-off", "voltage_end_v": "Volts at landing",
+        "motor_temp_max_c": "Hottest motor (°C)", "vibration_rms": "Vibration (m/s²)", "preflight_pass": "Checklist passed",
+        "preflight_fail_item": "Checklist problem", "inflight_event": "In-flight alert", "component_id": "Part",
+        "component_type": "Type", "lot": "Batch", "install_date": "Installed", "end_date": "Removed",
+        "life_value": "Used for (h or charges)", "status": "Failed (1) / not yet (0)", "failure_mode": "What happened",
+    }
+
+    @reactive.effect
+    def _data_drones():
+        ui.update_select("data_drone", choices=["All drones"] + sorted(flights()["drone_id"].unique()))
+
+    @reactive.calc
+    def data_view() -> pd.DataFrame:
+        df = (pd.read_csv(DATA / input.dataset() / "flights.csv") if input.data_table() == "flights"
+              else components())
+        if input.data_drone() and input.data_drone() != "All drones":
+            df = df[df["drone_id"] == input.data_drone()]
+        return df
+
+    @render.ui
+    def data_note():
+        df = data_view()
+        what = ("Each row is one flight: readings from before take-off, the flight controller's log, and right "
+                "after landing." if input.data_table() == "flights" else
+                "Each row is one motor, propeller or battery, from install until it failed, was removed, or today.")
+        return ui.p(f"{len(df):,} rows. {what} Column meanings and units: data/README.md in the repo. "
+                    "Click a column header to sort.", class_="section-note")
+
+    @render.data_frame
+    def data_grid():
+        df = data_view().rename(columns=FRIENDLY)
+        return render.DataGrid(df, width="100%", height="560px", filters=True)
+
+    # ---------- Fleet status tab ----------
     @render.ui
     def fleet_kpis():
-        counts = status()["status"].value_counts()
-        hints = {"ground": "inspect or repair before the next flight",
-                 "watch": "a signal in the last 10 flights",
-                 "go": "every chart in control"}
-        return ui.div(*[ui.div(ui.div(STATUS_WORD[s], class_="label"),
-                               ui.div(str(int(counts.get(s, 0))), class_="value"),
-                               ui.div(hints[s], class_="hint"), class_=f"kpi {s}")
-                        for s in ("ground", "watch", "go")], class_="kpis")
+        st = status()
+        meaning = {"go": "every chart in control",
+                   "watch": "a warning sign in the last 10 flights: fly, but inspect soon",
+                   "ground": "a reading is out of limits now, or it crashed: inspect or repair first"}
+        boxes = []
+        for s_ in ("go", "watch", "ground"):
+            ids = st.loc[st["status"] == s_, "drone_id"].tolist()
+            chips = "".join(f'<button class="chip {s_}" data-drone="{escape(d)}">{escape(d)}</button>' for d in ids)
+            boxes.append(ui.div(
+                ui.div(ui.span(STATUS_WORD[s_], class_="label"), ui.span(str(len(ids)), class_="count"), class_="kpi-top"),
+                ui.div(ui.HTML(chips or '<span class="none">none</span>'), class_="chips"),
+                ui.div(meaning[s_], class_="hint"), class_=f"kpi {s_}"))
+        return ui.div(*boxes, class_="kpis")
 
     @render.ui
     def fleet_health():
@@ -235,8 +290,8 @@ def server(input, output, session):
                 f'<div class="dr-go">›</div></button>')
         legend = ("<b>Health</b> = how much room is left before the nearest control limit, on the drone's "
                   "most-stretched chart. 100% = right at its normal; 0% = at a limit, or crashed. "
-                  "The colour is the status: Ground = latest reading outside a limit, EWMA outside its limit "
-                  "now, or a crash · Watch = a signal in the last 10 flights · Go = every chart in control. "
+                  "The colour is the status: Do not fly = latest reading outside a limit, EWMA outside its limit "
+                  "now, or a crash · Warning = a signal in the last 10 flights · Can fly = every chart in control. "
                   "Click a drone to see its charts.")
         return ui.div(ui.HTML(f'<div class="drone-list">{"".join(rows)}</div>'),
                       ui.HTML(f'<p class="rule-note">{legend}</p>'), class_="panel")

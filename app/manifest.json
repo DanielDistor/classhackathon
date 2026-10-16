@@ -26,19 +26,13 @@
       "checksum": "61939823fbcc7e8de3b61ab105331baf"
     },
     "README.md": {
-      "checksum": "94a87868c099628e4083d1bcf4e12a26"
+      "checksum": "f7fe372b2b012724eae71596c15dc218"
     },
     "app.py": {
-      "checksum": "52e8b73474d2cc988ab5ae1d1da0e1cd"
+      "checksum": "c52cb29eef4d6a9f0f4def3196f6d0a0"
     },
     "charts.py": {
       "checksum": "ff1e72c076482299a04d24428bd89e30"
-    },
-    "data/bad_battery_lot/components.csv": {
-      "checksum": "44904337e3515fe08e120c5e0306d679"
-    },
-    "data/bad_battery_lot/flights.csv": {
-      "checksum": "d9fc01022e7aeab04bd1a7d027f915cc"
     },
     "data/healthy/components.csv": {
       "checksum": "a5c6f2c953f94e97bbe2d41e0c793fcf"
@@ -46,20 +40,20 @@
     "data/healthy/flights.csv": {
       "checksum": "b86e19be07de1a5565a6171049140aa8"
     },
-    "data/motor_drift/components.csv": {
-      "checksum": "3e79bac4ccf5f8555a0b2d2cc1947b89"
+    "data/problem_fleet/components.csv": {
+      "checksum": "070a4bcdd29c5907f2f7f75fc76b3ca9"
     },
-    "data/motor_drift/flights.csv": {
-      "checksum": "d4be089441b0bb67c8b7a7b2a960d66b"
+    "data/problem_fleet/flights.csv": {
+      "checksum": "2cdfe8684fb6c5572c2f4eb9cb08447b"
     },
     "intro.py": {
-      "checksum": "7a565cc0aa0f5ae21c80fc4cde3eed36"
+      "checksum": "94d324394ff8bb1f78e053e73eaa6497"
     },
     "qc.py": {
       "checksum": "b8bb46fe7fcf31b84e45e131d329b24c"
     },
     "styles.css": {
-      "checksum": "c8bcfd7082564a8f3c7e9cd24fb6744a"
+      "checksum": "c7e1d9f5194609edec6a6e919e53b482"
     }
   }
 }

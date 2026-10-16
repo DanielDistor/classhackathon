@@ -18,22 +18,22 @@ python3 -m pip install -r requirements.txt   # Python 3.12
    picture), what's recorded before, during and after each flight, example rows from both data files, the
    three test datasets, key terms, and the views. **Continue** opens the dashboard; the header link
    goes back.
-2. **Dashboard, step 1: choose a fleet's records.** There are three invented test fleets with the same
-   10 drones, each with one planted problem or none:
+2. **Dashboard: which fleet?** A switch at the top picks one of two invented test fleets (the same 10 drones):
 
    | Card | Folder | What's planted |
    |---|---|---|
-   | Normal fleet | `data/healthy/` | Nothing |
-   | Worn motor | `data/motor_drift/` | D-07's motor wears out and it crashes on flight 95; D-03 has a prop strike on flight 80 |
-   | Bad battery batch | `data/bad_battery_lot/` | Batteries from supplier lot B wear out about 40% sooner |
+   | Fleet with problems (shown first) | `data/problem_fleet/` | D-07's motor wears out and it crashes on flight 95; D-03 has a prop strike on flight 80; batteries from supplier lot B wear out about 40% sooner |
+   | Healthy fleet | `data/healthy/` | Nothing (the comparison) |
 
-3. **Dashboard, step 2: choose a view of that fleet.**
-   - **Fleet health:** one row per drone with a **health bar**, its status and the reason. Click a row to open it.
+3. **The views of that fleet:**
+   - **Fleet status:** which drones **Can fly**, have a **Warning**, or must **Not fly**, listed by name, then one
+     row per drone with a **health bar** and the reason. Click any drone to open it.
    - **Drone detail:** a status banner, a table of the numbers behind every chart (baseline mean, limits,
      latest value, room left, signals), and four control charts (an EWMA and an I chart of motor temperature
      rise, plus I charts of vibration and battery voltage sag).
    - **Part reliability:** per part type, the Weibull fit, B10 "replace at" age, reliability curves with the
      Kaplan-Meier check, the battery-batch comparison, and the parts already past their B10 age.
+   - **The data:** both files (flight logbook, parts history) as a sortable, filterable table, with a drone filter.
 
 ## Files
 
@@ -62,8 +62,8 @@ python3 -m pip install -r requirements.txt   # Python 3.12
 | `fleet_status(flights, recent=10)` | flights table | per drone: `status`, `reason`, `health`, `health_driver`, `last_flight_no`, `n_flights` |
 | `check_flights(flights)` | flights table | the table if usable, otherwise a ValueError naming the problem |
 
-**Status rule.** *Ground*: the latest flight was a crash, or the latest reading is outside an I-chart limit,
-or the EWMA is outside its limit now. *Watch*: a signal within the last 10 readings. *Go*: everything in
+**Status rule.** *Do not fly* (`ground`): the latest flight was a crash, or the latest reading is outside an I-chart limit,
+or the EWMA is outside its limit now. *Warning* (`watch`): a signal within the last 10 readings. *Can fly* (`go`): everything in
 control. **Health** = `chart_margin` of the latest point on the drone's most-stretched chart (0 after a crash).
 
 **Reliability**

@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 21:10"
+updated: "2026-10-16 21:25"
 
 tasks:
   - id: H-01
@@ -55,12 +55,12 @@ tasks:
       Layout agreed by the team on 2026-10-16 - one folder per dataset because
       each dataset has a flights table and a components table.
     definition_of_done: >
-      ls data/*/flights.csv data/*/components.csv lists 3 datasets (healthy,
-      motor_drift, bad_battery_lot; one folder each, two tables per dataset),
+      ls data/*/flights.csv data/*/components.csv lists 2 datasets (problem_fleet,
+      healthy; one folder each, two tables per dataset),
       python data/simulate.py regenerates them identically (seeded), and
       data/README.md names every file and describes every column with units
       and how the data would be collected for real.
-    result: "3 seeded datasets x 2 tables in data/ (healthy, motor_drift, bad_battery_lot); simulate.py regenerates byte-identical; codebook covers all 24 columns; planted D-07 drift flagged by EWMA at flight 74, D-03 spike by I chart at flight 80, lot B eta 244 vs true 240"
+    result: "2 seeded datasets x 2 tables in data/ (problem_fleet with every planted problem, healthy as comparison; merged from 3 on 2026-10-16); simulate.py regenerates byte-identical; codebook covers every column; D-07 EWMA flight 74, D-03 I chart flight 80, lot B eta 244 vs true 240"
 
   - id: H-03
     title: Core QC statistic as one plain, tested function
@@ -93,7 +93,7 @@ tasks:
       The testme script in app/ starts the tool with one command, and a call
       on one data/ file (endpoint, function call or app upload) returns the
       same numbers as the H-03 known-answer test.
-    result: "app/testme.sh serves the Shiny app at 127.0.0.1:8000 (HTTP 200); Fleet tab on motor_drift grounds D-07 with EWMA first crossed on flight 74, same as tests/test_qc.py; 31 tests pass; checked in a browser."
+    result: "app/testme.sh serves the Shiny app at 127.0.0.1:8000 (HTTP 200); Fleet tab on problem_fleet grounds D-07 with EWMA first crossed on flight 74, same as tests/test_qc.py; 31 tests pass; checked in a browser."
 
   - id: H-05
     title: Demonstration of the tool on every test dataset

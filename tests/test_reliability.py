@@ -105,8 +105,8 @@ def comps(dataset):
     return pd.read_csv(DATA / dataset / "components.csv")
 
 
-def test_bad_battery_lot_b_is_short_lived():
-    lots = compare_lots(comps("bad_battery_lot"), "battery").set_index("lot")
+def test_problem_fleet_battery_lot_b_is_short_lived():
+    lots = compare_lots(comps("problem_fleet"), "battery").set_index("lot")
     assert lots.loc["B", "eta"] == pytest.approx(240, rel=0.10)   # planted: 240 cycles
     assert lots.loc["A", "eta"] > lots.loc["B", "eta"] * 1.3
     assert lots.loc["B", "b10"] < lots.loc["A", "b10"]

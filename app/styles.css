@@ -277,3 +277,31 @@ details.more summary { cursor: pointer; color: var(--accent-ink); font-weight: 6
 .drone-pick .shiny-input-container { margin-bottom: 0; }
 .drone-pick .control-label { font-size: 0.78rem; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
 .drone-pick .ctl-sub { margin: 0 0 8px; }
+
+/* ---------- v4: two-fleet switch, status lists, data tab ---------- */
+.controls .shiny-options-group { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 860px) { .controls .shiny-options-group { grid-template-columns: 1fr; } }
+.kpi { display: flex; flex-direction: column; gap: 8px; }
+.kpi-top { display: flex; align-items: baseline; justify-content: space-between; }
+.kpi .label { font-size: 1rem; text-transform: none; letter-spacing: 0; }
+.kpi .count { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; }
+.chip { all: unset; cursor: pointer; font-weight: 700; font-size: 0.85rem; padding: 4px 10px; border-radius: 8px;
+        border: 1.5px solid currentColor; }
+.chip:hover, .chip:focus-visible { filter: brightness(0.9); text-decoration: underline; }
+.chip.go { color: var(--go); background: var(--go-bg); }
+.chip.watch { color: var(--watch); background: var(--watch-bg); }
+.chip.ground { color: var(--ground); background: var(--ground-bg); }
+.chips .none { color: var(--ink-3); font-size: 0.85rem; }
+.data-controls { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+.data-controls .shiny-input-container { margin-bottom: 6px; }
+.data-controls .control-label { font-size: 0.78rem; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 14px; }
+@media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
+.grid-2 > * { min-width: 0; }
+.mini-cap { font-size: 0.74rem !important; color: var(--ink-3) !important; margin: 8px 0 0 !important; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 14px; }
+@media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
+.grid-2 > * { min-width: 0; }
+.mini-cap { font-size: 0.74rem !important; color: var(--ink-3) !important; margin: 8px 0 0 !important; }
+.shiny-data-frame td, .shiny-data-frame th { white-space: nowrap; }

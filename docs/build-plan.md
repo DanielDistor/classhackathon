@@ -49,7 +49,7 @@ Write plain Python functions in app/qc.py: derived columns (temp_rise_c, sag_rat
 I-MR limits from a baseline of the first 30 flights (sigma = MRbar / 1.128), and an EWMA chart
 (lambda 0.2, L 3, time-varying limits). No plotting, no Shiny. Write tests in tests/ FIRST:
 the SPEC section 4 known answers, constant data raises an error, n = 1 raises an error,
-and on data/motor_drift D-07's EWMA on temp_rise_c first signals at flight 74.
+and on data/problem_fleet D-07's EWMA on temp_rise_c first signals at flight 74.
 Run pytest and paste the output. Do not commit.
 ```
 
@@ -83,9 +83,8 @@ Tell the group chat which stage is finished.
 
 ### Stage 1 — Make the data · 5:00–7:00 PM · H-02 ✅
 - [x] `data/simulate.py` with a fixed random seed generates three datasets. Each is a folder holding `flights.csv` and `components.csv`:
-  - `data/healthy/`: stable fleet; charts should stay in control
-  - `data/motor_drift/`: drone D-07's motor temperature rise drifts up 0.20 °C per flight after flight 60 and it crashes at flight 95 (EWMA should flag flight 74); D-03 has a one-off vibration spike (prop strike)
-  - `data/bad_battery_lot/`: batteries from lot B wear out about 40% sooner
+  - `data/problem_fleet/` (the main demo): D-07's motor temperature rise drifts up 0.20 °C per flight after flight 60 and it crashes at flight 95 (EWMA flags flight 74); D-03 has a one-off vibration spike (prop strike) on flight 80; batteries from lot B wear out about 40% sooner
+  - `data/healthy/`: the same fleet with nothing planted, for comparison (changed from three datasets to two on 2026-10-16)
 - [x] `data/README.md` codebook: every file and column, units, and how a technician measures it
 - **Done:** CSVs load; a check found the EWMA flags D-07 at flight 74 and the I chart flags D-03 at flight 80.
 

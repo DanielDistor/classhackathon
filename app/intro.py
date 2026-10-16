@@ -91,35 +91,30 @@ PART_COLS = [
 
 SCENARIOS = [
     {
-        "num": "1", "file": "healthy", "name": "Normal fleet",
-        "what": "Nothing unusual happens. Parts wear at their normal rate.",
-        "why": "Checks the tool doesn't raise false alarms when nothing is wrong.",
-        "expect": "Almost every drone is Go. Two drones (D-06, D-07) show Watch from ordinary random "
-                  "variation, which is expected now and then. No drone is grounded.",
-        "timeline": [],
-    },
-    {
-        "num": "2", "file": "motor_drift", "name": "Worn motor",
-        "what": "Drone D-07: one motor (part 2, motor number 3) slowly wears out and runs a little hotter "
-                "every flight, until it fails and the drone crashes on flight 95. Drone D-03: a propeller "
-                "(part 1) hits something on flight 80.",
-        "why": "Checks the tool catches a failure before the crash, which is the whole point of the prompt.",
-        "expect": "D-07 is grounded. The tool warns at flight 74, 21 flights before the crash. "
-                  "D-03's vibration jump on flight 80 is flagged.",
+        "num": "1", "file": "problem_fleet", "name": "Fleet with problems (the main demo)",
+        "what": "Three things go wrong, the kind this startup only finds after a crash today. "
+                "(a) D-07: one motor (part 2) slowly wears out and runs a little hotter every flight, until it "
+                "fails and the drone crashes on flight 95. (b) D-03: a propeller (part 1) hits something on "
+                "flight 80. (c) Batteries (part 3) bought from supplier batch lot B are faulty and die after "
+                "about 240 charges instead of about 400.",
+        "expect": "D-07 is marked Do not fly, and the tool first warned at flight 74, 21 flights before the crash. "
+                  "D-03's vibration jump on flight 80 is flagged. The Part reliability view shows lot B "
+                  "batteries dying early.",
         "timeline": [(60, "D-07's motor starts wearing out", "wear"),
                      (74, "the tool warns about D-07", "tool"),
                      (80, "D-03's propeller hits something", "wear"),
                      (95, "D-07 crashes", "bad")],
+        "lots": [("Lot A", "bought before Oct 2025", 400), ("Lot B", "Oct 2025 – Mar 2026", 240),
+                 ("Lot C", "Apr 2026 onward", 400)],
     },
     {
-        "num": "3", "file": "bad_battery_lot", "name": "Bad battery batch",
-        "what": "Batteries (part 3) are bought in batches. One batch, lot B (bought Oct 2025 – Mar 2026), "
-                "was bad: those batteries wear out after about 240 charges instead of about 400.",
-        "why": "Checks the tool finds a problem no single flight shows: you only see it by comparing how "
-               "long whole batches last.",
-        "expect": "The flight charts look normal. The Part reliability tab (coming in Stage 4) shows lot B "
-                  "lasting far less than lots A and C.",
-        "lots": [("Lot A", "bought before Oct 2025", 400), ("Lot B", "Oct 2025 – Mar 2026", 240),
+        "num": "2", "file": "healthy", "name": "Healthy fleet (for comparison)",
+        "what": "The same 10 drones and the same flights, with nothing planted. Parts wear at their normal rate "
+                "and every battery batch is fine.",
+        "expect": "Almost every drone Can fly. A couple show a Warning from ordinary random variation, which "
+                  "happens now and then. No drone is marked Do not fly.",
+        "timeline": [],
+        "lots": [("Lot A", "bought before Oct 2025", 400), ("Lot B", "Oct 2025 – Mar 2026", 400),
                  ("Lot C", "Apr 2026 onward", 400)],
     },
 ]
@@ -143,20 +138,23 @@ TERMS = [
                     "It rises as a battery degrades."),
     ("Health bar", "How much room is left before the nearest control limit, on the drone's "
                     "most-stretched chart. 100% = right at its normal; 0% = at a limit, or crashed."),
-    ("Go / Watch / Ground", "Go: every chart in control. Watch: a signal in the last 10 flights. "
-                            "Ground: the latest reading is out, the EWMA is out now, or the drone crashed."),
+    ("Can fly / Warning / Do not fly", "Can fly: every chart in control. Warning: a warning sign in the last 10 "
+                                       "flights, so fly but inspect soon. Do not fly: a reading is out of limits now, "
+                                       "or the drone crashed."),
     ("Weibull life, B10, censored", "Coming in Stage 4. A Weibull model of how long parts last, "
                                     "B10 = the age by which 10% have failed, and censored = parts "
                                     "that haven't failed yet."),
 ]
 
 TABS = [
-    ("Fleet health", "A health bar for every drone, plus its status (Go, Watch or Ground) and the "
-                     "reason in plain English. Start here each morning; click a drone to open it."),
-    ("Drone detail", "Four control charts for the drone you pick: EWMA and I chart of motor temperature "
-              "rise, plus vibration and battery voltage sag. Each comes with a table explaining every number."),
-    ("Part reliability", "How long motors, propellers and batteries last, and when to replace them "
-                    "(coming in Stage 4)."),
+    ("Fleet status", "Which drones can fly, which have a warning, and which must not fly, with a health "
+                     "bar and the reason for each. Start here each morning; click a drone to open it."),
+    ("Drone detail", "Four control charts for one drone (motor temperature, vibration, battery voltage) "
+                     "and a table explaining every number."),
+    ("Part reliability", "How long motors, propellers and batteries last, when to replace them, and whether "
+                         "a supplier batch is bad."),
+    ("The data", "The raw records behind everything: the flight logbook and the parts history, "
+                 "filterable by drone."),
 ]
 
 STEPS = [
@@ -164,7 +162,7 @@ STEPS = [
                              "temperature, battery voltage, and numbers from the flight log."),
     ("2", "Compare to the drone's own normal", "The tool learns each drone's normal from its first "
                                                "30 flights and checks every new flight against it."),
-    ("3", "Act on Go / Watch / Ground", "Ground a drone before it fails in the air, instead of "
+    ("3", "Act on it: can fly, warning, or do not fly", "Stop a drone before it fails in the air, instead of "
                                         "investigating after a crash."),
 ]
 
@@ -252,7 +250,7 @@ def example_parts() -> str:
     return _example_table(picks, PART_COLS)
 
 
-# ---------------------------------------------------------------- the three scenarios
+# ---------------------------------------------------------------- the two test datasets
 
 def _timeline(marks: list[tuple[int, str, str]]) -> str:
     """A flight 1 to 100 bar with coloured dots, and the events listed underneath in order."""
@@ -280,15 +278,15 @@ def _lots(lots: list[tuple[str, str, int]]) -> str:
 def scenario_cards() -> list[ui.Tag]:
     cards = []
     for s in SCENARIOS:
-        visual = _lots(s["lots"]) if "lots" in s else _timeline(s["timeline"])
         cards.append(ui.div(
             ui.div(ui.span(f"Dataset {s['num']}", class_="tag"), ui.code(f"data/{s['file']}/"),
                    class_="card-head"),
             ui.h3(s["name"]),
-            ui.HTML(visual),
+            ui.p("Flights, September 2026", class_="mini-cap"),
+            ui.HTML(_timeline(s["timeline"])),
+            ui.HTML(_lots(s["lots"])),
             ui.tags.dl(
                 ui.tags.dt("What happens"), ui.tags.dd(s["what"]),
-                ui.tags.dt("Why it's here"), ui.tags.dd(s["why"]),
                 ui.tags.dt("What the tool should show"), ui.tags.dd(s["expect"]),
                 class_="scenario-dl"),
             class_="info-card scenario"))
@@ -328,7 +326,7 @@ def intro_page() -> ui.Tag:
 
             ui.h3("One flight, three moments", class_="sub-h"),
             ui.p("Every line of the flight logbook is one whole flight, with readings from before, during "
-                 "and after it. All three datasets have all three.", class_="section-note"),
+                 "and after it. Both datasets have all three.", class_="section-note"),
             moments_strip(),
 
             ui.h3("The two files", class_="sub-h"),
@@ -347,17 +345,16 @@ def intro_page() -> ui.Tag:
                 class_="stack",
             ),
 
-            # ---- the three datasets ----
-            ui.h2("The three test datasets (three made-up fleets)"),
+            # ---- the two datasets ----
+            ui.h2("The two test datasets"),
             ui.div(
-                ui.p(ui.strong("They are three versions of the same month."),
-                     " Same 10 drones, same dates, same 1,000 flights. In each version we changed one "
-                     "thing, so we can check the tool reacts correctly. It works like testing a smoke "
-                     "alarm: once with no smoke, once with smoke, and once with a different kind of "
-                     "problem."),
-                ui.p("In the dashboard you pick one of the three fleets first, then a view of it (fleet health, one drone, or part reliability)."),
+                ui.p(ui.strong("Two invented fleets: one with problems, one without."),
+                     " Both are the same 10 drones flying the same 1,000 flights in September 2026. The only "
+                     "difference is the problems we planted, so we know the right answer and can check the "
+                     "tool finds it, like testing a smoke alarm once with smoke and once without."),
+                ui.p("The dashboard opens on the fleet with problems; a switch at the top shows the healthy one."),
                 class_="callout"),
-            ui.div(*scenario_cards(), class_="grid-3"),
+            ui.div(*scenario_cards(), class_="grid-2"),
 
             ui.h2("Key terms"),
             ui.div(*[ui.div(ui.tags.dt(term), ui.tags.dd(desc), class_="term")
@@ -365,7 +362,7 @@ def intro_page() -> ui.Tag:
 
             ui.h2("What's in the dashboard"),
             ui.div(*[ui.div(ui.h3(name), ui.p(desc), class_="info-card tab-card")
-                     for name, desc in TABS], class_="grid-3"),
+                     for name, desc in TABS], class_="grid-2"),
 
             ui.div(
                 ui.input_action_button("enter", "Continue to the dashboard  →", class_="btn-continue"),

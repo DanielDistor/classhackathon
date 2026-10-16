@@ -1,4 +1,4 @@
-"""Generate the three invented test datasets for the drone fleet reliability tool.
+"""Generate the two invented test datasets for the drone fleet reliability tool.
 
 Run from the repo root:
 
@@ -6,23 +6,22 @@ Run from the repo root:
 
 It writes one folder per dataset, each holding two tables:
 
-    data/healthy/          flights.csv  components.csv
-    data/motor_drift/      flights.csv  components.csv
-    data/bad_battery_lot/  flights.csv  components.csv
+    data/problem_fleet/  flights.csv  components.csv   (the main demo)
+    data/healthy/        flights.csv  components.csv   (the comparison)
 
 Every number is invented. The data are shaped like a real maintenance log
 (see data/README.md, the codebook) but describe no real fleet.
 
-Design: all three datasets are built from the SAME random draws. Each
-random stream is keyed by (seed, purpose, drone, slot), so a planted problem
-in one dataset never shifts the draws anywhere else. The datasets therefore
-differ ONLY by their planted signals:
+Design: both datasets are built from the SAME random draws. Each random
+stream is keyed by (seed, purpose, drone, slot), so a planted problem never
+shifts the draws anywhere else. The two fleets therefore differ ONLY by the
+planted problems:
 
-    healthy          nothing planted; every chart should be in control
-    motor_drift      D-07: temp_rise_c climbs 0.20 C per flight after flight 60
-                     and motor 3 fails (crash) on flight 95.
-                     D-03: a prop strike on flight 80 (one vibration spike).
-    bad_battery_lot  batteries from lot B have a Weibull scale 40% shorter.
+    problem_fleet  D-07: temp_rise_c climbs 0.20 C per flight after flight 60
+                   and motor 3 fails (crash) on flight 95.
+                   D-03: a prop strike on flight 80 (one vibration spike).
+                   Batteries from supplier lot B have a Weibull scale 40% shorter.
+    healthy        nothing planted; every chart should be in control
 
 Only numpy and pandas are needed.
 """
@@ -51,10 +50,10 @@ MEAN_FLIGHT_MIN = 22.0
 MOTOR = dict(beta=2.5, eta=500.0)
 PROP = dict(beta=1.8, eta=150.0)
 BATTERY = dict(beta=3.0, eta=400.0)
-BAD_LOT_SCALE = 0.60          # lot B battery eta multiplier in bad_battery_lot
+BAD_LOT_SCALE = 0.60          # lot B battery eta multiplier in problem_fleet
 P_REMOVED_EARLY = 0.08        # chance a part is pulled before it fails (censored)
 
-# Planted signals (motor_drift).
+# Planted signals (problem_fleet).
 DRIFT_DRONE, DRIFT_START, DRIFT_PER_FLIGHT, CRASH_FLIGHT, CRASH_MOTOR = "D-07", 60, 0.20, 95, 3
 STRIKE_DRONE, STRIKE_FLIGHT, STRIKE_PROP, STRIKE_VIBRATION = "D-03", 80, 1, 7.0
 
@@ -199,7 +198,7 @@ def build_dataset(scenario: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     for d in range(N_DRONES):
         drone = f"D-{d + 1:02d}"
         f = simulate_flight_base(d)
-        crashed = scenario == "motor_drift" and drone == DRIFT_DRONE
+        crashed = scenario == "problem_fleet" and drone == DRIFT_DRONE
 
         # ---- planted flight-level signals ----
         if crashed:
@@ -208,14 +207,14 @@ def build_dataset(scenario: str) -> tuple[pd.DataFrame, pd.DataFrame]:
             f = f[f["flight_seq"] <= CRASH_FLIGHT].copy()
             f.loc[f["flight_seq"] > 85, "inflight_event"] = "warning"
             f.loc[f["flight_seq"] == CRASH_FLIGHT, "inflight_event"] = "crash"
-        strike = scenario == "motor_drift" and drone == STRIKE_DRONE
+        strike = scenario == "problem_fleet" and drone == STRIKE_DRONE
         if strike:
             f.loc[f["flight_seq"] == STRIKE_FLIGHT, "vibration_rms"] = STRIKE_VIBRATION
             f.loc[f["flight_seq"] == STRIKE_FLIGHT, "inflight_event"] = "warning"
 
         times = list(f["datetime"])
         hours_window = np.cumsum(f["flight_min"].to_numpy() / 60)
-        commission = pd.Timestamp("2025-04-01") + pd.Timedelta(days=int(rng_for(3, d).integers(0, 180)))
+        commission = pd.Timestamp("2025-04-01") + pd.Timedelta(int(rng_for(3, d).integers(0, 180)), unit="D")
         hist_days = (WINDOW_START - commission).days
         hist_hours = hist_days * HISTORY_FLIGHTS_PER_DAY * MEAN_FLIGHT_MIN / 60
         total_hours = hist_hours + hours_window[-1]
@@ -273,7 +272,7 @@ def build_dataset(scenario: str) -> tuple[pd.DataFrame, pd.DataFrame]:
 
             def eta_of(t, slot=slot):
                 install = usage_to_time(t, hist_cycles, commission, cyc_window, [times[i] for i in idx])
-                bad = scenario == "bad_battery_lot" and battery_lot(install) == "B"
+                bad = scenario == "problem_fleet" and battery_lot(install) == "B"
                 return BATTERY["eta"] * (BAD_LOT_SCALE if bad else 1.0)
 
             lives = simulate_slot(rng_for(40, d, slot), BATTERY["beta"], eta_of, total_cycles,
@@ -323,7 +322,7 @@ def build_dataset(scenario: str) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def main() -> None:
-    for scenario in ("healthy", "motor_drift", "bad_battery_lot"):
+    for scenario in ("problem_fleet", "healthy"):
         flights, comps = build_dataset(scenario)
         folder = OUT_DIR / scenario
         folder.mkdir(exist_ok=True)

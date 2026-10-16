@@ -141,8 +141,8 @@ def first_flight(series: pd.DataFrame, signal: pd.Series):
     return int(hits.iloc[0]) if len(hits) else None
 
 
-def test_motor_drift_ewma_catches_d07_before_crash():
-    s = drone_series(load("motor_drift"), "D-07", "temp_rise_c")
+def test_problem_fleet_ewma_catches_d07_before_crash():
+    s = drone_series(load("problem_fleet"), "D-07", "temp_rise_c")
     ewma = ewma_chart(s["value"])
     imr = imr_chart(s["value"])
     assert first_flight(s, ewma["signal"]) == 74          # drift starts after 60, crash at 95
@@ -150,8 +150,8 @@ def test_motor_drift_ewma_catches_d07_before_crash():
     assert s["flight_no"].max() == 94                     # crash flight has no temperature
 
 
-def test_motor_drift_i_chart_catches_d03_prop_strike():
-    s = drone_series(load("motor_drift"), "D-03", "vibration_rms")
+def test_problem_fleet_i_chart_catches_d03_prop_strike():
+    s = drone_series(load("problem_fleet"), "D-03", "vibration_rms")
     imr = imr_chart(s["value"])
     assert list(s.loc[imr["signal_i"].to_numpy(), "flight_no"]) == [80]
 
@@ -210,8 +210,8 @@ def test_fleet_status_too_few_flights():
     assert st.loc["D-01", "status"] == "not enough data"
 
 
-def test_fleet_status_motor_drift_grounds_d07():
-    st = fleet_status(load("motor_drift")).set_index("drone_id")
+def test_fleet_status_problem_fleet_grounds_d07():
+    st = fleet_status(load("problem_fleet")).set_index("drone_id")
     assert st.loc["D-07", "status"] == "ground"
     assert "crash" in st.loc["D-07", "reason"]
     assert "first crossed on flight 74" in st.loc["D-07", "reason"]
@@ -271,8 +271,8 @@ def test_health_is_high_for_a_steady_drone():
     assert 0.3 < st.loc["D-01", "health"] <= 1.0
 
 
-def test_health_motor_drift_d07_is_zero_and_healthy_fleet_is_not():
-    drift = fleet_status(load("motor_drift")).set_index("drone_id")
+def test_health_problem_fleet_d07_is_zero_and_healthy_fleet_is_not():
+    drift = fleet_status(load("problem_fleet")).set_index("drone_id")
     assert drift.loc["D-07", "health"] == 0.0
     healthy = fleet_status(load("healthy"))
     assert healthy["health"].between(0, 1).all()
