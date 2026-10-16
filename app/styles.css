@@ -361,3 +361,10 @@ td.pcell.over .pbar div { background: var(--ground); } td.pcell.over span { colo
 td.pcell.soon .pbar div { background: #d99a00; } td.pcell.soon span { color: var(--watch); }
 td.pcell.ok .pbar div { background: var(--go); } td.pcell.ok span { color: var(--go); }
 .key { font-weight: 650; } .key.over { color: var(--ground); } .key.soon { color: var(--watch); } .key.ok { color: var(--go); }
+
+/* ---------- drone detail pop-up ---------- */
+.drone-modal .modal-content { background: var(--surface); border: none; border-radius: 16px; }
+.drone-modal .modal-body { padding: 20px 22px 6px; }
+.drone-modal .modal-footer { border-top: none; }
+.drone-modal .modal-footer .btn { background: var(--navy); color: #fff; border: none; border-radius: 8px; padding: 8px 20px; }
+td.room { white-space: nowrap; }

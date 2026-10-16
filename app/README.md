@@ -28,10 +28,9 @@ python3 -m pip install -r requirements.txt   # Python 3.12
 3. **The views of that fleet:**
    - **Fleet status:** a count of drones that **Can fly**, have a **Warning**, or must **Not fly**, then all 10
      drones as cards in two rows: each drawn in its status colour with a ✓ / ! / ✕ symbol, a **health bar** and
-     the reason. Click a card to open that drone.
-   - **Drone detail:** a status banner, a table of the numbers behind every chart (baseline mean, limits,
-     latest value, room left, signals), and four control charts (an EWMA and an I chart of motor temperature
-     rise, plus I charts of vibration and battery voltage sag).
+     the reason. **Click a card** to open that drone in a pop-up: a status banner, a table of the
+     numbers behind every chart (baseline mean, limits, latest value, room left, signals), and four control charts
+     (an EWMA and an I chart of motor temperature rise, plus I charts of vibration and battery voltage sag).
    - **Parts replacement:** one card per part type with its replace-at age (B10) in flight hours or charges and
      in flights; then a table of the 10 drones, each with its 4 motors, 4 propellers and 2 batteries shown as
      "life used" bars with days left or *overdue*, and what to do next; then "Why these numbers": reliability

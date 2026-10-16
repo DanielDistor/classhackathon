@@ -119,6 +119,28 @@ controls = ui.div(
     class_="controls",
 )
 
+def drone_detail_body() -> ui.Tag:
+    """What the pop-up shows when a drone card is clicked."""
+    return ui.div(
+        ui.output_ui("drone_banner"),
+        ui.div(ui.h4("The numbers behind the charts"), ui.output_ui("drone_numbers"), class_="panel"),
+        ui.div(ui.output_plot("drone_charts", height="1250px"), class_="panel"),
+        ui.div(
+            ui.h4("How to read these charts"),
+            ui.div(ui.markdown(
+                "The shaded band is the drone's first 30 flights, its **baseline**. The dashed "
+                "**limits** are the baseline mean ± 3 sigma, where sigma = average moving range "
+                "÷ 1.128. A red ✕ is a **signal**: a reading the drone's own normal variation is "
+                "very unlikely to produce.\n\n"
+                "* **EWMA** (top chart): a running average that weights recent flights most "
+                "(λ = 0.2). It catches slow wear early.\n"
+                "* **I charts**: each reading on its own. They catch sudden damage.\n"
+                "* **Temperature rise** = hottest motor after landing − air temperature, so a "
+                "hot day isn't mistaken for wear."), class_="read-me"),
+            class_="panel"),
+    )
+
+
 dashboard = ui.div(
     CLICK_JS,
     ui.div(
@@ -133,32 +155,6 @@ dashboard = ui.div(
             ui.nav_panel(
                 "Fleet status",
                 ui.div(ui.output_ui("fleet_summary"), ui.output_ui("fleet_cards"), class_="pt-3"),
-            ),
-            ui.nav_panel(
-                "Drone detail",
-                ui.div(
-                    ui.div(ui.input_select("drone", "Drone", [], width="220px"),
-                           ui.p("Pick a drone here, or click one on the Fleet status view.", class_="ctl-sub"),
-                           class_="drone-pick"),
-                    ui.output_ui("drone_banner"),
-                    ui.div(ui.h4("The numbers behind the charts"), ui.output_ui("drone_numbers"),
-                           class_="panel"),
-                    ui.div(ui.output_plot("drone_charts", height="1250px"), class_="panel"),
-                    ui.div(
-                        ui.h4("How to read these charts"),
-                        ui.div(ui.markdown(
-                            "The shaded band is the drone's first 30 flights, its **baseline**. The dashed "
-                            "**limits** are the baseline mean ± 3 sigma, where sigma = average moving range "
-                            "÷ 1.128. A red ✕ is a **signal**: a reading the drone's own normal variation is "
-                            "very unlikely to produce.\n\n"
-                            "* **EWMA** (top chart): a running average that weights recent flights most "
-                            "(λ = 0.2). It catches slow wear early.\n"
-                            "* **I charts**: each reading on its own. They catch sudden damage.\n"
-                            "* **Temperature rise** = hottest motor after landing − air temperature, so a "
-                            "hot day isn't mistaken for wear."), class_="read-me"),
-                        class_="panel"),
-                    class_="pt-3",
-                ),
             ),
             ui.nav_panel(
                 "Parts replacement",
@@ -222,8 +218,9 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.open_drone)
     def _open_drone():
-        ui.update_select("drone", selected=input.open_drone())
-        ui.update_navset("tabs", selected="Drone detail")
+        selected.set(input.open_drone())
+        ui.modal_show(ui.modal(drone_detail_body(), title=None, size="xl", easy_close=True,
+                               footer=ui.modal_button("Close"), class_="drone-modal"))
 
     # ---------- data ----------
     @reactive.calc
@@ -237,11 +234,7 @@ def server(input, output, session):
         st["_order"] = st["status"].map(STATUS_ORDER)
         return st.sort_values(["_order", "health", "drone_id"]).drop(columns="_order").reset_index(drop=True)
 
-    @reactive.effect
-    def _drones():
-        st = status()
-        ui.update_select("drone", choices=sorted(st["drone_id"]),
-                         selected=st["drone_id"].iloc[0] if len(st) else None)
+    selected = reactive.value(None)  # the drone whose pop-up is open
 
     # ---------- Fleet status tab ----------
     @render.ui
@@ -285,11 +278,11 @@ def server(input, output, session):
         return ui.div(ui.HTML(f'<div class="hangar">{"".join(cards)}</div>'),
                       ui.HTML(f'<p class="rule-note">{legend}</p>'))
 
-    # ---------- Drone detail tab ----------
+    # ---------- Drone detail pop-up (opened by clicking a drone card) ----------
     @reactive.calc
     def drone_charts_data():
         """Every chart for the selected drone, computed once by qc.py."""
-        drone = input.drone()
+        drone = selected.get()
         if not drone:
             return None
         f = flights()
@@ -306,7 +299,7 @@ def server(input, output, session):
 
     @render.ui
     def drone_banner():
-        drone = input.drone()
+        drone = selected.get()
         if not drone:
             return None
         row = status().set_index("drone_id").loc[drone]

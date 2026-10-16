@@ -148,9 +148,8 @@ TERMS = [
 
 TABS = [
     ("Fleet status", "All 10 drones at a glance, drawn green (can fly), amber (warning) or red (do not fly), "
-                     "each with a health bar and the reason. Start here each morning; click a drone to open it."),
-    ("Drone detail", "Four control charts for one drone (motor temperature, vibration, battery voltage) "
-                     "and a table explaining every number."),
+                     "each with a health bar and the reason. Start here each morning. Click a drone to open its "
+                     "control charts (motor temperature, vibration, battery voltage) and the numbers behind them."),
     ("Parts replacement", "When to replace each kind of part (in flight hours, charges and flights), then all "
                           "10 drones' motors, propellers and batteries with how many days each has left or whether "
                           "it is overdue, plus the battery-batch check."),
