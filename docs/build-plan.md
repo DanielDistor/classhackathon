@@ -33,7 +33,7 @@ When it's finished, check it in (`status: done` plus a one-line result) in the s
 ### Stage 1 — Make the data · 5:00–7:00 PM · H-02
 - [ ] `data/simulate.py` with a fixed random seed generates three datasets. Each is a folder holding `flights.csv` and `components.csv`:
   - `data/healthy/`: stable fleet; charts should stay in control
-  - `data/motor_drift/`: drone D-07's motor temperature rise drifts up after flight 60 and it crashes at flight 95; D-03 has a one-off vibration spike (prop strike)
+  - `data/motor_drift/`: drone D-07's motor temperature rise drifts up 0.20 °C per flight after flight 60 and it crashes at flight 95 (EWMA should flag flight 74); D-03 has a one-off vibration spike (prop strike)
   - `data/bad_battery_lot/`: batteries from lot B wear out about 40% sooner
 - [ ] `data/README.md` codebook: every file and column, units, and how a technician measures it
 - **Done when:** the CSVs load and a quick plot shows D-07 drifting.
