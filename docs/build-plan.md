@@ -23,7 +23,7 @@ Grading: working tool 25 · valid QC statistics 25 · design for a real user 25 
 
 Data comes before charts, statistics before the app, and the first deploy happens before midnight.
 
-**Status:** Stage 0 ✅ (waiting on everyone reading SPEC section 4) · Stage 1 ✅ · **next: Stage 2**
+**Status:** Stage 0 ✅ (waiting on everyone reading SPEC section 4) · Stage 1 ✅ · Stage 2 ✅ · **next: Stage 3**
 
 ### How to run a stage yourself
 
@@ -89,15 +89,15 @@ Tell the group chat which stage is finished.
 - [x] `data/README.md` codebook: every file and column, units, and how a technician measures it
 - **Done:** CSVs load; a check found the EWMA flags D-07 at flight 74 and the I chart flags D-03 at flight 80.
 
-### Stage 2 — Control charts, tested · 7:00–10:00 PM · H-03 ← **next**
-- [ ] **Decide first:** D-06 raises a false alarm on the healthy fleet because its first 30 flights ran
+### Stage 2 — Control charts, tested · 7:00–10:00 PM · H-03 ✅
+- [x] **Decided: keep 30.** D-06 raises a false alarm on the healthy fleet because its first 30 flights ran
   cool by chance (see `data/README.md`, Known quirks). Keep the 30-flight baseline and explain it in
   the demo (recommended), or use 50 flights.
-- [ ] `app/qc.py`: derived columns, I-MR chart, EWMA chart (plain functions, with no plotting or UI code inside)
-- [ ] `tests/`: the known answers in SPEC section 4, a constant-data case, and D-07 flagged before its crash
-- **Done when:** `pytest` passes.
+- [x] `app/qc.py`: derived columns, I-MR chart, EWMA chart (plain functions, with no plotting or UI code inside)
+- [x] `tests/`: the known answers in SPEC section 4, a constant-data case, and D-07 flagged before its crash
+- **Done:** 20 tests pass, and R's `qcc` package reproduces the same limits and signals (D-07 EWMA at flight 74, I chart at 83; D-03 at 80).
 
-### Stage 3 — Bare app and first deploy · 10:00 PM–12:00 AM · H-04, H-06
+### Stage 3 — Bare app and first deploy · 10:00 PM–12:00 AM · H-04, H-06 ← **next**
 - [ ] Minimal Shiny app: pick a dataset and a drone, see the charts and its go / watch / ground status
 - [ ] Deploy to Posit Connect while it's still ugly. Credentials go in GitHub repo secrets, **never in a file**
 - **Done when:** the public URL loads in a logged-out browser.

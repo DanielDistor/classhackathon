@@ -76,7 +76,7 @@ tasks:
       pytest tests (Python) or Rscript -e "testthat::test_dir('tests')" (R)
       passes, including one test that reproduces the SPEC section 4
       known-answer check and one degenerate case (constant data or n = 1).
-    result: ""
+    result: "Stage 2 part done - app/qc.py add_derived, imr_limits, imr_chart, ewma_chart, drone_series; pytest 20 passed (SPEC known answers, constant/n=1/NaN/short-baseline refused, D-07 EWMA flight 74, D-03 I flight 80); R qcc cross-check matches. Still open - Weibull fit (Stage 4)."
 
   - id: H-04
     title: Working tool - one demo copied to app/ and wired to the H-03 function
