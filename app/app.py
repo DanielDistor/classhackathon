@@ -144,9 +144,10 @@ def drone_detail_body() -> ui.Tag:
 dashboard = ui.div(
     CLICK_JS,
     ui.div(
-        ui.div(ui.span("Drone Fleet Reliability Monitor", class_="title"),
-               ui.span("which drones can fly today, and why", class_="subtitle")),
-        ui.input_action_link("about", "About this tool and the datasets"),
+        ui.div(ui.input_action_button("about", "← Back to welcome page", class_="btn-back"),
+               ui.span("Drone Fleet Reliability Monitor", class_="title"),
+               ui.span("which drones can fly today, and why", class_="subtitle"),
+               class_="topbar-left"),
         class_="topbar",
     ),
     ui.div(

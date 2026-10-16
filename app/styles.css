@@ -368,3 +368,10 @@ td.pcell.ok .pbar div { background: var(--go); } td.pcell.ok span { color: var(-
 .drone-modal .modal-footer { border-top: none; }
 .drone-modal .modal-footer .btn { background: var(--navy); color: #fff; border: none; border-radius: 8px; padding: 8px 20px; }
 td.room { white-space: nowrap; }
+
+/* back to the welcome page */
+.topbar-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.topbar .subtitle { margin-left: 0; }
+.btn-back { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.35);
+            border-radius: 999px; padding: 6px 14px; font-size: 0.88rem; font-weight: 600; }
+.btn-back:hover, .btn-back:focus { background: #fff; color: var(--navy); border-color: #fff; }
