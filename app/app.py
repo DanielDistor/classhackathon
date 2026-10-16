@@ -67,24 +67,22 @@ def health_bar(health: float, status: str, big: bool = True) -> str:
 
 
 STATUS_SYMBOL = {"go": "✓", "watch": "!", "ground": "✕", "not enough data": "?"}
-# body fill, symbol colour: darker = worse (monochrome theme)
-STATUS_BODY = {"go": ("#ffffff", "#111111"), "watch": ("#8f8f8c", "#ffffff"), "ground": ("#111111", "#ffffff"),
-               "not enough data": ("#e4e4e1", "#555555")}
+STATUS_COLOR = {"go": "#0a7d32", "watch": "#c98500", "ground": "#c62f2f", "not enough data": "#5f6670"}
 
 
 def drone_icon(status: str) -> str:
-    """A small top-view quadcopter in grays; its body is white, gray or black by status, with a symbol."""
-    body, mark = STATUS_BODY[status]
+    """A small top-view quadcopter drawn in the status colour, with the status symbol on its body."""
+    c = STATUS_COLOR[status]
     arms = ((28, 28), (92, 28), (92, 92), (28, 92))
-    g = "".join(f'<line x1="60" y1="60" x2="{x}" y2="{y}" stroke="#b5b5b2" stroke-width="7" stroke-linecap="round"/>'
+    g = "".join(f'<line x1="60" y1="60" x2="{x}" y2="{y}" stroke="#9aa3ad" stroke-width="7" stroke-linecap="round"/>'
                 for x, y in arms)
-    g += "".join(f'<circle cx="{x}" cy="{y}" r="22" fill="#000" fill-opacity="0.035" stroke="#a5a5a2" '
-                 f'stroke-width="1.5" stroke-dasharray="4 3"/>'
-                 f'<line x1="{x - 18}" y1="{y + 5}" x2="{x + 18}" y2="{y - 5}" stroke="#7a7a77" stroke-width="3.5" '
-                 f'stroke-linecap="round" opacity="0.7"/><circle cx="{x}" cy="{y}" r="6.5" fill="#2b2b2b"/>'
+    g += "".join(f'<circle cx="{x}" cy="{y}" r="22" fill="{c}" fill-opacity="0.13" stroke="{c}" '
+                 f'stroke-opacity="0.55" stroke-width="2" stroke-dasharray="4 3"/>'
+                 f'<line x1="{x - 18}" y1="{y + 5}" x2="{x + 18}" y2="{y - 5}" stroke="#6b7682" stroke-width="3.5" '
+                 f'stroke-linecap="round" opacity="0.6"/><circle cx="{x}" cy="{y}" r="6.5" fill="#3a4450"/>'
                  for x, y in arms)
-    g += (f'<rect x="42" y="44" width="36" height="32" rx="9" fill="{body}" stroke="#111" stroke-width="2"/>'
-          f'<text x="60" y="66.5" text-anchor="middle" font-size="19" font-weight="700" fill="{mark}">'
+    g += (f'<rect x="42" y="44" width="36" height="32" rx="9" fill="{c}"/>'
+          f'<text x="60" y="66.5" text-anchor="middle" font-size="19" font-weight="700" fill="#fff">'
           f'{STATUS_SYMBOL[status]}</text>')
     return f'<svg class="dc-icon" viewBox="0 0 120 120" aria-hidden="true">{g}</svg>'
 

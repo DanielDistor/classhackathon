@@ -14,12 +14,11 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
-SURFACE = "#ffffff"
-INK, INK_2 = "#111111", "#6b6b6b"
-GRID = "#e9e9e6"
-SERIES = "#111111"     # the charted variable (monochrome theme)
-CRITICAL = "#111111"   # out-of-control points: a large black X with a white edge
-MUTED = "#a3a3a0"      # the line under the signals, and the normal lots
+SURFACE = "#fcfcfb"
+INK, INK_2 = "#0b0b0b", "#52514e"
+GRID = "#e4e3df"
+SERIES = "#2a78d6"     # categorical slot 1: the charted variable
+CRITICAL = "#d03b3b"   # status colour: out-of-control points (always with an X marker)
 
 plt.rcParams.update({
     "font.size": 10, "axes.edgecolor": GRID, "axes.labelcolor": INK_2,
@@ -49,7 +48,7 @@ def _limits(ax, x, lcl, ucl) -> None:
 def _signals(ax, x, y, mask) -> None:
     if not mask.any():
         return
-    ax.scatter(x[mask], y[mask], s=70, marker="X", color=CRITICAL, edgecolor=SURFACE,
+    ax.scatter(x[mask], y[mask], s=44, marker="X", color=CRITICAL, edgecolor=SURFACE,
                linewidth=1, zorder=4)
     first = x[mask].iloc[0]
     ax.annotate(f"first signal: flight {first}", (first, y[mask].iloc[0]), xytext=(-10, 18),
@@ -62,7 +61,7 @@ def ewma_axes(ax, chart: pd.DataFrame, flight_no: pd.Series, title: str, unit: s
     x = pd.Series(flight_no).reset_index(drop=True)
     _frame(ax, title, unit, int(chart["baseline"].sum()))
     ax.scatter(x, chart["value"], s=10, color=INK_2, alpha=0.35, lw=0, label="each flight")
-    ax.plot(x, chart["z"], color=INK_2, lw=2, label="EWMA")
+    ax.plot(x, chart["z"], color=SERIES, lw=2, label="EWMA")
     _limits(ax, x, chart["lcl"], chart["ucl"])
     _signals(ax, x, chart["z"], chart["signal"].to_numpy())
     ax.legend(loc="lower left", frameon=False, fontsize=8.5)
@@ -72,7 +71,7 @@ def i_axes(ax, chart: pd.DataFrame, flight_no: pd.Series, title: str, unit: str)
     """Draw the I half of qc.imr_chart() output: readings, limits, signals."""
     x = pd.Series(flight_no).reset_index(drop=True)
     _frame(ax, title, unit, int(chart["baseline"].sum()))
-    ax.plot(x, chart["value"], color=MUTED, lw=1.2, marker="o", ms=2.5)
+    ax.plot(x, chart["value"], color=SERIES, lw=1.2, marker="o", ms=2.5)
     _limits(ax, x, chart["lcl"], chart["ucl"])
     _signals(ax, x, chart["value"], chart["signal_i"].to_numpy())
 
@@ -136,7 +135,7 @@ def lots_figure(lots: pd.DataFrame, unit: str) -> plt.Figure:
     best_lo = fitted["eta_lo"].max() if len(fitted) else 0
     for i, r in fitted.iterrows():
         worse = r["eta_hi"] < best_lo
-        col = CRITICAL if worse else MUTED
+        col = CRITICAL if worse else SERIES
         ax.plot([r["eta_lo"], r["eta_hi"]], [i, i], color=col, lw=3, solid_capstyle="round", alpha=0.45)
         ax.scatter([r["eta"]], [i], s=70, color=col, zorder=3, edgecolor=SURFACE, linewidth=1.5)
         ax.annotate(f"{r['eta']:.0f}  ({r['eta_lo']:.0f}–{r['eta_hi']:.0f})", (r["eta_hi"], i),
