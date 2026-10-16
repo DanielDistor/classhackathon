@@ -26,10 +26,10 @@
       "checksum": "61939823fbcc7e8de3b61ab105331baf"
     },
     "README.md": {
-      "checksum": "dcfee8b770c911a0fe971ba9acf305e5"
+      "checksum": "7ec8489aacf284814f2b46ab8b0f2e89"
     },
     "app.py": {
-      "checksum": "cec6e48d1094bafb428f4ca40e647068"
+      "checksum": "4d05854af2784d8e28acf7ae5f11fb29"
     },
     "charts.py": {
       "checksum": "ff1e72c076482299a04d24428bd89e30"
@@ -38,22 +38,22 @@
       "checksum": "a5c6f2c953f94e97bbe2d41e0c793fcf"
     },
     "data/healthy/flights.csv": {
-      "checksum": "b86e19be07de1a5565a6171049140aa8"
+      "checksum": "17bd85c38e062549e55162d7e97d2451"
     },
     "data/problem_fleet/components.csv": {
       "checksum": "070a4bcdd29c5907f2f7f75fc76b3ca9"
     },
     "data/problem_fleet/flights.csv": {
-      "checksum": "2cdfe8684fb6c5572c2f4eb9cb08447b"
+      "checksum": "d2b9c6f282e179c3e32c84b564ed065b"
     },
     "intro.py": {
-      "checksum": "fcc6e4cb66b2ad2bc0e4070581b4cdd9"
+      "checksum": "af427307a38a67c80505b66fefeaef15"
     },
     "qc.py": {
-      "checksum": "d8fc2e35708542c67e65164cb9f523a3"
+      "checksum": "1eddc59c2f27b59b10f86354ef258976"
     },
     "styles.css": {
-      "checksum": "3058d84aa48265172622c2ec19508e0f"
+      "checksum": "51a2e0a8a9144ace77d3efcc743c26d4"
     }
   }
 }

@@ -26,20 +26,18 @@ FACTS = [
 # (number, part, what it is, what the technician writes down, column names)
 PARTS = [
     ("1", "Propellers ×4", "The spinning blades that lift the drone.",
-     "Before each flight: is any blade chipped or cracked?", "preflight_fail_item"),
+     "When a propeller is replaced, and why (chipped, cracked, hit something).", "components.csv"),
     ("2", "Motors ×4", "Spin the propellers. A worn-out motor runs hotter.",
-     "Right after landing: the temperature of the hottest motor, with an infrared thermometer.",
-     "motor_temp_max_c"),
+     "Right after landing: the temperature of the hottest motor, with an infrared thermometer. "
+     "When a motor is replaced, and why.", "motor_temp_max_c, components.csv"),
     ("3", "Batteries ×2", "Power the drone. Each drone has two and swaps them between flights. "
      "Old batteries drain faster.",
-     "Battery voltage at takeoff and at landing, and how many times it has been charged "
-     "(the battery displays both).", "voltage_start_v, voltage_end_v, battery_cycles"),
+     "Battery voltage at take-off and at landing (the battery displays it). When a battery is replaced, "
+     "and how many charges it lasted.", "voltage_start_v, voltage_end_v, components.csv"),
     ("4", "Flight controller", "The drone's onboard computer. It keeps a log of every flight.",
-     "From that log: how long the flight took, how much the drone shook, and any alerts.",
+     "From that log: how long the flight took, how much the drone shook, and any alert.",
      "flight_min, vibration_rms, inflight_event"),
-    ("5", "Package", "The delivery being carried.", "Its weight, from the scale at loading.",
-     "payload_kg"),
-    ("6", "Air thermometer (at the launch pad, not on the drone)",
+    ("5", "Air thermometer (at the launch pad, not on the drone)",
      "Hot days make every motor hotter.",
      "The air temperature, so the tool can subtract it and not mistake a hot day for a worn motor.",
      "ambient_temp_c"),
@@ -48,10 +46,8 @@ PARTS = [
 # Every row of flights.csv covers one whole flight: before, during and after.
 MOMENTS = [
     ("Before take-off", "Technician, at the launch pad", [
-        ("Checklist passed? What failed?", "preflight_pass, preflight_fail_item"),
-        ("Which battery, how many charges", "battery_id, battery_cycles"),
         ("Battery voltage at take-off", "voltage_start_v"),
-        ("Package weight, air temperature", "payload_kg, ambient_temp_c"),
+        ("Air temperature", "ambient_temp_c"),
     ]),
     ("During the flight", "Recorded automatically by the drone's flight controller", [
         ("How long it flew", "flight_min"),
@@ -108,7 +104,7 @@ SCENARIOS = [
                  ("Lot C", "Apr 2026 onward", 400)],
     },
     {
-        "num": "2", "file": "healthy", "name": "Healthy fleet (for comparison)",
+        "num": "2", "file": "healthy", "name": "Healthy fleet (behind the scenes, for testing)",
         "what": "The same 10 drones and the same flights, with nothing planted. Parts wear at their normal rate "
                 "and every battery batch is fine.",
         "expect": "Almost every drone Can fly. A couple show a Warning from ordinary random variation, which "
@@ -136,8 +132,6 @@ TERMS = [
                          "Subtracting the air temperature means a hot day isn't mistaken for wear."),
     ("Voltage sag", "Battery voltage at takeoff minus at landing, per flight minute (V/min). "
                     "It rises as a battery degrades."),
-    ("Health bar", "How much room is left before the nearest control limit, on the drone's "
-                    "most-stretched chart. 100% = right at its normal; 0% = at a limit, or crashed."),
     ("Can fly / Warning / Do not fly", "Can fly: every chart in control. Warning: a warning sign in the last 10 "
                                        "flights, so fly but inspect soon. Do not fly: a reading is out of limits now, "
                                        "or the drone crashed."),
@@ -148,7 +142,7 @@ TERMS = [
 
 TABS = [
     ("Fleet status", "All 10 drones at a glance, drawn green (can fly), amber (warning) or red (do not fly), "
-                     "each with a health bar and the reason. Start here each morning. Click a drone to open its "
+                     "each with the reason. Start here each morning. Click a drone to open its "
                      "control charts (motor temperature, vibration, battery voltage) and the numbers behind them."),
     ("Parts replacement", "When to replace each kind of part (in flight hours, charges and flights), then all "
                           "10 drones' motors, propellers and batteries with how many days each has left or whether "
@@ -190,7 +184,7 @@ def drone_diagram() -> str:
     g.append('<text x="380" y="251" text-anchor="middle" class="d-inner">FC</text>')
     g.append('<text x="380" y="34" text-anchor="middle" class="d-front">▲ FRONT</text>')
     # leader lines from each label to its part
-    for pts in ("200,92 222,72", "200,350 250,343", "560,168 426,205", "560,282 404,250", "200,225 318,225"):
+    for pts in ("200,92 222,72", "200,350 250,343", "560,168 426,205", "560,282 404,250"):
         g.append(f'<polyline points="{pts}" class="d-leader"/>')
     # badge + name for each part (left column ends at x=200, right column starts at x=560)
     g.append(_badge(40, 92, "1") + '<text x="64" y="98" class="d-name">Propellers</text>')
@@ -198,12 +192,11 @@ def drone_diagram() -> str:
     g.append(_badge(590, 168, "3") + '<text x="614" y="174" class="d-name">Batteries</text>')
     g.append(_badge(590, 282, "4") + '<text x="614" y="280" class="d-name">Flight</text>'
              '<text x="614" y="300" class="d-name">controller</text>')
-    g.append(_badge(40, 225, "5") + '<text x="64" y="231" class="d-name">Package</text>')
-    g.append(_badge(590, 56, "6") + '<text x="614" y="54" class="d-name">Air</text>'
+    g.append(_badge(590, 56, "5") + '<text x="614" y="54" class="d-name">Air</text>'
              '<text x="614" y="74" class="d-name">thermometer</text>'
              '<text x="614" y="92" class="d-sub">at the launch pad</text>')
     return ('<svg viewBox="0 0 760 420" role="img" class="drone-svg" '
-            'aria-label="Top view of a delivery drone with its parts numbered 1 to 6">'
+            'aria-label="Top view of a delivery drone with its parts numbered 1 to 5">'
             + "".join(g) + "</svg>")
 
 
@@ -331,9 +324,8 @@ def intro_page() -> ui.Tag:
             ui.div(
                 ui.div(ui.h3("flights.csv: the flight logbook"),
                        ui.p("One line per flight. These are the first 3 flights of drone D-01. The gray text "
-                            "under each heading is the column's name in the file. Six more columns record "
-                            "the package weight, which battery flew and its charge count, the checklist "
-                            "result, and anything unusual during the flight."),
+                            "under each heading is the column's name in the file. One more column records "
+                            "any alert during the flight."),
                        ui.HTML(example_flights()), class_="info-card"),
                 ui.div(ui.h3("components.csv: the parts history"),
                        ui.p("One line per part, from the day it was installed until it failed, was removed, "
@@ -350,7 +342,8 @@ def intro_page() -> ui.Tag:
                      " Both are the same 10 drones flying the same 1,000 flights in September 2026. The only "
                      "difference is the problems we planted, so we know the right answer and can check the "
                      "tool finds it, like testing a smoke alarm once with smoke and once without."),
-                ui.p("The dashboard opens on the fleet with problems; a switch at the top shows the healthy one."),
+                ui.p("The dashboard shows the fleet with problems. The healthy fleet works behind the scenes: "
+                     "our tests run the tool on it to prove no healthy drone is ever grounded."),
                 class_="callout"),
             ui.div(*scenario_cards(), class_="grid-2"),
 

@@ -375,3 +375,34 @@ td.room { white-space: nowrap; }
 .btn-back { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.35);
             border-radius: 999px; padding: 6px 14px; font-size: 0.88rem; font-weight: 600; }
 .btn-back:hover, .btn-back:focus { background: #fff; color: var(--navy); border-color: #fff; }
+
+/* ---------- simplified views ---------- */
+.muted-cell { font-size: 0.78rem; color: var(--ink-3); }
+td.num.out { color: var(--ground); font-weight: 700; }
+.rel-card .rc-main { margin: 8px 0 4px; }
+.pd-list { display: flex; flex-direction: column; gap: 6px; }
+.pd-item { border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.pd-item summary, .pd-item.lost { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center;
+                                  padding: 10px 14px; cursor: pointer; list-style: none; }
+.pd-item summary::-webkit-details-marker { display: none; }
+.pd-item.lost { cursor: default; grid-template-columns: 64px 1fr; color: var(--ground); }
+.pd-id { font-weight: 800; }
+.pd-action { font-size: 0.92rem; }
+.pd-more { font-size: 0.8rem; color: var(--accent-ink); font-weight: 600; }
+.pd-item[open] summary { border-bottom: 1px solid var(--line); }
+table.mini-parts { width: 100%; max-width: 520px; margin: 8px 14px 12px; font-size: 0.86rem; border-collapse: collapse; }
+table.mini-parts th { text-align: left; font-size: 0.72rem; color: var(--ink-3); text-transform: uppercase; padding: 4px 6px; }
+table.mini-parts td { padding: 4px 6px; }
+table.mini-parts td.pcell { width: 45%; }
+td.when { font-weight: 650; white-space: nowrap; }
+td.when.over { color: var(--ground); } td.when.soon { color: var(--watch); } td.when.ok { color: var(--go); }
+details.stats-details > summary { cursor: pointer; font-weight: 650; color: var(--accent-ink); }
+details.stats-details[open] > summary { margin-bottom: 12px; }
+
+/* compact test-data switch in the header */
+.topbar { gap: 16px; flex-wrap: wrap; }
+.data-switch { display: flex; align-items: center; }
+.data-switch .shiny-input-container { margin: 0; display: flex; align-items: center; gap: 8px; }
+.data-switch .control-label { color: #b9c8d8; font-size: 0.82rem; margin: 0; white-space: nowrap; }
+.data-switch select { font-size: 0.88rem; padding: 4px 28px 4px 10px; border-radius: 8px; }
+.dataset-note { color: var(--ink-3); font-size: 0.85rem; margin: 0 0 12px; }

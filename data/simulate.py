@@ -314,9 +314,10 @@ def build_dataset(scenario: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     flights = pd.concat(flights_all, ignore_index=True).sort_values(["datetime", "drone_id"])
     flights["datetime"] = flights["datetime"].dt.strftime("%Y-%m-%dT%H:%M")
     flights = flights[[
-        "flight_id", "drone_id", "datetime", "flight_min", "payload_kg", "ambient_temp_c",
-        "battery_id", "battery_cycles", "voltage_start_v", "voltage_end_v", "motor_temp_max_c",
-        "vibration_rms", "preflight_pass", "preflight_fail_item", "inflight_event"]]
+        # Only the columns the tool uses (minimal inputs). Payload weight, battery IDs and the
+        # checklist still shape the simulation above, but a technician doesn't need to log them.
+        "flight_id", "drone_id", "datetime", "flight_min", "ambient_temp_c",
+        "voltage_start_v", "voltage_end_v", "motor_temp_max_c", "vibration_rms", "inflight_event"]]
     comps = pd.DataFrame(comps_all).sort_values(["drone_id", "component_id"])
     return flights.reset_index(drop=True), comps.reset_index(drop=True)
 

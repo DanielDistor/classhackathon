@@ -219,10 +219,12 @@ def drone_series(flights: pd.DataFrame, drone_id: str, column: str) -> pd.DataFr
 # --------------------------------------------------------------------------
 
 #: (column, plain name, units, also gets an EWMA chart?)
+#: (column, plain name, units, chart). One chart per measurement, the same ones the
+#: dashboard shows: an EWMA for slow motor wear, I charts for sudden vibration or battery changes.
 MONITORED = (
-    ("temp_rise_c", "motor temperature rise", "°C", True),
-    ("vibration_rms", "vibration", "m/s²", False),
-    ("sag_rate_v_per_min", "voltage sag", "V/min", False),
+    ("temp_rise_c", "motor temperature rise", "°C", "ewma"),
+    ("vibration_rms", "vibration", "m/s²", "i"),
+    ("sag_rate_v_per_min", "voltage sag", "V/min", "i"),
 )
 #: How many of a drone's latest readings count as "recent" for a watch.
 RECENT_FLIGHTS = 10
@@ -254,9 +256,9 @@ def fleet_status(flights: pd.DataFrame, recent: int = RECENT_FLIGHTS,
                  n_baseline: int = N_BASELINE, min_baseline: int = MIN_BASELINE) -> pd.DataFrame:
     """Decide go / watch / ground for every drone in the flights table.
 
-    For each drone it runs an I chart on temperature rise, vibration and
-    voltage sag, plus an EWMA chart on temperature rise (limits from that
-    drone's own first `n_baseline` readings), then applies:
+    For each drone it runs the charts in MONITORED: an EWMA on motor temperature
+    rise (slow wear), and I charts on vibration and voltage sag (sudden changes),
+    with limits from that drone's own first `n_baseline` readings, then applies:
 
       ground  the drone's latest flight was a crash, OR its latest reading is
               outside an I-chart limit, OR its EWMA is outside its limit now
@@ -283,36 +285,37 @@ def fleet_status(flights: pd.DataFrame, recent: int = RECENT_FLIGHTS,
         if crashed:
             ground.append(f"crashed on flight {last_no}")
         try:
-            for col, name, unit, with_ewma in MONITORED:
+            for col, name, unit, chart in MONITORED:
                 s = drone_series(f, drone, col)
-                im = imr_chart(s["value"], n_baseline, min_baseline)
-                r = im.iloc[-1]
-                margins[name] = chart_margin(r.value, r.center, r.lcl, r.ucl)
-                if im["signal_i"].iloc[-1]:
+                if chart == "i":
+                    im = imr_chart(s["value"], n_baseline, min_baseline)
                     r = im.iloc[-1]
-                    ground.append(f"{name} {r.value:.2f} {unit} on flight {s.flight_no.iloc[-1]} is outside "
-                                  f"its I-chart limits ({r.lcl:.2f} to {r.ucl:.2f})")
+                    margins[name] = chart_margin(r.value, r.center, r.lcl, r.ucl)
+                    if im["signal_i"].iloc[-1]:
+                        ground.append(f"{name} {r.value:.2f} {unit} on flight {s.flight_no.iloc[-1]} is outside "
+                                      f"its normal range ({r.lcl:.2f} to {r.ucl:.2f})")
+                    else:
+                        hit = s.loc[im["signal_i"].to_numpy(), "flight_no"]
+                        hit = hit[hit.index >= len(s) - recent]
+                        if len(hit):
+                            watch.append(f"{name} was outside its normal range on flight "
+                                         f"{', '.join(map(str, hit))}")
                 else:
-                    hit = s.loc[im["signal_i"].to_numpy(), "flight_no"]
-                    hit = hit[hit.index >= len(s) - recent]
-                    if len(hit):
-                        watch.append(f"{name} was outside its I-chart limits on flight "
-                                     f"{', '.join(map(str, hit))}")
-                if with_ewma:
                     ew = ewma_chart(s["value"], n_baseline=n_baseline, min_baseline=min_baseline)
                     e = ew.iloc[-1]
-                    margins[f"{name} (EWMA)"] = chart_margin(e.z, e.center, e.lcl, e.ucl)
+                    margins[name] = chart_margin(e.z, e.center, e.lcl, e.ucl)
                     if ew["signal"].iloc[-1]:
                         side = "above its upper" if ew["z"].iloc[-1] > ew["center"].iloc[-1] else "below its lower"
                         start = _run_start(ew["signal"], s["flight_no"])
                         first = int(s.loc[ew["signal"].to_numpy(), "flight_no"].iloc[0])
                         note = f" (first crossed on flight {first})" if first != start else ""
-                        ground.append(f"{name} EWMA {side} limit since flight {start}{note}")
+                        ground.append(f"{name} trend (EWMA) {side} limit since flight {start}{note}")
                     else:
                         hit = s.loc[ew["signal"].to_numpy(), "flight_no"]
                         hit = hit[hit.index >= len(s) - recent]
                         if len(hit):
-                            watch.append(f"{name} EWMA signalled on flight {', '.join(map(str, hit))}, now back inside")
+                            watch.append(f"{name} trend (EWMA) was outside its limits on flight "
+                                         f"{', '.join(map(str, hit))}, now back inside")
         except ValueError as err:
             rows.append(dict(drone_id=drone, status="not enough data", reason=str(err),
                              last_flight_no=last_no, n_flights=len(d),
