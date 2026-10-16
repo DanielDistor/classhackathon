@@ -106,6 +106,16 @@ controls = ui.div(
         {k: ui.TagList(ui.span(name, class_="ds-name"), ui.span(desc, class_="ds-desc"))
          for k, (name, desc) in DATASETS.items()},
         selected="problem_fleet", inline=True),
+    ui.tags.details(
+        ui.tags.summary("Or load your own logbook (CSV files)"),
+        ui.div(
+            ui.input_file("up_flights", "Flight logbook (flights.csv)", accept=[".csv"], button_label="Choose file"),
+            ui.input_file("up_parts", "Parts history (components.csv, optional)", accept=[".csv"],
+                          button_label="Choose file"),
+            class_="upload-row"),
+        ui.p("Same columns as the test data (see data/README.md in the repo). Your files replace the fleet "
+             "chosen above until you reload the page.", class_="ctl-sub"),
+        class_="upload-box"),
     class_="controls",
 )
 
@@ -216,7 +226,14 @@ def server(input, output, session):
     # ---------- data ----------
     @reactive.calc
     def flights() -> pd.DataFrame:
-        f = pd.read_csv(DATA / input.dataset() / "flights.csv")
+        up = input.up_flights()
+        if up:
+            try:
+                f = qc.check_flights(pd.read_csv(up[0]["datapath"]))
+            except (ValueError, pd.errors.ParserError) as err:
+                raise SafeException(f"Can't use that flight logbook: {err}") from None
+        else:
+            f = pd.read_csv(DATA / input.dataset() / "flights.csv")
         return qc.add_derived(f)
 
     @reactive.calc
@@ -238,7 +255,10 @@ def server(input, output, session):
                          f'<b>{n}</b> {STATUS_WORD[s_].lower()}</span>')
         note = ""
         n_watch = int((st["status"] == "watch").sum())
-        if input.dataset() == "healthy":
+        if input.up_flights():
+            note = (f'<p class="fleet-note"><b>Showing your uploaded logbook</b> '
+                    f'({len(flights()):,} flights, {st["drone_id"].nunique()} drones).</p>')
+        elif input.dataset() == "healthy":
             note = ('<p class="fleet-note"><b>Nothing was planted in this fleet.</b> '
                     + (f"The {n_watch} warning{'s are' if n_watch != 1 else ' is'} ordinary chance readings: "
                        if n_watch else "")
@@ -322,7 +342,12 @@ def server(input, output, session):
     # ---------- Parts replacement tab ----------
     @reactive.calc
     def components() -> pd.DataFrame:
-        return qc.check_components(pd.read_csv(DATA / input.dataset() / "components.csv"))
+        up = input.up_parts()
+        try:
+            c = pd.read_csv(up[0]["datapath"]) if up else pd.read_csv(DATA / input.dataset() / "components.csv")
+            return qc.check_components(c)
+        except (ValueError, pd.errors.ParserError) as err:
+            raise SafeException(f"Can't use that parts history: {err}") from None
 
     @reactive.calc
     def by_type() -> pd.DataFrame:
@@ -422,7 +447,7 @@ def server(input, output, session):
 
     @reactive.calc
     def plan() -> pd.DataFrame:
-        return qc.replacement_plan(components(), pd.read_csv(DATA / input.dataset() / "flights.csv"), by_type())
+        return qc.replacement_plan(components(), flights(), by_type())
 
     @render.ui
     def parts_by_drone():
@@ -464,6 +489,7 @@ def server(input, output, session):
                          f'{part_rows(mine)}</details>')
         n_over = int(p["overdue"].sum())
         summary = (f'<p class="due-summary"><b>{n_over} of {len(p)} parts in service are past their replace-at age.</b> '
+                   "This fleet runs parts until they break, so many are overdue: that is the risk the tool makes visible. "
                    "Click a drone to see each of its parts.</p>")
         return ui.HTML(summary + f'<div class="pd-list">{"".join(items)}</div>')
 

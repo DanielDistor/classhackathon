@@ -406,3 +406,10 @@ details.stats-details[open] > summary { margin-bottom: 12px; }
 .data-switch .control-label { color: #b9c8d8; font-size: 0.82rem; margin: 0; white-space: nowrap; }
 .data-switch select { font-size: 0.88rem; padding: 4px 28px 4px 10px; border-radius: 8px; }
 .dataset-note { color: var(--ink-3); font-size: 0.85rem; margin: 0 0 12px; }
+
+/* load your own logbook */
+.upload-box { margin-top: 10px; }
+.upload-box > summary { cursor: pointer; font-size: 0.88rem; color: var(--accent-ink); font-weight: 600; }
+.upload-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px; }
+.upload-row .shiny-input-container { width: 320px !important; margin-bottom: 4px; }
+.upload-row .control-label { font-size: 0.82rem; font-weight: 600; }

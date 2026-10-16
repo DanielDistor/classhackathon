@@ -28,6 +28,9 @@ of the flight log.
 ## `flights.csv`: one row per flight
 
 The technician fills in one row per flight, at launch and right after landing. Rows are in time order.
+It has only the 10 columns the tool uses, so logging a flight takes about a minute: before take-off (voltage, air
+temperature), during the flight (copied from the flight controller's log: minutes, vibration, any alert), and right
+after landing (hottest motor, voltage).
 
 | Column | Type | Units | Meaning | How it is collected for real |
 |---|---|---|---|---|
@@ -35,16 +38,11 @@ The technician fills in one row per flight, at launch and right after landing. R
 | `drone_id` | text | — | Airframe, `D-01` to `D-10` | Label on the airframe |
 | `datetime` | ISO 8601 | local time | Launch time, `YYYY-MM-DDTHH:MM` | Automatic |
 | `flight_min` | numeric | minutes | Takeoff to landing | Flight controller log summary |
-| `payload_kg` | numeric | kg | Package weight | Package scale at loading |
 | `ambient_temp_c` | numeric | °C | Outdoor air temperature at launch | Thermometer at the pad or a weather app |
-| `battery_id` | text | — | Battery used on this flight; matches a `component_id` in `components.csv` | Label on the battery pack |
-| `battery_cycles` | integer | charge cycles | Charge cycles on this battery, counting this flight | Battery management system (BMS) readout |
 | `voltage_start_v` | numeric | V | Pack voltage at takeoff (6S pack, full ≈ 25.2 V) | BMS or ground station |
 | `voltage_end_v` | numeric | V | Pack voltage at landing | BMS or ground station |
 | `motor_temp_max_c` | numeric | °C | Temperature of the hottest of the 4 motors, within 1 minute of landing. **Blank** on the crash flight (the wreck can't be measured) | Handheld infrared thermometer pointed at each motor bell |
 | `vibration_rms` | numeric | m/s² | RMS vibration over the flight | Flight controller log export (PX4 and ArduPilot both log vibration) |
-| `preflight_pass` | 0/1 | — | 1 = passed every item of the before-flight checklist | Checklist |
-| `preflight_fail_item` | category | — | `none`, `prop_chip`, `loose_arm` or `connector`. A failed item is fixed before launch, and the flight still happens | Checklist |
 | `inflight_event` | category | — | `none`; `warning` (flight controller alert, flight completed); `return_home` (a part failed in the air and the drone returned on its own); `crash` | Flight log and pilot report |
 
 **Derived by the tool (never typed in):**
@@ -92,14 +90,13 @@ only the failures, makes parts look short-lived. The Weibull fit must treat `sta
 These details are for checking the tool's numbers. A real fleet would not come with them.
 
 - **Temperature rise** = drone-specific level (about 18 °C, varying by ±1 °C between drones) + 1.2 °C per kg of
-  payload above 1.5 kg + 0.1 °C per flight minute above 22 + noise (sd 1.2 °C). Total sd ≈ 1.4 °C.
+  package above 1.5 kg + 0.1 °C per flight minute above 22 + noise (sd 1.2 °C). Total sd ≈ 1.4 °C. The package
+  weight shapes the simulation but is not logged: the tool doesn't need it, so the technician isn't asked for it.
 - **Vibration** = about 3.0 m/s² for each drone (±0.2 between drones) + noise (sd 0.25).
 - **Voltage sag** = 0.17 V/min + 0.02 V/min per kg above 1.5 kg + noise (sd 0.008).
 - **Ambient temperature** is a shared daily level (mean 17 °C, sd 4) plus a midday bump of up to 3 °C.
-- **Before-flight fails**: 1% loose arm and 1% connector, at random. A `prop_chip` is logged on the flight
-  after a simulated propeller failure.
 - **Failures during the flight log** appear in it: a random motor or battery failure marks that flight
-  `return_home`, and a propeller failure becomes a `prop_chip` at the next check.
+  `return_home`. Propeller damage is found at inspection and recorded in `components.csv`.
 
 ## Known quirks
 
@@ -108,5 +105,9 @@ These details are for checking the tool's numbers. A real fleet would not come w
   raises a few false alarms on a healthy drone. This is the real cost of a short baseline period, and we
   left it in rather than re-picking the seed. The tool's README discusses it.
 - **False alarms at 3σ.** The I charts flag about 1% of healthy flights. That's more than the textbook
-  0.27%, because limits estimated from 30 flights are themselves uncertain.
+  0.27%, because limits estimated from 30 flights are themselves uncertain. In the healthy fleet this gives
+  two Warnings (D-06, D-07) and no Do not fly; the dashboard explains them.
+- **Most parts are past their replace-at age.** The simulated startup runs every part until it breaks (the
+  prompt: "they only investigate after a crash"), so about half the parts still flying are older than their
+  B10 life. That is the finding the Parts replacement view is built to surface.
 - `life_value` prints with one decimal for every type. Battery cycles are always whole numbers.
