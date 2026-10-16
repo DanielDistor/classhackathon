@@ -28,11 +28,13 @@ tasks:
   - id: H-01
     title: Fill in every FILL IN line in SPEC.md
     points: "15 - Tool Design: scope matches a prompt (5), clear user and use case (5), minimal inputs (5)"
-    status: in_progress
+    status: blocked
     owner: "Claude + DanielDistor"
     started_at: "2026-10-16 16:02"
     owns: ["SPEC.md"]
     notes: >
+      STATUS 2026-10-16: SPEC.md is filled (0 FILL IN lines). Only the human
+      readback is left. Agents: do not work on this task; move on to H-03.
       Do this together, out loud, right after kickoff. The prompts are in
       docs/prompts.md once the event starts. Keep inputs to what the user can
       actually measure.
@@ -40,7 +42,7 @@ tasks:
       grep -c "FILL IN[.,]" SPEC.md prints 0 (it counts only the blanks,
       not the instructions at the top), and every teammate can say the
       method sentence in SPEC section 4 without reading it.
-    result: ""
+    result: "grep -c FILL IN prints 0. Blocked only on the team readback of SPEC section 4; set done once everyone has read it."
 
   - id: H-02
     title: Two or three test datasets plus a codebook

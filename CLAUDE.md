@@ -11,6 +11,14 @@ Contents: [Start here](#start-here-every-session) | [Which skill](#which-skill-w
 [Which command](#which-command-when) | [Hard rules](#hard-rules) | [The event](#the-event) |
 [Repo map](#repo-map) | [Four-script contract](#the-four-script-contract) | [Deploy](#deploy-target)
 
+## Team Flight Control: "do the next stage"
+
+When a teammate says **"do the next stage"** (or "next", "keep going"): open
+[`docs/build-plan.md`](docs/build-plan.md), find the stage marked **← next**, and build the CONTRACT task
+id(s) in its heading, following [`docs/plan.md`](docs/plan.md). H-01 is `blocked` on a human readback, so skip it.
+When the stage passes, tick its boxes, move **← next** to the following stage, update the Status line,
+and show the diff before committing.
+
 ## Start here, every session
 
 1. **Read [`SPEC.md`](SPEC.md) and [`CONTRACT.yaml`](CONTRACT.yaml) before anything else.** SPEC says
