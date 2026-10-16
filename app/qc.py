@@ -212,3 +212,117 @@ def drone_series(flights: pd.DataFrame, drone_id: str, column: str) -> pd.DataFr
         "datetime": d["datetime"].to_numpy(),
         "value": d[column].to_numpy(dtype=float),
     })
+
+
+# --------------------------------------------------------------------------
+# Fleet status: go / watch / ground for every drone (SPEC.md section 4)
+# --------------------------------------------------------------------------
+
+#: (column, plain name, units, also gets an EWMA chart?)
+MONITORED = (
+    ("temp_rise_c", "motor temperature rise", "°C", True),
+    ("vibration_rms", "vibration", "m/s²", False),
+    ("sag_rate_v_per_min", "voltage sag", "V/min", False),
+)
+#: How many of a drone's latest readings count as "recent" for a watch.
+RECENT_FLIGHTS = 10
+
+
+def _run_start(signal: pd.Series, flight_no: pd.Series) -> int:
+    """Flight number where the current unbroken run of signals began."""
+    flags = signal.to_numpy()
+    k = len(flags) - 1
+    while k > 0 and flags[k - 1]:
+        k -= 1
+    return int(flight_no.iloc[k])
+
+
+def fleet_status(flights: pd.DataFrame, recent: int = RECENT_FLIGHTS,
+                 n_baseline: int = N_BASELINE, min_baseline: int = MIN_BASELINE) -> pd.DataFrame:
+    """Decide go / watch / ground for every drone in the flights table.
+
+    For each drone it runs an I chart on temperature rise, vibration and
+    voltage sag, plus an EWMA chart on temperature rise (limits from that
+    drone's own first `n_baseline` readings), then applies:
+
+      ground  the drone's latest flight was a crash, OR its latest reading is
+              outside an I-chart limit, OR its EWMA is outside its limit now
+      watch   no ground reason, but a chart signalled within the last
+              `recent` readings
+      go      every chart in control over the last `recent` readings
+      not enough data
+              fewer than `min_baseline` readings (or no variation), so no
+              limits can be drawn
+
+    Returns one row per drone: drone_id, status, reason (plain English, every
+    reason joined by "; "), last_flight_no, n_flights.
+    """
+    f = flights if "temp_rise_c" in flights.columns else add_derived(flights)
+    rows = []
+    for drone in sorted(f["drone_id"].unique()):
+        d = f[f["drone_id"] == drone].sort_values("datetime")
+        last_no = int(d["flight_id"].iloc[-1].rsplit("-", 1)[-1])
+        ground, watch = [], []
+        if "inflight_event" in d.columns and d["inflight_event"].iloc[-1] == "crash":
+            ground.append(f"crashed on flight {last_no}")
+        try:
+            for col, name, unit, with_ewma in MONITORED:
+                s = drone_series(f, drone, col)
+                im = imr_chart(s["value"], n_baseline, min_baseline)
+                if im["signal_i"].iloc[-1]:
+                    r = im.iloc[-1]
+                    ground.append(f"{name} {r.value:.2f} {unit} on flight {s.flight_no.iloc[-1]} is outside "
+                                  f"its I-chart limits ({r.lcl:.2f} to {r.ucl:.2f})")
+                else:
+                    hit = s.loc[im["signal_i"].to_numpy(), "flight_no"]
+                    hit = hit[hit.index >= len(s) - recent]
+                    if len(hit):
+                        watch.append(f"{name} was outside its I-chart limits on flight "
+                                     f"{', '.join(map(str, hit))}")
+                if with_ewma:
+                    ew = ewma_chart(s["value"], n_baseline=n_baseline, min_baseline=min_baseline)
+                    if ew["signal"].iloc[-1]:
+                        side = "above its upper" if ew["z"].iloc[-1] > ew["center"].iloc[-1] else "below its lower"
+                        start = _run_start(ew["signal"], s["flight_no"])
+                        first = int(s.loc[ew["signal"].to_numpy(), "flight_no"].iloc[0])
+                        note = f" (first crossed on flight {first})" if first != start else ""
+                        ground.append(f"{name} EWMA {side} limit since flight {start}{note}")
+                    else:
+                        hit = s.loc[ew["signal"].to_numpy(), "flight_no"]
+                        hit = hit[hit.index >= len(s) - recent]
+                        if len(hit):
+                            watch.append(f"{name} EWMA signalled on flight {', '.join(map(str, hit))}, now back inside")
+        except ValueError as err:
+            rows.append(dict(drone_id=drone, status="not enough data", reason=str(err),
+                             last_flight_no=last_no, n_flights=len(d)))
+            continue
+        status = "ground" if ground else "watch" if watch else "go"
+        reason = "; ".join(ground or watch) or f"all charts in control over the last {recent} flights"
+        rows.append(dict(drone_id=drone, status=status, reason=reason,
+                         last_flight_no=last_no, n_flights=len(d)))
+    return pd.DataFrame(rows)
+
+
+#: Columns fleet_status() and the charts need in an uploaded flights table.
+REQUIRED_FLIGHT_COLUMNS = ("flight_id", "drone_id", "datetime", "flight_min", "ambient_temp_c",
+                           "voltage_start_v", "voltage_end_v", "motor_temp_max_c", "vibration_rms")
+
+
+def check_flights(flights: pd.DataFrame) -> pd.DataFrame:
+    """Refuse a flights table the tool cannot chart, with a message a technician can act on.
+
+    Checks the required columns are present and numeric where they must be, and
+    that every flight_id ends in its sequence number (F-<drone>-<number>).
+    Returns the table unchanged when it passes.
+    """
+    missing = [c for c in REQUIRED_FLIGHT_COLUMNS if c not in flights.columns]
+    if missing:
+        raise ValueError(f"the flights file is missing column(s): {', '.join(missing)} "
+                         "(see data/README.md for the expected columns)")
+    for c in ("flight_min", "ambient_temp_c", "voltage_start_v", "voltage_end_v",
+              "motor_temp_max_c", "vibration_rms"):
+        if not pd.api.types.is_numeric_dtype(flights[c]):
+            raise ValueError(f"column {c!r} must hold numbers only (blank cells are fine)")
+    if not flights["flight_id"].astype(str).str.match(r"^.+-\d+$").all():
+        raise ValueError("every flight_id must end in its flight number, e.g. F-07-074")
+    return flights

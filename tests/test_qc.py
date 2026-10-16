@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.qc import add_derived, drone_series, ewma_chart, imr_chart, imr_limits
+from app.qc import (add_derived, check_flights, drone_series, ewma_chart, fleet_status, imr_chart,
+                    imr_limits)
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 
@@ -163,3 +164,81 @@ def test_healthy_d07_stays_in_control():
 def test_drone_series_unknown_drone_is_refused():
     with pytest.raises(ValueError, match="no flights"):
         drone_series(load("healthy"), "D-99", "temp_rise_c")
+
+
+# ---------------------------------------------------------------- fleet status (go / watch / ground)
+
+def synthetic_flights(n=40, spike_at=None, drone="D-01"):
+    """A steady drone; optionally one vibration spike at flight `spike_at`."""
+    rng = np.random.default_rng(7)
+    vib = 3 + rng.normal(0, 0.2, n)
+    if spike_at:
+        vib[spike_at - 1] = 9.0
+    return pd.DataFrame({
+        "flight_id": [f"F-01-{k:03d}" for k in range(1, n + 1)],
+        "drone_id": drone,
+        "datetime": pd.date_range("2026-09-01", periods=n, freq="h").strftime("%Y-%m-%dT%H:%M"),
+        "flight_min": 20.0,
+        "ambient_temp_c": 15 + rng.normal(0, 2, n),
+        "motor_temp_max_c": 0.0,  # filled below
+        "voltage_start_v": 25.15,
+        "voltage_end_v": 25.15 - 20 * (0.17 + rng.normal(0, 0.008, n)),
+        "vibration_rms": vib,
+        "inflight_event": "none",
+    }).assign(motor_temp_max_c=lambda d: d.ambient_temp_c + 18 + rng.normal(0, 1.2, n))
+
+
+def test_fleet_status_go_when_nothing_signals():
+    st = fleet_status(synthetic_flights()).set_index("drone_id")
+    assert st.loc["D-01", "status"] == "go"
+
+
+def test_fleet_status_ground_when_latest_flight_is_out():
+    st = fleet_status(synthetic_flights(spike_at=40)).set_index("drone_id")
+    assert st.loc["D-01", "status"] == "ground"
+    assert "vibration" in st.loc["D-01", "reason"] and "flight 40" in st.loc["D-01", "reason"]
+
+
+def test_fleet_status_watch_when_recent_signal_cleared():
+    st = fleet_status(synthetic_flights(spike_at=35)).set_index("drone_id")
+    assert st.loc["D-01", "status"] == "watch"
+    assert "flight 35" in st.loc["D-01", "reason"]
+
+
+def test_fleet_status_too_few_flights():
+    st = fleet_status(synthetic_flights(n=10)).set_index("drone_id")
+    assert st.loc["D-01", "status"] == "not enough data"
+
+
+def test_fleet_status_motor_drift_grounds_d07():
+    st = fleet_status(load("motor_drift")).set_index("drone_id")
+    assert st.loc["D-07", "status"] == "ground"
+    assert "crash" in st.loc["D-07", "reason"]
+    assert "first crossed on flight 74" in st.loc["D-07", "reason"]
+    assert len(st) == 10
+
+
+def test_fleet_status_grounds_no_healthy_drone():
+    # The healthy fleet raises a couple of "watch" false alarms (3-sigma charts on
+    # 10 drones; D-06's cool baseline, see data/README.md) but must ground nobody.
+    st = fleet_status(load("healthy"))
+    assert (st["status"] != "ground").all()
+    assert (st["status"] == "go").sum() >= 8
+
+
+def test_check_flights_accepts_bundled_data():
+    f = pd.read_csv(DATA / "healthy" / "flights.csv")
+    assert check_flights(f) is f
+
+
+def test_check_flights_names_missing_columns():
+    f = pd.read_csv(DATA / "healthy" / "flights.csv").drop(columns=["vibration_rms"])
+    with pytest.raises(ValueError, match="vibration_rms"):
+        check_flights(f)
+
+
+def test_check_flights_refuses_text_in_numbers():
+    f = pd.read_csv(DATA / "healthy" / "flights.csv").astype({"vibration_rms": str})
+    f.loc[0, "vibration_rms"] = "high"
+    with pytest.raises(ValueError, match="numbers"):
+        check_flights(f)

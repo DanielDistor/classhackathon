@@ -23,7 +23,7 @@ Grading: working tool 25 · valid QC statistics 25 · design for a real user 25 
 
 Data comes before charts, statistics before the app, and the first deploy happens before midnight.
 
-**Status:** Stage 0 ✅ (waiting on everyone reading SPEC section 4) · Stage 1 ✅ · Stage 2 ✅ · **next: Stage 3**
+**Status:** Stage 0 ✅ (waiting on everyone reading SPEC section 4) · Stage 1 ✅ · Stage 2 ✅ · Stage 3: app ✅, deploy waiting on the key · **next: Stage 4** (and the deploy as soon as the key arrives)
 
 ### How to run a stage yourself
 
@@ -97,12 +97,17 @@ Tell the group chat which stage is finished.
 - [x] `tests/`: the known answers in SPEC section 4, a constant-data case, and D-07 flagged before its crash
 - **Done:** 20 tests pass, and R's `qcc` package reproduces the same limits and signals (D-07 EWMA at flight 74, I chart at 83; D-03 at 80).
 
-### Stage 3 — Bare app and first deploy · 10:00 PM–12:00 AM · H-04, H-06 ← **next**
-- [ ] Minimal Shiny app: pick a dataset and a drone, see the charts and its go / watch / ground status
-- [ ] Deploy to Posit Connect while it's still ugly. Credentials go in GitHub repo secrets, **never in a file**
-- **Done when:** the public URL loads in a logged-out browser.
+### Stage 3 — Bare app and first deploy · 10:00 PM–12:00 AM · H-04 ✅, H-06 ⏳
+- [x] Minimal Shiny app: pick a dataset and a drone, see the charts and its go / watch / ground status. Run it: `cd app && ./testme.sh`, then open http://127.0.0.1:8000
+- [ ] Deploy to Posit Connect. **Blocked until we get the publisher key from the organizers.** Credentials never go in a committed file.
+  1. Put the two values in `app/.env` (gitignored, so check with `git status` that it doesn't show up):
+     `CONNECT_SERVER=...` and `CONNECT_API_KEY=...`
+  2. First deploy, from a laptop: `cd app && ./deployme.sh`, then open the URL it prints in a logged-out browser.
+  3. Auto-deploy on every push: add repo secrets `CONNECT_SERVER` and `CONNECT_API_KEY` (GitHub → Settings → Secrets and variables → Actions), then ask the agent: *"copy the Shiny-for-Python deploy workflow for H-06 with APP_DIR app"*.
+  4. After **any** change to `app/` or `data/`: run `app/manifestme.sh` and commit `app/manifest.json`.
+- **Done when:** the public URL loads in a logged-out browser and the Fleet tab grounds D-07 on the motor-drift dataset.
 
-### Stage 4 — Weibull reliability, tested · 12:00–2:00 AM · H-03
+### Stage 4 — Weibull reliability, tested · 12:00–2:00 AM · H-03 ← **next**
 - [ ] Weibull fit for each part type with right-censoring, reporting shape β, scale η, B10 life and a replacement interval; compare battery lots
 - **Done when:** the tests recover the simulated β and show lot B is shorter-lived.
 

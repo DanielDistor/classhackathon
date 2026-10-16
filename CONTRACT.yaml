@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 17:05"
+updated: "2026-10-16 19:00"
 
 tasks:
   - id: H-01
@@ -81,7 +81,7 @@ tasks:
   - id: H-04
     title: Working tool - one demo copied to app/ and wired to the H-03 function
     points: "25 - Tool Implementation: an effective, working tool (does it run?)"
-    status: in_progress
+    status: done
     owner: "Claude + DanielDistor"
     started_at: "2026-10-16 18:20"
     owns: ["app/"]
@@ -93,7 +93,7 @@ tasks:
       The testme script in app/ starts the tool with one command, and a call
       on one data/ file (endpoint, function call or app upload) returns the
       same numbers as the H-03 known-answer test.
-    result: ""
+    result: "app/testme.sh serves the Shiny app at 127.0.0.1:8000 (HTTP 200); Fleet tab on motor_drift grounds D-07 with EWMA first crossed on flight 74, same as tests/test_qc.py; 31 tests pass; checked in a browser."
 
   - id: H-05
     title: Demonstration of the tool on every test dataset
@@ -127,7 +127,7 @@ tasks:
     definition_of_done: >
       The workflow run is green, and the public URL answers HTTP 200 from a
       logged-out browser and returns the H-03 numbers for one test dataset.
-    result: ""
+    result: "Prepared - app/manifest.json (python-shiny, app:app, 3.12), .python-version, pinned requirements, deployme.sh. Waiting on the publisher key from the organizers; steps in docs/build-plan.md Stage 3."
 
   - id: H-07
     title: README and function documentation

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "locale": "en_US.UTF-8",
+  "metadata": {
+    "appmode": "python-shiny",
+    "entrypoint": "app:app"
+  },
+  "python": {
+    "version": "3.12.0",
+    "package_manager": {
+      "name": "pip",
+      "version": "26.2.1",
+      "package_file": "requirements.txt"
+    }
+  },
+  "environment": {
+    "python": {
+      "requires": "~=3.12.0"
+    }
+  },
+  "files": {
+    "requirements.txt": {
+      "checksum": "fc01331dbaf722982e32aa8877fba700"
+    },
+    ".python-version": {
+      "checksum": "61939823fbcc7e8de3b61ab105331baf"
+    },
+    "README.md": {
+      "checksum": "e16aa3fffdca0f5fda14de4609416c6a"
+    },
+    "app.py": {
+      "checksum": "170d6f3d1ee70050818124fb89c9db2c"
+    },
+    "charts.py": {
+      "checksum": "ab6048a51028ff805a191339bc768663"
+    },
+    "data/bad_battery_lot/components.csv": {
+      "checksum": "44904337e3515fe08e120c5e0306d679"
+    },
+    "data/bad_battery_lot/flights.csv": {
+      "checksum": "d9fc01022e7aeab04bd1a7d027f915cc"
+    },
+    "data/healthy/components.csv": {
+      "checksum": "a5c6f2c953f94e97bbe2d41e0c793fcf"
+    },
+    "data/healthy/flights.csv": {
+      "checksum": "b86e19be07de1a5565a6171049140aa8"
+    },
+    "data/motor_drift/components.csv": {
+      "checksum": "3e79bac4ccf5f8555a0b2d2cc1947b89"
+    },
+    "data/motor_drift/flights.csv": {
+      "checksum": "d4be089441b0bb67c8b7a7b2a960d66b"
+    },
+    "intro.py": {
+      "checksum": "f0f64b40dab227422505b3ef36bc1e00"
+    },
+    "qc.py": {
+      "checksum": "0a7665eaed79bebbf86049deaa22c512"
+    },
+    "styles.css": {
+      "checksum": "79522356c142f642abcf95dc274e24ca"
+    }
+  }
+}
