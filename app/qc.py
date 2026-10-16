@@ -228,6 +228,19 @@ MONITORED = (
 RECENT_FLIGHTS = 10
 
 
+def chart_margin(value: float, center: float, lcl: float, ucl: float) -> float:
+    """Room left before the nearest control limit, as a fraction from 1 to 0.
+
+    1.0 = the reading sits on the center line; 0.5 = halfway to the limit on
+    its side; 0.0 = on or beyond the limit (never negative). This is what the
+    dashboard's health bar shows.
+    """
+    if not (ucl > center > lcl):
+        raise ValueError(f"limits must satisfy lcl < center < ucl, got {lcl}, {center}, {ucl}")
+    room = (ucl - value) / (ucl - center) if value >= center else (value - lcl) / (center - lcl)
+    return float(min(1.0, max(0.0, room)))
+
+
 def _run_start(signal: pd.Series, flight_no: pd.Series) -> int:
     """Flight number where the current unbroken run of signals began."""
     flags = signal.to_numpy()
@@ -255,20 +268,26 @@ def fleet_status(flights: pd.DataFrame, recent: int = RECENT_FLIGHTS,
               limits can be drawn
 
     Returns one row per drone: drone_id, status, reason (plain English, every
-    reason joined by "; "), last_flight_no, n_flights.
+    reason joined by "; "), last_flight_no, n_flights, health and
+    health_driver. health = chart_margin() of the latest point on the drone's
+    most-stretched chart (1 = at its normal, 0 = at a limit or crashed);
+    health_driver names that chart.
     """
     f = flights if "temp_rise_c" in flights.columns else add_derived(flights)
     rows = []
     for drone in sorted(f["drone_id"].unique()):
         d = f[f["drone_id"] == drone].sort_values("datetime")
         last_no = int(d["flight_id"].iloc[-1].rsplit("-", 1)[-1])
-        ground, watch = [], []
-        if "inflight_event" in d.columns and d["inflight_event"].iloc[-1] == "crash":
+        ground, watch, margins = [], [], {}
+        crashed = "inflight_event" in d.columns and d["inflight_event"].iloc[-1] == "crash"
+        if crashed:
             ground.append(f"crashed on flight {last_no}")
         try:
             for col, name, unit, with_ewma in MONITORED:
                 s = drone_series(f, drone, col)
                 im = imr_chart(s["value"], n_baseline, min_baseline)
+                r = im.iloc[-1]
+                margins[name] = chart_margin(r.value, r.center, r.lcl, r.ucl)
                 if im["signal_i"].iloc[-1]:
                     r = im.iloc[-1]
                     ground.append(f"{name} {r.value:.2f} {unit} on flight {s.flight_no.iloc[-1]} is outside "
@@ -281,6 +300,8 @@ def fleet_status(flights: pd.DataFrame, recent: int = RECENT_FLIGHTS,
                                      f"{', '.join(map(str, hit))}")
                 if with_ewma:
                     ew = ewma_chart(s["value"], n_baseline=n_baseline, min_baseline=min_baseline)
+                    e = ew.iloc[-1]
+                    margins[f"{name} (EWMA)"] = chart_margin(e.z, e.center, e.lcl, e.ucl)
                     if ew["signal"].iloc[-1]:
                         side = "above its upper" if ew["z"].iloc[-1] > ew["center"].iloc[-1] else "below its lower"
                         start = _run_start(ew["signal"], s["flight_no"])
@@ -294,12 +315,16 @@ def fleet_status(flights: pd.DataFrame, recent: int = RECENT_FLIGHTS,
                             watch.append(f"{name} EWMA signalled on flight {', '.join(map(str, hit))}, now back inside")
         except ValueError as err:
             rows.append(dict(drone_id=drone, status="not enough data", reason=str(err),
-                             last_flight_no=last_no, n_flights=len(d)))
+                             last_flight_no=last_no, n_flights=len(d),
+                             health=float("nan"), health_driver=""))
             continue
         status = "ground" if ground else "watch" if watch else "go"
         reason = "; ".join(ground or watch) or f"all charts in control over the last {recent} flights"
+        driver = min(margins, key=margins.get)
+        health = 0.0 if crashed else margins[driver]
         rows.append(dict(drone_id=drone, status=status, reason=reason,
-                         last_flight_no=last_no, n_flights=len(d)))
+                         last_flight_no=last_no, n_flights=len(d),
+                         health=health, health_driver="crash" if crashed else driver))
     return pd.DataFrame(rows)
 
 

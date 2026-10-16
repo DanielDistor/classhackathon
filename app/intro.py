@@ -85,7 +85,7 @@ SCENARIOS = [
                 "was bad: those batteries wear out after about 240 charges instead of about 400.",
         "why": "Checks the tool finds a problem no single flight shows: you only see it by comparing how "
                "long whole batches last.",
-        "expect": "The flight charts look normal. The Reliability tab (coming in Stage 4) shows lot B "
+        "expect": "The flight charts look normal. The Part reliability tab (coming in Stage 4) shows lot B "
                   "lasting far less than lots A and C.",
         "lots": [("Lot A", "bought before Oct 2025", 400), ("Lot B", "Oct 2025 – Mar 2026", 240),
                  ("Lot C", "Apr 2026 onward", 400)],
@@ -109,6 +109,8 @@ TERMS = [
                          "Subtracting the air temperature means a hot day isn't mistaken for wear."),
     ("Voltage sag", "Battery voltage at takeoff minus at landing, per flight minute (V/min). "
                     "It rises as a battery degrades."),
+    ("Health bar", "How much room is left before the nearest control limit, on the drone's "
+                    "most-stretched chart. 100% = right at its normal; 0% = at a limit, or crashed."),
     ("Go / Watch / Ground", "Go: every chart in control. Watch: a signal in the last 10 flights. "
                             "Ground: the latest reading is out, the EWMA is out now, or the drone crashed."),
     ("Weibull life, B10, censored", "Coming in Stage 4. A Weibull model of how long parts last, "
@@ -117,11 +119,11 @@ TERMS = [
 ]
 
 TABS = [
-    ("Fleet", "Every drone's status, Go, Watch or Ground, with the reason in plain English. "
-              "Start here each morning."),
-    ("Drone", "Four control charts for the drone you pick: EWMA and I chart of motor temperature "
+    ("Fleet health", "A health bar for every drone, plus its status (Go, Watch or Ground) and the "
+                     "reason in plain English. Start here each morning; click a drone to open it."),
+    ("Drone detail", "Four control charts for the drone you pick: EWMA and I chart of motor temperature "
               "rise, plus vibration and battery voltage sag. Each comes with a table explaining every number."),
-    ("Reliability", "How long motors, propellers and batteries last, and when to replace them "
+    ("Part reliability", "How long motors, propellers and batteries last, and when to replace them "
                     "(coming in Stage 4)."),
 ]
 
@@ -316,7 +318,7 @@ def intro_page() -> ui.Tag:
                      "thing, so we can check the tool reacts correctly. It works like testing a smoke "
                      "alarm: once with no smoke, once with smoke, and once with a different kind of "
                      "problem."),
-                ui.p("A real startup would simply upload its own flights.csv in the sidebar."),
+                ui.p("A real startup would simply upload its own flights.csv at the top of the dashboard."),
                 class_="callout"),
             ui.div(*scenario_cards(), class_="grid-3"),
 

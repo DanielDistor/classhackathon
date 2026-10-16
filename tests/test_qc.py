@@ -15,8 +15,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.qc import (add_derived, check_flights, drone_series, ewma_chart, fleet_status, imr_chart,
-                    imr_limits)
+from app.qc import (add_derived, chart_margin, check_flights, drone_series, ewma_chart, fleet_status,
+                    imr_chart, imr_limits)
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 
@@ -242,3 +242,43 @@ def test_check_flights_refuses_text_in_numbers():
     f.loc[0, "vibration_rms"] = "high"
     with pytest.raises(ValueError, match="numbers"):
         check_flights(f)
+
+
+# ---------------------------------------------------------------- health (room left before a limit)
+
+def test_chart_margin_known_answers():
+    # center 10, limits 7 and 13: the room on each side is 3
+    assert chart_margin(10, 10, 7, 13) == pytest.approx(1.0)     # at the center
+    assert chart_margin(11.5, 10, 7, 13) == pytest.approx(0.5)   # halfway to the UCL
+    assert chart_margin(7.75, 10, 7, 13) == pytest.approx(0.25)  # 3/4 of the way to the LCL
+    assert chart_margin(13, 10, 7, 13) == pytest.approx(0.0)     # on the limit
+    assert chart_margin(20, 10, 7, 13) == 0.0                    # beyond it: never negative
+
+
+def test_chart_margin_refuses_zero_width_limits():
+    with pytest.raises(ValueError):
+        chart_margin(10, 10, 10, 10)
+
+
+def test_health_is_zero_when_latest_reading_is_out():
+    st = fleet_status(synthetic_flights(spike_at=40)).set_index("drone_id")
+    assert st.loc["D-01", "health"] == 0.0
+    assert st.loc["D-01", "health_driver"] == "vibration"
+
+
+def test_health_is_high_for_a_steady_drone():
+    st = fleet_status(synthetic_flights()).set_index("drone_id")
+    assert 0.3 < st.loc["D-01", "health"] <= 1.0
+
+
+def test_health_motor_drift_d07_is_zero_and_healthy_fleet_is_not():
+    drift = fleet_status(load("motor_drift")).set_index("drone_id")
+    assert drift.loc["D-07", "health"] == 0.0
+    healthy = fleet_status(load("healthy"))
+    assert healthy["health"].between(0, 1).all()
+    assert (healthy["health"] > 0).sum() >= 8
+
+
+def test_health_missing_when_not_enough_data():
+    st = fleet_status(synthetic_flights(n=10)).set_index("drone_id")
+    assert math.isnan(st.loc["D-01", "health"])
