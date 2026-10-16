@@ -535,3 +535,49 @@ def check_components(components: pd.DataFrame) -> pd.DataFrame:
     if not components["status"].isin([0, 1]).all():
         raise ValueError("column 'status' must be 1 (failed) or 0 (still working / removed early)")
     return components
+
+
+#: Batteries each drone swaps between; one battery charge = this many drone flights.
+BATTERIES_PER_DRONE = 2
+
+
+def replacement_plan(components: pd.DataFrame, flights: pd.DataFrame, by_type: pd.DataFrame) -> pd.DataFrame:
+    """How long until each part still in service reaches its replace-at age (its type's B10).
+
+    remaining  = B10 - age, in the part's own unit (flight hours or charge cycles)
+    flights_left:
+        motors, propellers: remaining hours / the drone's mean flight length in hours
+        batteries: remaining charges x BATTERIES_PER_DRONE (the drone alternates its
+        batteries, so each one is charged on every second flight)
+    days_left  = flights_left / the drone's flights per day in the logbook
+    Negative values mean the part is already past its replace-at age (overdue = True).
+    Returns one row per in-service part with drone_id, component_id, component_type,
+    position (from the id), lot, age, b10, unit, remaining, pct_used, flights_left,
+    days_left, overdue; most urgent first.
+    """
+    b10 = by_type.dropna(subset=["b10"]).set_index("component_type")["b10"]
+    live = components[components["end_date"].isna()].copy()
+    live = live[live["component_type"].isin(b10.index)]
+    f = flights.copy()
+    f["_t"] = pd.to_datetime(f["datetime"])
+    pace = f.groupby("drone_id").agg(mean_min=("flight_min", "mean"), n=("flight_id", "size"),
+                                     first=("_t", "min"), last=("_t", "max"))
+    # n flights have n - 1 gaps between the first and the last, so the rate is (n - 1) / span
+    span_days = ((pace["last"] - pace["first"]).dt.total_seconds() / 86400).clip(lower=1)
+    pace["per_day"] = (pace["n"] - 1).clip(lower=1) / span_days
+    live = live[live["drone_id"].isin(pace.index)]
+    live["b10"] = live["component_type"].map(b10)
+    live["age"] = live["life_value"]
+    live["unit"] = live["component_type"].map(LIFE_UNIT)
+    live["remaining"] = live["b10"] - live["age"]
+    live["pct_used"] = 100 * live["age"] / live["b10"]
+    hours_per_flight = live["drone_id"].map(pace["mean_min"]) / 60
+    live["flights_left"] = np.where(live["component_type"] == "battery",
+                                    live["remaining"] * BATTERIES_PER_DRONE,
+                                    live["remaining"] / hours_per_flight)
+    live["days_left"] = live["flights_left"] / live["drone_id"].map(pace["per_day"])
+    live["overdue"] = live["remaining"] <= 0
+    live["position"] = live["component_id"].str.split("-").str[2].astype(int)
+    cols = ["drone_id", "component_id", "component_type", "position", "lot", "age", "b10", "unit",
+            "remaining", "pct_used", "flights_left", "days_left", "overdue"]
+    return live[cols].sort_values("days_left").reset_index(drop=True)

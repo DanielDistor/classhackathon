@@ -32,8 +32,10 @@ python3 -m pip install -r requirements.txt   # Python 3.12
    - **Drone detail:** a status banner, a table of the numbers behind every chart (baseline mean, limits,
      latest value, room left, signals), and four control charts (an EWMA and an I chart of motor temperature
      rise, plus I charts of vibration and battery voltage sag).
-   - **Part reliability:** per part type, the Weibull fit, B10 "replace at" age, reliability curves with the
-     Kaplan-Meier check, the battery-batch comparison, and the parts already past their B10 age.
+   - **Parts replacement:** one card per part type with its replace-at age (B10) in flight hours or charges and
+     in flights; then a table of the 10 drones, each with its 4 motors, 4 propellers and 2 batteries shown as
+     "life used" bars with days left or *overdue*, and what to do next; then "Why these numbers": reliability
+     curves with the Kaplan-Meier check, and the battery-batch comparison.
 
 ## Files
 
@@ -77,6 +79,7 @@ control. **Health** = `chart_margin` of the latest point on the drone's most-str
 | `fit_by_type(components)` | components table | one Weibull fit per part type, with its unit (flight hours or charge cycles) |
 | `compare_lots(components, "battery")` | components table | one fit per supplier lot. Lots whose η intervals don't overlap differ by more than chance |
 | `parts_past_b10(components, by_type)` | components, fits | parts still flying that are older than their type's B10, most overdue first |
+| `replacement_plan(components, flights, by_type)` | components, flights, fits | per part in service: `remaining` = B10 − age, `pct_used`, `flights_left` (hours ÷ the drone's mean flight length; batteries: charges × 2, since each drone alternates two batteries), `days_left` (÷ the drone's flights per day), `overdue` |
 | `check_components(components)` | components table | the table if usable, otherwise a ValueError |
 
 Every function refuses bad input with a `ValueError` instead of returning a misleading number. Examples:

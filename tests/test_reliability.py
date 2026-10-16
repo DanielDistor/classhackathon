@@ -162,3 +162,53 @@ def test_check_components_accepts_bundled_and_refuses_bad_status():
         check_components(bad)
     with pytest.raises(ValueError, match="lot"):
         check_components(c.drop(columns=["lot"]))
+
+
+# ---------------------------------------------------------------- replacement plan (flights and days left)
+
+def tiny_fleet():
+    """One drone: 40 flights of 30 min over 10 days (4 a day), one motor and one battery in service."""
+    flights = pd.DataFrame({
+        "flight_id": [f"F-01-{k:03d}" for k in range(1, 41)], "drone_id": "D-01",
+        "datetime": pd.date_range("2026-09-01T08:00", periods=40, freq="6h").strftime("%Y-%m-%dT%H:%M"),
+        "flight_min": 30.0,
+    })
+    comps_ = pd.DataFrame({
+        "component_id": ["M-01-1-01", "B-01-1-01", "P-01-1-01", "M-01-2-01"],
+        "drone_id": "D-01", "component_type": ["motor", "battery", "propeller", "motor"],
+        "lot": "A", "end_date": [None, None, None, "2026-08-01"],
+        "life_value": [100.0, 50.0, 80.0, 30.0], "status": [0, 0, 0, 1],
+    })
+    by = pd.DataFrame({"component_type": ["motor", "battery", "propeller"],
+                       "unit": ["flight hours", "charge cycles", "flight hours"], "b10": [200.0, 150.0, 60.0]})
+    return flights, comps_, by
+
+
+def test_replacement_plan_known_answers():
+    from app.qc import replacement_plan
+    flights, comps_, by = tiny_fleet()
+    plan = replacement_plan(comps_, flights, by).set_index("component_id")
+    assert "M-01-2-01" not in plan.index                      # removed parts are not planned
+    m = plan.loc["M-01-1-01"]
+    # 200 h B10 - 100 h used = 100 h left; 30-min flights -> 200 flights; 4 flights a day -> 50 days
+    assert m["remaining"] == pytest.approx(100)
+    assert m["flights_left"] == pytest.approx(200)
+    assert m["days_left"] == pytest.approx(50)
+    assert m["pct_used"] == pytest.approx(50)
+    b = plan.loc["B-01-1-01"]
+    # 150 charges - 50 = 100 charges left; two batteries alternate, so 1 charge = 2 drone flights
+    assert b["flights_left"] == pytest.approx(200)
+    assert b["days_left"] == pytest.approx(50)
+    p = plan.loc["P-01-1-01"]
+    assert p["overdue"] and p["flights_left"] == pytest.approx(-40)   # 20 h past B10 = 40 flights
+
+
+def test_replacement_plan_on_problem_fleet():
+    from app.qc import replacement_plan
+    c = comps("problem_fleet")
+    f = pd.read_csv(DATA / "problem_fleet" / "flights.csv")
+    plan = replacement_plan(c, f, fit_by_type(c))
+    assert set(plan["component_id"]) == set(c.loc[c["end_date"].isna(), "component_id"])
+    assert "D-07" not in set(plan["drone_id"])                # lost in its crash: nothing to replace
+    assert plan["overdue"].equals(plan["remaining"] <= 0)
+    assert plan.groupby("drone_id").size().max() == 10        # 4 motors, 4 props, 2 batteries

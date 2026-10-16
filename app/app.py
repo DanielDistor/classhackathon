@@ -161,24 +161,25 @@ dashboard = ui.div(
                 ),
             ),
             ui.nav_panel(
-                "Part reliability",
+                "Parts replacement",
                 ui.div(
-                    ui.p("How long motors, propellers and batteries last, from this fleet's parts history "
-                         "(components.csv). Parts that haven't failed yet still count: they tell us the part "
-                         "lasted at least that long.", class_="section-note"),
+                    ui.p("When each kind of part should be replaced, worked out from this fleet's parts history "
+                         "(components.csv): the age by which 10% of that part fail (B10). Parts that haven't failed "
+                         "yet still count: they tell us the part lasted at least that long.", class_="section-note"),
                     ui.output_ui("rel_cards"),
-                    ui.div(ui.h4("How long parts last"),
-                           ui.output_plot("rel_curves", height="380px"),
-                           ui.p("Blue = the fitted Weibull model. Gray steps = the same thing measured straight "
-                                "from the data (Kaplan-Meier). When the two agree, the model fits. Red dashed "
-                                "line = B10, the age by which 10% of parts have failed.", class_="rule-note"),
+                    ui.div(ui.h4("Each drone's parts: when to replace them"),
+                           ui.output_ui("parts_by_drone"),
                            class_="panel"),
-                    ui.div(ui.h4("Battery batches compared"),
-                           ui.output_ui("lot_sentence"),
-                           ui.output_plot("lot_plot", height="260px"),
-                           class_="panel"),
-                    ui.div(ui.h4("Parts to replace at the next maintenance slot"),
-                           ui.output_ui("due_table"), class_="panel"),
+                    ui.div(
+                        ui.h4("Why these numbers"),
+                        ui.output_plot("rel_curves", height="380px"),
+                        ui.p("Blue = the fitted Weibull model. Gray steps = the same thing measured straight from the "
+                             "data (Kaplan-Meier). When the two agree, the model fits. Red dashed line = B10, the "
+                             "replace-at age.", class_="rule-note"),
+                        ui.h4("Battery batches compared", class_="mt-4"),
+                        ui.output_ui("lot_sentence"),
+                        ui.output_plot("lot_plot", height="260px"),
+                        class_="panel"),
                     class_="pt-3",
                 ),
             ),
@@ -346,7 +347,7 @@ def server(input, output, session):
                  f"</tr></thead><tbody>{''.join(rows)}</tbody></table>")
         return ui.HTML(f'<div class="scroll-x">{table}</div>')
 
-    # ---------- Part reliability tab ----------
+    # ---------- Parts replacement tab ----------
     @reactive.calc
     def components() -> pd.DataFrame:
         return qc.check_components(pd.read_csv(DATA / input.dataset() / "components.csv"))
@@ -375,6 +376,10 @@ def server(input, output, session):
                 ui.div(ui.span("Replace at", class_="rc-label"),
                        ui.span(f"{r.b10:.0f}", class_="rc-value"), ui.span(r.unit, class_="rc-unit"),
                        class_="rc-main"),
+                ui.p(ui.span(f"≈ {flights_equiv(r.component_type, r.b10):,.0f} flights", class_="rc-flights"),
+                     " " + ("(each battery flies every other flight)" if r.component_type == "battery"
+                            else f"(at this fleet's average {mean_flight_min():.0f}-minute flight)"),
+                     class_="rc-sub"),
                 ui.p(f"10% of {name.lower()} fail by {r.b10:.0f} {r.unit} (B10). Typical life η = {r.eta:.0f} "
                      f"(95% interval {r.eta_lo:.0f}–{r.eta_hi:.0f}); mean life {r.mean_life:.0f}."),
                 ui.p(f"Shape β = {r.beta:.2f} ({r.beta_lo:.2f}–{r.beta_hi:.2f}). {shape}", class_="muted-p"),
@@ -427,34 +432,76 @@ def server(input, output, session):
             return None
         return charts.lots_figure(lt, "charge cycles")
 
-    @render.ui
-    def due_table():
-        due = qc.parts_past_b10(components(), by_type())
-        if due.empty:
-            return ui.p("No part still in service is past its B10 life.", class_="rule-note")
-        def table(df):
-            rows = "".join(
-                f"<tr><td><strong>{escape(r.component_id)}</strong></td><td>{escape(r.drone_id)}</td>"
-                f"<td>{escape(r.component_type)}</td><td>{escape(str(r.lot))}</td>"
-                f'<td class="num">{r.life_value:g} {qc.LIFE_UNIT.get(r.component_type, "")}</td>'
-                f'<td class="num">{r.b10:.0f}</td><td class="num">{r.pct_of_b10:.0f}%</td></tr>'
-                for r in df.itertuples())
-            return ('<div class="scroll-x"><table class="numbers"><thead><tr><th>Part</th><th>Drone</th>'
-                    "<th>Type</th><th>Batch</th><th>Age now</th><th>B10 life</th><th>Age as % of B10</th>"
-                    f"</tr></thead><tbody>{rows}</tbody></table></div>")
+    @reactive.calc
+    def mean_flight_min() -> float:
+        return float(flights()["flight_min"].mean())
 
-        counts = due["component_type"].value_counts()
-        summary = ", ".join(f"{n} {t}{'s' if n != 1 else ''}" for t, n in counts.items())
-        top, rest = due.head(10), due.iloc[10:]
-        more = (f"<details class='more'><summary>Show the other {len(rest)} parts</summary>{table(rest)}</details>"
-                if len(rest) else "")
-        return ui.div(
-            ui.HTML(f'<p class="due-summary"><b>{len(due)} parts still flying are past their B10 age</b> '
-                    f"({summary}). Most overdue first:</p>"),
-            ui.HTML(table(top) + more),
-            ui.p("B10 = the age by which 10% of that kind of part fail. This fleet runs parts until they "
-                 "break, so many are well past it: replacing at B10 would prevent most in-flight failures.",
-                 class_="rule-note"))
+    def flights_equiv(component_type: str, b10: float) -> float:
+        """Replace-at age expressed in drone flights (display only)."""
+        if component_type == "battery":
+            return b10 * qc.BATTERIES_PER_DRONE
+        return b10 / (mean_flight_min() / 60)
+
+    @reactive.calc
+    def plan() -> pd.DataFrame:
+        return qc.replacement_plan(components(), pd.read_csv(DATA / input.dataset() / "flights.csv"), by_type())
+
+    @render.ui
+    def parts_by_drone():
+        p = plan()
+        st = status().set_index("drone_id")
+        soon_days = 14
+
+        def cell(part) -> str:
+            if part is None:
+                return '<td class="pcell empty">–</td>'
+            cls = "over" if part.overdue else "soon" if part.days_left <= soon_days else "ok"
+            when = ("overdue" if part.overdue else
+                    f"in {part.days_left:.0f} d" if part.days_left >= 1 else "today")
+            title = (f"{part.component_id}: {part.age:g} of {part.b10:.0f} {part.unit} used "
+                     f"({part.pct_used:.0f}%), {abs(part.flights_left):.0f} flights "
+                     + ("past its replace-at age" if part.overdue else "left"))
+            return (f'<td class="pcell {cls}" title="{escape(title)}"><div class="pbar"><div style="width:'
+                    f'{min(part.pct_used, 100):.0f}%"></div></div><span>{when}</span></td>')
+
+        heads = ("".join(f"<th>M{i}</th>" for i in range(1, 5)) + "".join(f"<th>P{i}</th>" for i in range(1, 5))
+                 + "".join(f"<th>B{i}</th>" for i in range(1, 3)))
+        rows = []
+        for drone in sorted(st.index):
+            mine = p[p["drone_id"] == drone]
+            if mine.empty:
+                last = int(st.loc[drone, "last_flight_no"])
+                rows.append(f'<tr><td class="pd-id">{escape(drone)}</td><td colspan="10" class="pd-lost">'
+                            f'No parts in service: lost in a crash on flight {last}.</td>'
+                            '<td class="pd-next">Replace the drone</td></tr>')
+                continue
+            by_key = {(r.component_type, r.position): r for r in mine.itertuples()}
+            cells = ("".join(cell(by_key.get(("motor", i))) for i in range(1, 5))
+                     + "".join(cell(by_key.get(("propeller", i))) for i in range(1, 5))
+                     + "".join(cell(by_key.get(("battery", i))) for i in range(1, 3)))
+            over = mine[mine["overdue"]]
+            short = {"motor": "M", "propeller": "P", "battery": "B"}
+            if len(over):
+                names = ", ".join(f"{short[r.component_type]}{r.position}" for r in over.itertuples())
+                nxt = f'<b class="over-t">Replace now:</b> {names}'
+            else:
+                r = mine.iloc[0]
+                nxt = f"Next: {short[r.component_type]}{r.position} in {r.days_left:.0f} days"
+            rows.append(f'<tr><td class="pd-id">{escape(drone)}</td>{cells}<td class="pd-next">{nxt}</td></tr>')
+        table = ('<div class="scroll-x"><table class="parts-drone"><thead><tr><th>Drone</th>'
+                 f'<th colspan="4" class="grp">Motors</th><th colspan="4" class="grp">Propellers</th>'
+                 f'<th colspan="2" class="grp">Batteries</th><th>What to do</th></tr>'
+                 f'<tr class="sub"><th></th>{heads}<th></th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>')
+        n_over, n_soon = int(p["overdue"].sum()), int(((~p["overdue"]) & (p["days_left"] <= soon_days)).sum())
+        summary = (f'<p class="due-summary"><b>{n_over} of {len(p)} parts in service are past their replace-at age</b>'
+                   f" and {n_soon} more reach it within {soon_days} days.</p>")
+        legend = ('<p class="rule-note">Each bar shows how much of the part\'s replace-at age is used up. '
+                  '<span class="key over">red = overdue</span> · '
+                  f'<span class="key soon">amber = due within {soon_days} days</span> · '
+                  '<span class="key ok">green = fine</span>. Days come from each drone\'s own pace '
+                  "(flights per day and average flight length in the logbook). Hover a part for its exact numbers. "
+                  "M = motor, P = propeller, B = battery, numbered by position.</p>")
+        return ui.HTML(summary + table + legend)
 
     @render.plot
     def drone_charts():

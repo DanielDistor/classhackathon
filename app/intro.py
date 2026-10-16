@@ -98,7 +98,7 @@ SCENARIOS = [
                 "flight 80. (c) Batteries (part 3) bought from supplier batch lot B are faulty and die after "
                 "about 240 charges instead of about 400.",
         "expect": "D-07 is marked Do not fly, and the tool first warned at flight 74, 21 flights before the crash. "
-                  "D-03's vibration jump on flight 80 is flagged. The Part reliability view shows lot B "
+                  "D-03's vibration jump on flight 80 is flagged. The Parts replacement view shows lot B "
                   "batteries dying early.",
         "timeline": [(60, "D-07's motor starts wearing out", "wear"),
                      (74, "the tool warns about D-07", "tool"),
@@ -151,8 +151,9 @@ TABS = [
                      "each with a health bar and the reason. Start here each morning; click a drone to open it."),
     ("Drone detail", "Four control charts for one drone (motor temperature, vibration, battery voltage) "
                      "and a table explaining every number."),
-    ("Part reliability", "How long motors, propellers and batteries last, when to replace them, and whether "
-                         "a supplier batch is bad."),
+    ("Parts replacement", "When to replace each kind of part (in flight hours, charges and flights), then all "
+                          "10 drones' motors, propellers and batteries with how many days each has left or whether "
+                          "it is overdue, plus the battery-batch check."),
 ]
 
 STEPS = [

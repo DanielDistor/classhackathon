@@ -339,3 +339,25 @@ details.more summary { cursor: pointer; color: var(--accent-ink); font-weight: 6
 .dc-open { font-size: 0.8rem; font-weight: 650; color: var(--accent-ink); }
 .fleet-note { flex-basis: 100%; margin: 4px 0 0; font-size: 0.88rem; color: var(--ink-2); line-height: 1.5;
               border-top: 1px solid var(--line); padding-top: 10px; }
+
+/* ---------- parts replacement ---------- */
+.rc-sub { margin: -2px 0 8px !important; color: var(--ink-2) !important; font-size: 0.88rem !important; }
+.rc-flights { font-weight: 700; color: var(--navy); }
+table.parts-drone { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+table.parts-drone th { font-size: 0.72rem; color: var(--ink-3); font-weight: 650; text-transform: uppercase;
+                       letter-spacing: 0.04em; padding: 6px 4px; text-align: center; }
+table.parts-drone th.grp { border-bottom: 1px solid var(--line); }
+table.parts-drone tr.sub th { padding-top: 2px; }
+table.parts-drone td { padding: 8px 4px; border-top: 1px solid var(--line); vertical-align: middle; }
+td.pd-id { font-weight: 800; font-size: 0.95rem; padding-right: 10px !important; white-space: nowrap; }
+td.pd-next { font-size: 0.82rem; padding-left: 12px !important; min-width: 170px; }
+td.pd-lost { color: var(--ground); font-weight: 600; text-align: center; }
+.over-t { color: var(--ground); }
+td.pcell { text-align: center; min-width: 56px; }
+td.pcell .pbar { height: 8px; background: #e9ecf0; border-radius: 999px; overflow: hidden; margin: 0 2px 4px; }
+td.pcell .pbar div { height: 100%; border-radius: 999px; }
+td.pcell span { font-size: 0.72rem; font-weight: 650; white-space: nowrap; }
+td.pcell.over .pbar div { background: var(--ground); } td.pcell.over span { color: var(--ground); }
+td.pcell.soon .pbar div { background: #d99a00; } td.pcell.soon span { color: var(--watch); }
+td.pcell.ok .pbar div { background: var(--go); } td.pcell.ok span { color: var(--go); }
+.key { font-weight: 650; } .key.over { color: var(--ground); } .key.soon { color: var(--watch); } .key.ok { color: var(--go); }
