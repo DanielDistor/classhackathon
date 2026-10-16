@@ -162,3 +162,27 @@ tasks:
       testme script and the H-03 tests both pass with no extra steps; git
       grep -i "api_key" finds no real key; the Devpost entry links the repo.
     result: ""
+
+  - id: H-09
+    title: Shorter, dashboard-first welcome page
+    points: "protects Tool Design: judges see this page first - clear user and use case (5), clear demonstration (10)"
+    status: in_progress
+    owner: "Duc + OpenCode"
+    started_at: "2026-10-16 18:55"
+    owns: ["app/intro.py", "app/styles.css", "app/app.py"]
+    notes: >
+      Agreed with Duc on 2026-10-16: same content, re-prioritized. A "What you
+      get" strip and the dashboard button move above the fold; the two test
+      datasets move up; the parts table, three-moments strip, example rows and
+      key terms fold into native <details>. Both dataset cards stay expanded.
+      Statistics untouched. app/manifest.json belongs to H-06 - regenerate it
+      with app/manifestme.sh before the next deploy.
+    definition_of_done: >
+      .venv\Scripts\python.exe -m pytest tests -q passes; the app answers HTTP
+      200 and the served page still contains "How it works", "test datasets",
+      "Key terms" and both Continue buttons; the visible-word count of the
+      served page with folds removed (helper: Temp\opencode\wcpage.py) prints
+      at most 950, down from 1624 before the change; Duc confirms the title,
+      the one-line purpose and the Open-the-dashboard button show without
+      scrolling at 1280x800.
+    result: ""
