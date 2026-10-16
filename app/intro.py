@@ -153,8 +153,6 @@ TERMS = [
 TABS = [
     ("Fleet health", "A health bar for every drone, plus its status (Go, Watch or Ground) and the "
                      "reason in plain English. Start here each morning; click a drone to open it."),
-    ("Log a flight", "Enter one flight's readings (before, during, after) and see straight away whether that "
-                     "drone should fly again. Download the updated logbook to keep it."),
     ("Drone detail", "Four control charts for the drone you pick: EWMA and I chart of motor temperature "
               "rise, plus vibration and battery voltage sag. Each comes with a table explaining every number."),
     ("Part reliability", "How long motors, propellers and batteries last, and when to replace them "
@@ -367,7 +365,7 @@ def intro_page() -> ui.Tag:
 
             ui.h2("What's in the dashboard"),
             ui.div(*[ui.div(ui.h3(name), ui.p(desc), class_="info-card tab-card")
-                     for name, desc in TABS], class_="grid-2"),
+                     for name, desc in TABS], class_="grid-3"),
 
             ui.div(
                 ui.input_action_button("enter", "Continue to the dashboard  →", class_="btn-continue"),

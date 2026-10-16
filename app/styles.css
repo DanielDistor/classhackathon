@@ -277,18 +277,3 @@ details.more summary { cursor: pointer; color: var(--accent-ink); font-weight: 6
 .drone-pick .shiny-input-container { margin-bottom: 0; }
 .drone-pick .control-label { font-size: 0.78rem; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
 .drone-pick .ctl-sub { margin: 0 0 8px; }
-
-/* ---------- log a flight ---------- */
-.log-top { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 4px; }
-.log-top .shiny-input-container { width: 260px !important; }
-.log-card .shiny-input-container { width: 100% !important; margin-bottom: 10px; }
-.log-card .control-label { font-size: 0.86rem; font-weight: 600; color: var(--ink); }
-.log-card .moment-head { margin-bottom: 10px; }
-.log-actions { text-align: center; margin: 22px 0 16px; }
-.btn-log { padding: 12px 28px; }
-.log-footer { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 16px; }
-.link-btn { all: unset; cursor: pointer; color: var(--accent-ink); font-weight: 650; }
-.link-btn:hover { text-decoration: underline; }
-.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 14px; }
-@media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
-.grid-2 > * { min-width: 0; }

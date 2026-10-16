@@ -18,7 +18,7 @@ python3 -m pip install -r requirements.txt   # Python 3.12
    picture), what's recorded before, during and after each flight, example rows from both data files, the
    three test datasets, key terms, and the views. **Continue** opens the dashboard; the header link
    goes back.
-2. **Dashboard, step 1: demo, pick a test fleet.** A real startup would see its own fleet here. There are three invented test fleets with the same
+2. **Dashboard, step 1: choose a fleet's records.** There are three invented test fleets with the same
    10 drones, each with one planted problem or none:
 
    | Card | Folder | What's planted |
@@ -29,11 +29,6 @@ python3 -m pip install -r requirements.txt   # Python 3.12
 
 3. **Dashboard, step 2: choose a view of that fleet.**
    - **Fleet health:** one row per drone with a **health bar**, its status and the reason. Click a row to open it.
-   - **Log a flight:** a form in three parts (before take-off, during the flight, right after landing),
-     pre-filled with the drone's typical readings. Impossible values are refused with a message naming the
-     field. A logged flight joins the fleet on screen, the drone's new status and health bar appear at once,
-     and **Download this fleet's logbook** saves `flights.csv` with the new rows (the app keeps nothing
-     after it closes).
    - **Drone detail:** a status banner, a table of the numbers behind every chart (baseline mean, limits,
      latest value, room left, signals), and four control charts (an EWMA and an I chart of motor temperature
      rise, plus I charts of vibration and battery voltage sag).
@@ -66,8 +61,6 @@ python3 -m pip install -r requirements.txt   # Python 3.12
 | `chart_margin(value, center, lcl, ucl)` | one point and its limits | room left before the nearest limit, from 1 (at center) to 0 (at or past a limit) |
 | `fleet_status(flights, recent=10)` | flights table | per drone: `status`, `reason`, `health`, `health_driver`, `last_flight_no`, `n_flights` |
 | `check_flights(flights)` | flights table | the table if usable, otherwise a ValueError naming the problem |
-| `make_flight_record(flights, entry)` | the table, one typed entry | a new flights.csv row with the next flight_id, or a ValueError naming the impossible field (ranges in `ENTRY_RANGES`; landing voltage must be below take-off) |
-| `append_flight(flights, record)` | table, row | a new table with the row added (input unchanged) |
 
 **Status rule.** *Ground*: the latest flight was a crash, or the latest reading is outside an I-chart limit,
 or the EWMA is outside its limit now. *Watch*: a signal within the last 10 readings. *Go*: everything in
