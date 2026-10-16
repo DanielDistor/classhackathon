@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 19:00"
+updated: "2026-10-16 21:10"
 
 tasks:
   - id: H-01
@@ -65,7 +65,7 @@ tasks:
   - id: H-03
     title: Core QC statistic as one plain, tested function
     points: "25 - Tool Implementation: valid analyses relevant to quality control in R or Python"
-    status: in_progress
+    status: done
     owner: "Claude + DanielDistor"
     started_at: "2026-10-16 17:40"
     owns: ["app/qc.py", "app/requirements.txt", "tests/"]
@@ -76,7 +76,7 @@ tasks:
       pytest tests (Python) or Rscript -e "testthat::test_dir('tests')" (R)
       passes, including one test that reproduces the SPEC section 4
       known-answer check and one degenerate case (constant data or n = 1).
-    result: "Stage 2 part done - app/qc.py add_derived, imr_limits, imr_chart, ewma_chart, drone_series; pytest 20 passed (SPEC known answers, constant/n=1/NaN/short-baseline refused, D-07 EWMA flight 74, D-03 I flight 80); R qcc cross-check matches. Still open - Weibull fit (Stage 4)."
+    result: "app/qc.py control charts + fleet status/health + Weibull (weibull_fit, fit_by_type, compare_lots, km_curve, parts_past_b10); pytest 56 passed (SPEC known answers: I-MR 15.589, EWMA 10.2/10.56, B10 32.459; degenerate cases refused; D-07 EWMA flight 74; lot B eta 244 vs planted 240); control charts match R qcc and Weibull fits match R survreg to 4 decimals."
 
   - id: H-04
     title: Working tool - one demo copied to app/ and wired to the H-03 function

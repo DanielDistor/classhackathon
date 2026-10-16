@@ -45,6 +45,38 @@ PARTS = [
      "ambient_temp_c"),
 ]
 
+# Every row of flights.csv covers one whole flight: before, during and after.
+MOMENTS = [
+    ("Before take-off", "Technician, at the launch pad", [
+        ("Checklist passed? What failed?", "preflight_pass, preflight_fail_item"),
+        ("Which battery, how many charges", "battery_id, battery_cycles"),
+        ("Battery voltage at take-off", "voltage_start_v"),
+        ("Package weight, air temperature", "payload_kg, ambient_temp_c"),
+    ]),
+    ("During the flight", "Recorded automatically by the drone's flight controller", [
+        ("How long it flew", "flight_min"),
+        ("How much it shook", "vibration_rms"),
+        ("Any alert: warning, auto-return, crash", "inflight_event"),
+    ]),
+    ("Right after landing", "Technician, within a minute of landing", [
+        ("Hottest motor temperature (infrared thermometer)", "motor_temp_max_c"),
+        ("Battery voltage at landing", "voltage_end_v"),
+    ]),
+]
+
+
+def moments_strip() -> ui.Tag:
+    cards = []
+    for i, (when, who, items) in enumerate(MOMENTS, 1):
+        rows = "".join(f"<li>{escape(what)}<code>{escape(cols)}</code></li>" for what, cols in items)
+        cards.append(ui.div(
+            ui.div(ui.span(str(i), class_="step-num"), ui.h3(when), class_="moment-head"),
+            ui.p(who, class_="moment-who"),
+            ui.HTML(f'<ul class="moment-list">{rows}</ul>'),
+            class_="info-card moment"))
+    return ui.div(*cards, class_="grid-3 moments")
+
+
 FLIGHT_COLS = [  # (column, friendly name)
     ("flight_id", "Flight"), ("drone_id", "Drone"), ("datetime", "Take-off time"),
     ("flight_min", "Minutes flown"), ("ambient_temp_c", "Air temp (°C)"),
@@ -59,7 +91,7 @@ PART_COLS = [
 
 SCENARIOS = [
     {
-        "num": "1", "file": "healthy", "name": "A normal month",
+        "num": "1", "file": "healthy", "name": "Normal fleet",
         "what": "Nothing unusual happens. Parts wear at their normal rate.",
         "why": "Checks the tool doesn't raise false alarms when nothing is wrong.",
         "expect": "Almost every drone is Go. Two drones (D-06, D-07) show Watch from ordinary random "
@@ -67,7 +99,7 @@ SCENARIOS = [
         "timeline": [],
     },
     {
-        "num": "2", "file": "motor_drift", "name": "A month where a motor wears out",
+        "num": "2", "file": "motor_drift", "name": "Worn motor",
         "what": "Drone D-07: one motor (part 2, motor number 3) slowly wears out and runs a little hotter "
                 "every flight, until it fails and the drone crashes on flight 95. Drone D-03: a propeller "
                 "(part 1) hits something on flight 80.",
@@ -80,7 +112,7 @@ SCENARIOS = [
                      (95, "D-07 crashes", "bad")],
     },
     {
-        "num": "3", "file": "bad_battery_lot", "name": "A month with a bad batch of batteries",
+        "num": "3", "file": "bad_battery_lot", "name": "Bad battery batch",
         "what": "Batteries (part 3) are bought in batches. One batch, lot B (bought Oct 2025 – Mar 2026), "
                 "was bad: those batteries wear out after about 240 charges instead of about 400.",
         "why": "Checks the tool finds a problem no single flight shows: you only see it by comparing how "
@@ -250,7 +282,7 @@ def scenario_cards() -> list[ui.Tag]:
     for s in SCENARIOS:
         visual = _lots(s["lots"]) if "lots" in s else _timeline(s["timeline"])
         cards.append(ui.div(
-            ui.div(ui.span(f"Version {s['num']}", class_="tag"), ui.code(f"data/{s['file']}/"),
+            ui.div(ui.span(f"Dataset {s['num']}", class_="tag"), ui.code(f"data/{s['file']}/"),
                    class_="card-head"),
             ui.h3(s["name"]),
             ui.HTML(visual),
@@ -294,6 +326,11 @@ def intro_page() -> ui.Tag:
             ui.h3("The parts we keep track of", class_="sub-h"),
             ui.div(ui.HTML(drone_diagram()), ui.HTML(parts_table()), class_="diagram-card"),
 
+            ui.h3("One flight, three moments", class_="sub-h"),
+            ui.p("Every line of the flight logbook is one whole flight, with readings from before, during "
+                 "and after it. All three datasets have all three.", class_="section-note"),
+            moments_strip(),
+
             ui.h3("The two files", class_="sub-h"),
             ui.div(
                 ui.div(ui.h3("flights.csv: the flight logbook"),
@@ -311,14 +348,14 @@ def intro_page() -> ui.Tag:
             ),
 
             # ---- the three datasets ----
-            ui.h2("The three test datasets"),
+            ui.h2("The three test datasets (three made-up fleets)"),
             ui.div(
                 ui.p(ui.strong("They are three versions of the same month."),
                      " Same 10 drones, same dates, same 1,000 flights. In each version we changed one "
                      "thing, so we can check the tool reacts correctly. It works like testing a smoke "
                      "alarm: once with no smoke, once with smoke, and once with a different kind of "
                      "problem."),
-                ui.p("A real startup would simply upload its own flights.csv at the top of the dashboard."),
+                ui.p("In the dashboard you pick one of the three fleets first, then a view of it (fleet health, one drone, or part reliability)."),
                 class_="callout"),
             ui.div(*scenario_cards(), class_="grid-3"),
 

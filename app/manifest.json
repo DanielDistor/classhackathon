@@ -20,19 +20,19 @@
   },
   "files": {
     "requirements.txt": {
-      "checksum": "fc01331dbaf722982e32aa8877fba700"
+      "checksum": "f449ff772fe05226f9b1309117e081dc"
     },
     ".python-version": {
       "checksum": "61939823fbcc7e8de3b61ab105331baf"
     },
     "README.md": {
-      "checksum": "e16aa3fffdca0f5fda14de4609416c6a"
+      "checksum": "94a87868c099628e4083d1bcf4e12a26"
     },
     "app.py": {
-      "checksum": "02e3c3f9be357f41e479a3d814b364f3"
+      "checksum": "52e8b73474d2cc988ab5ae1d1da0e1cd"
     },
     "charts.py": {
-      "checksum": "ab6048a51028ff805a191339bc768663"
+      "checksum": "ff1e72c076482299a04d24428bd89e30"
     },
     "data/bad_battery_lot/components.csv": {
       "checksum": "44904337e3515fe08e120c5e0306d679"
@@ -53,13 +53,13 @@
       "checksum": "d4be089441b0bb67c8b7a7b2a960d66b"
     },
     "intro.py": {
-      "checksum": "bce255a93a2ec6b033d53156cb0bcb36"
+      "checksum": "7a565cc0aa0f5ae21c80fc4cde3eed36"
     },
     "qc.py": {
-      "checksum": "dcb2a09edac0bf89864db18073cc34df"
+      "checksum": "b8bb46fe7fcf31b84e45e131d329b24c"
     },
     "styles.css": {
-      "checksum": "72a41871946fc92293bd1c16f3a49fc4"
+      "checksum": "c8bcfd7082564a8f3c7e9cd24fb6744a"
     }
   }
 }

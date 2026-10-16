@@ -14,6 +14,7 @@ import math
 from html import escape
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from shiny import App, reactive, render, ui
 from shiny.types import SafeException
@@ -24,10 +25,10 @@ from intro import intro_page
 
 HERE = Path(__file__).resolve().parent
 DATA = HERE / "data"  # a copy of the repo's data/ folder; manifestme.sh refreshes it
-DATASETS = {
-    "healthy": "Version 1 · A normal month",
-    "motor_drift": "Version 2 · A motor wears out",
-    "bad_battery_lot": "Version 3 · A bad battery batch",
+DATASETS = {  # folder in data/ -> (name, what's in it)
+    "healthy": ("Normal fleet", "No planted problems: every drone wears normally."),
+    "motor_drift": ("Worn motor", "D-07's motor wears out and it crashes on flight 95. D-03 has a prop strike on flight 80."),
+    "bad_battery_lot": ("Bad battery batch", "Batteries from supplier lot B wear out about 40% sooner."),
 }
 STATUS_ORDER = {"ground": 0, "watch": 1, "not enough data": 2, "go": 3}
 STATUS_CLASS = {"ground": "ground", "watch": "watch", "go": "go", "not enough data": "na",
@@ -69,10 +70,14 @@ def pct_text(health: float) -> str:
 
 
 controls = ui.div(
-    ui.div(ui.input_select("dataset", "Dataset", DATASETS), class_="ctl"),
-    ui.div(ui.input_file("upload", "Or upload your own flights.csv", accept=[".csv"],
-                         button_label="Choose file"), class_="ctl"),
-    ui.div(ui.input_select("drone", "Drone", []), class_="ctl ctl-narrow"),
+    ui.div(ui.span("1", class_="step-num"), ui.span("Choose a fleet's records", class_="ctl-title"),
+           ui.span("Three invented test fleets: same 10 drones, each with one planted problem (or none).",
+                   class_="ctl-sub"), class_="ctl-head"),
+    ui.input_radio_buttons(
+        "dataset", None,
+        {k: ui.TagList(ui.span(name, class_="ds-name"), ui.span(desc, class_="ds-desc"))
+         for k, (name, desc) in DATASETS.items()},
+        selected="healthy", inline=True),
     class_="controls",
 )
 
@@ -86,6 +91,8 @@ dashboard = ui.div(
     ),
     ui.div(
         controls,
+        ui.div(ui.span("2", class_="step-num"), ui.span("Choose a view of that fleet", class_="ctl-title"),
+               class_="ctl-head views-head"),
         ui.navset_pill(
             ui.nav_panel(
                 "Fleet health",
@@ -94,6 +101,9 @@ dashboard = ui.div(
             ui.nav_panel(
                 "Drone detail",
                 ui.div(
+                    ui.div(ui.input_select("drone", "Drone", [], width="220px"),
+                           ui.p("Pick a drone here, or click one on the Fleet health view.", class_="ctl-sub"),
+                           class_="drone-pick"),
                     ui.output_ui("drone_banner"),
                     ui.div(ui.h4("The numbers behind the charts"), ui.output_ui("drone_numbers"),
                            class_="panel"),
@@ -116,10 +126,25 @@ dashboard = ui.div(
             ),
             ui.nav_panel(
                 "Part reliability",
-                ui.div(ui.h3("Coming in Stage 4"),
-                       ui.p("Weibull life curves for motors, propellers and batteries, B10 life, "
-                            "replacement intervals, and the battery lot comparison."),
-                       class_="coming"),
+                ui.div(
+                    ui.p("How long motors, propellers and batteries last, from this fleet's parts history "
+                         "(components.csv). Parts that haven't failed yet still count: they tell us the part "
+                         "lasted at least that long.", class_="section-note"),
+                    ui.output_ui("rel_cards"),
+                    ui.div(ui.h4("How long parts last"),
+                           ui.output_plot("rel_curves", height="380px"),
+                           ui.p("Blue = the fitted Weibull model. Gray steps = the same thing measured straight "
+                                "from the data (Kaplan-Meier). When the two agree, the model fits. Red dashed "
+                                "line = B10, the age by which 10% of parts have failed.", class_="rule-note"),
+                           class_="panel"),
+                    ui.div(ui.h4("Battery batches compared"),
+                           ui.output_ui("lot_sentence"),
+                           ui.output_plot("lot_plot", height="260px"),
+                           class_="panel"),
+                    ui.div(ui.h4("Parts to replace at the next maintenance slot"),
+                           ui.output_ui("due_table"), class_="panel"),
+                    class_="pt-3",
+                ),
             ),
             id="tabs",
         ),
@@ -166,15 +191,7 @@ def server(input, output, session):
     # ---------- data ----------
     @reactive.calc
     def flights() -> pd.DataFrame:
-        upload = input.upload()
-        if upload:
-            try:
-                f = pd.read_csv(upload[0]["datapath"])
-                qc.check_flights(f)
-            except (ValueError, pd.errors.ParserError) as err:
-                raise SafeException(f"Can't use that file: {err}") from None
-        else:
-            f = pd.read_csv(DATA / input.dataset() / "flights.csv")
+        f = pd.read_csv(DATA / input.dataset() / "flights.csv")
         return qc.add_derived(f)
 
     @reactive.calc
@@ -284,6 +301,116 @@ def server(input, output, session):
                  "<th>Latest</th><th>Room left</th><th>Signals after baseline</th><th>First signal</th>"
                  f"</tr></thead><tbody>{''.join(rows)}</tbody></table>")
         return ui.HTML(f'<div class="scroll-x">{table}</div>')
+
+    # ---------- Part reliability tab ----------
+    @reactive.calc
+    def components() -> pd.DataFrame:
+        return qc.check_components(pd.read_csv(DATA / input.dataset() / "components.csv"))
+
+    @reactive.calc
+    def by_type() -> pd.DataFrame:
+        return qc.fit_by_type(components())
+
+    @render.ui
+    def rel_cards():
+        cards = []
+        for r in by_type().itertuples():
+            name = charts.PART_TITLE.get(r.component_type, r.component_type)
+            if r.note:
+                cards.append(ui.div(ui.h3(name), ui.p(f"Not enough failures to fit: {r.note}."),
+                                    class_="info-card"))
+                continue
+            if r.beta_lo > 1:
+                shape = "Wear-out (β > 1): the older the part, the likelier it fails, so replacing it early prevents failures."
+            elif r.beta_hi < 1:
+                shape = "Early failures (β < 1): weak parts fail young; better incoming checks help more than early replacement."
+            else:
+                shape = "No clear wear-out (the interval for β includes 1): failures look random in age."
+            cards.append(ui.div(
+                ui.div(ui.h3(name), ui.span(f"{r.n_failed} failed of {r.n}", class_="tag"), class_="card-head"),
+                ui.div(ui.span("Replace at", class_="rc-label"),
+                       ui.span(f"{r.b10:.0f}", class_="rc-value"), ui.span(r.unit, class_="rc-unit"),
+                       class_="rc-main"),
+                ui.p(f"10% of {name.lower()} fail by {r.b10:.0f} {r.unit} (B10). Typical life η = {r.eta:.0f} "
+                     f"(95% interval {r.eta_lo:.0f}–{r.eta_hi:.0f}); mean life {r.mean_life:.0f}."),
+                ui.p(f"Shape β = {r.beta:.2f} ({r.beta_lo:.2f}–{r.beta_hi:.2f}). {shape}", class_="muted-p"),
+                class_="info-card rel-card"))
+        return ui.div(*cards, class_="grid-3 mb-3")
+
+    @render.plot
+    def rel_curves():
+        c = components()
+        curves = []
+        for r in by_type().dropna(subset=["eta"]).itertuples():
+            part = c[c["component_type"] == r.component_type]
+            t = np.linspace(0, part["life_value"].max() * 1.1, 200)
+            curves.append(dict(type=r.component_type, unit=r.unit, t=t, r=qc.reliability(t, r.beta, r.eta),
+                               km=qc.km_curve(part["life_value"], part["status"]),
+                               b10=r.b10, beta=r.beta, eta=r.eta))
+        if not curves:
+            return None
+        return charts.reliability_figure(curves)
+
+    @reactive.calc
+    def lots() -> pd.DataFrame:
+        try:
+            return qc.compare_lots(components(), "battery")
+        except ValueError:
+            return pd.DataFrame()
+
+    @render.ui
+    def lot_sentence():
+        lt = lots().dropna(subset=["eta"]) if len(lots()) else lots()
+        if len(lt) < 2:
+            return ui.p("Fewer than two battery lots have enough failures to compare.", class_="rule-note")
+        worst, best = lt.loc[lt["eta"].idxmin()], lt.loc[lt["eta"].idxmax()]
+        if worst["eta_hi"] < best["eta_lo"]:
+            msg = (f"<b>Lot {escape(str(worst['lot']))} batteries wear out sooner.</b> Their typical life is "
+                   f"{worst['eta']:.0f} charge cycles (95% interval {worst['eta_lo']:.0f}–{worst['eta_hi']:.0f}), "
+                   f"against {best['eta']:.0f} for lot {escape(str(best['lot']))}. The intervals don't overlap, so "
+                   "this is a real difference, not chance: check the supplier and replace those batteries first.")
+            cls = "banner ground"
+        else:
+            msg = ("<b>No battery lot stands out.</b> Every lot's 95% interval overlaps the others, so the "
+                   "differences are within chance.")
+            cls = "banner go"
+        return ui.div(ui.HTML(f"<p>{msg}</p>"), class_=cls)
+
+    @render.plot
+    def lot_plot():
+        lt = lots()
+        if lt.empty or lt["eta"].isna().all():
+            return None
+        return charts.lots_figure(lt, "charge cycles")
+
+    @render.ui
+    def due_table():
+        due = qc.parts_past_b10(components(), by_type())
+        if due.empty:
+            return ui.p("No part still in service is past its B10 life.", class_="rule-note")
+        def table(df):
+            rows = "".join(
+                f"<tr><td><strong>{escape(r.component_id)}</strong></td><td>{escape(r.drone_id)}</td>"
+                f"<td>{escape(r.component_type)}</td><td>{escape(str(r.lot))}</td>"
+                f'<td class="num">{r.life_value:g} {qc.LIFE_UNIT.get(r.component_type, "")}</td>'
+                f'<td class="num">{r.b10:.0f}</td><td class="num">{r.pct_of_b10:.0f}%</td></tr>'
+                for r in df.itertuples())
+            return ('<div class="scroll-x"><table class="numbers"><thead><tr><th>Part</th><th>Drone</th>'
+                    "<th>Type</th><th>Batch</th><th>Age now</th><th>B10 life</th><th>Age as % of B10</th>"
+                    f"</tr></thead><tbody>{rows}</tbody></table></div>")
+
+        counts = due["component_type"].value_counts()
+        summary = ", ".join(f"{n} {t}{'s' if n != 1 else ''}" for t, n in counts.items())
+        top, rest = due.head(10), due.iloc[10:]
+        more = (f"<details class='more'><summary>Show the other {len(rest)} parts</summary>{table(rest)}</details>"
+                if len(rest) else "")
+        return ui.div(
+            ui.HTML(f'<p class="due-summary"><b>{len(due)} parts still flying are past their B10 age</b> '
+                    f"({summary}). Most overdue first:</p>"),
+            ui.HTML(table(top) + more),
+            ui.p("B10 = the age by which 10% of that kind of part fail. This fleet runs parts until they "
+                 "break, so many are well past it: replacing at B10 would prevent most in-flight failures.",
+                 class_="rule-note"))
 
     @render.plot
     def drone_charts():

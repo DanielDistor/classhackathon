@@ -230,3 +230,50 @@ table.example tbody tr:nth-child(odd) td { background: #fafbfc; }
 .banner .hbar { background: rgba(255,255,255,.7); }
 td.room { min-width: 130px; } td.room .hbar { display: inline-block; width: 80px; vertical-align: middle; margin-right: 8px; }
 td.room span { font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+
+/* ---------- part reliability ---------- */
+.rel-card .rc-main { display: flex; align-items: baseline; gap: 8px; margin: 10px 0 8px; }
+.rc-label { font-size: 0.78rem; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.rc-value { font-size: 2rem; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; }
+.rc-unit { color: var(--ink-2); font-weight: 600; }
+.muted-p { color: var(--ink-2) !important; font-size: 0.88rem !important; }
+.banner p { margin: 0; }
+.due-summary { margin: 0 0 10px; }
+details.more { margin-top: 10px; }
+details.more summary { cursor: pointer; color: var(--accent-ink); font-weight: 600; font-size: 0.9rem; }
+
+/* ---------- welcome page: one flight, three moments ---------- */
+.moment-head { display: flex; align-items: center; gap: 10px; }
+.moment-head .step-num { margin: 0; }
+.moment-head h3 { margin: 0 !important; }
+.moment-who { font-size: 0.85rem !important; color: var(--ink-3) !important; margin: 6px 0 8px !important; }
+.moment-list { list-style: none; padding: 0; margin: 0; }
+.moment-list li { padding: 7px 0; border-top: 1px solid var(--line); font-size: 0.92rem; color: var(--ink); }
+.moment-list code { display: block; background: none; color: var(--ink-3); padding: 0; font-size: 0.76rem; margin-top: 2px; }
+
+/* ---------- dashboard v3: "1. choose a fleet" cards, "2. choose a view" ---------- */
+.controls { display: block; padding: 16px 18px 6px; }
+.ctl-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.ctl-head .step-num { margin: 0; }
+.ctl-title { font-weight: 700; font-size: 1.02rem; }
+.ctl-sub { color: var(--ink-3); font-size: 0.85rem; }
+.views-head { margin: 4px 0 10px; }
+.controls .shiny-options-group { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 860px) { .controls .shiny-options-group { grid-template-columns: 1fr; } }
+.controls .shiny-label-null { display: none; }
+.controls label.radio-inline { margin: 0; padding: 12px 14px; display: block; height: 100%; cursor: pointer;
+                               border: 1.5px solid var(--line); border-radius: 10px; background: #fafbfc;
+                               transition: border-color .15s, background .15s; }
+.controls label.radio-inline:hover { border-color: #9dbfe6; }
+.controls label.radio-inline input { position: absolute; opacity: 0; pointer-events: none; }
+.controls label.radio-inline:has(input:checked) { border-color: var(--accent); background: #eef5fd;
+                                                  box-shadow: 0 0 0 3px rgba(42,120,214,.12); }
+.controls label.radio-inline:has(input:checked) .ds-name::after { content: "  ✓ showing"; color: var(--accent-ink);
+                                                                  font-size: 0.78rem; font-weight: 650; }
+.controls label.radio-inline:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ds-name { display: block; font-weight: 700; color: var(--ink); }
+.ds-desc { display: block; font-size: 0.84rem; color: var(--ink-2); margin-top: 3px; line-height: 1.4; }
+.drone-pick { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+.drone-pick .shiny-input-container { margin-bottom: 0; }
+.drone-pick .control-label { font-size: 0.78rem; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.drone-pick .ctl-sub { margin: 0 0 8px; }

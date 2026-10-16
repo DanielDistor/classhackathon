@@ -351,3 +351,187 @@ def check_flights(flights: pd.DataFrame) -> pd.DataFrame:
     if not flights["flight_id"].astype(str).str.match(r"^.+-\d+$").all():
         raise ValueError("every flight_id must end in its flight number, e.g. F-07-074")
     return flights
+
+
+# --------------------------------------------------------------------------
+# Reliability: Weibull life with right-censoring (SPEC.md section 4)
+# --------------------------------------------------------------------------
+#
+# Two-parameter Weibull: R(t) = exp(-(t/eta)^beta), the chance a part is still
+# working at age t. beta (shape) > 1 means wear-out (the failure risk rises
+# with age); eta (scale) is the age by which 63.2% have failed.
+# B10 = eta * (-ln 0.9)^(1/beta): the age by which 10% have failed, used as the
+# recommended replacement age.
+# Fitted by maximum likelihood with right-censoring (lifelines.WeibullFitter):
+# a part with status 0 (still flying, or removed before it failed) counts as
+# "lasted at least this long" instead of being thrown away.
+
+#: Usage unit of life_value for each component type (data/README.md).
+LIFE_UNIT = {"motor": "flight hours", "propeller": "flight hours", "battery": "charge cycles"}
+#: Fewest failures we accept before fitting a Weibull.
+MIN_FAILURES = 3
+
+
+class WeibullFit(NamedTuple):
+    """A fitted Weibull life model; _lo/_hi are 95% confidence limits."""
+
+    beta: float
+    beta_lo: float
+    beta_hi: float
+    eta: float
+    eta_lo: float
+    eta_hi: float
+    b10: float       # age by which 10% have failed
+    mean_life: float  # eta * Gamma(1 + 1/beta), the mean time to failure
+    n: int
+    n_failed: int
+
+
+def b_life(beta: float, eta: float, p: float = 0.10) -> float:
+    """Age by which a fraction p of parts have failed: eta * (-ln(1 - p))^(1/beta)."""
+    if not (beta > 0 and eta > 0 and 0 < p < 1):
+        raise ValueError("need beta > 0, eta > 0 and 0 < p < 1")
+    return eta * (-math.log(1 - p)) ** (1 / beta)
+
+
+def reliability(t, beta: float, eta: float):
+    """Chance a part is still working at age t: exp(-(t/eta)^beta). Works on arrays too."""
+    return np.exp(-(np.asarray(t, dtype=float) / eta) ** beta)
+
+
+def weibull_fit(life: Iterable[float], status: Iterable[int],
+                min_failures: int = MIN_FAILURES) -> WeibullFit:
+    """Fit a 2-parameter Weibull by maximum likelihood with right-censoring.
+
+    life    usage until failure or removal (flight hours or charge cycles), > 0
+    status  1 = failed at that age, 0 = censored (survived at least that long)
+
+    Raises ValueError for non-positive or missing lives, statuses other than
+    0/1, mismatched lengths, or fewer than `min_failures` failures (too little
+    information to estimate a shape).
+    """
+    from lifelines import WeibullFitter  # imported here so the control charts don't need it
+
+    t = _clean(life, minimum=2)
+    try:
+        e = np.asarray([int(v) for v in status])
+    except (TypeError, ValueError) as err:
+        raise ValueError(f"status must be 0 or 1: {err}") from None
+    if len(e) != len(t):
+        raise ValueError(f"life and status have different lengths ({len(t)} vs {len(e)})")
+    if not np.isin(e, (0, 1)).all():
+        raise ValueError("status must be 0 (censored) or 1 (failed)")
+    if (t <= 0).any():
+        raise ValueError("every life must be greater than 0")
+    n_failed = int(e.sum())
+    if n_failed < min_failures:
+        raise ValueError(f"need at least {min_failures} failures to fit a Weibull, got {n_failed} "
+                         f"(the other {len(t) - n_failed} parts haven't failed yet)")
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        wf = WeibullFitter().fit(t, e)
+    ci = wf.summary
+    beta, eta = float(wf.rho_), float(wf.lambda_)
+    return WeibullFit(
+        beta=beta, beta_lo=float(ci.loc["rho_", "coef lower 95%"]),
+        beta_hi=float(ci.loc["rho_", "coef upper 95%"]),
+        eta=eta, eta_lo=float(ci.loc["lambda_", "coef lower 95%"]),
+        eta_hi=float(ci.loc["lambda_", "coef upper 95%"]),
+        b10=b_life(beta, eta), mean_life=eta * math.gamma(1 + 1 / beta),
+        n=len(t), n_failed=n_failed)
+
+
+def _fit_rows(groups, label: str) -> pd.DataFrame:
+    rows = []
+    for key, g in groups:
+        row = {label: key}
+        try:
+            row.update(weibull_fit(g["life_value"], g["status"])._asdict())
+            row["note"] = ""
+        except ValueError as err:
+            row.update(n=len(g), n_failed=int(g["status"].sum()), note=str(err))
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def fit_by_type(components: pd.DataFrame) -> pd.DataFrame:
+    """One Weibull fit per component type, with its life unit.
+
+    Returns component_type, unit, beta (+ _lo/_hi), eta (+ _lo/_hi), b10,
+    mean_life, n, n_failed and note (why a fit was skipped, if it was).
+    """
+    out = _fit_rows(components.groupby("component_type"), "component_type")
+    out.insert(1, "unit", out["component_type"].map(LIFE_UNIT))
+    return out
+
+
+def compare_lots(components: pd.DataFrame, component_type: str = "battery") -> pd.DataFrame:
+    """One Weibull fit per supplier lot of one component type.
+
+    A lot with fewer than MIN_FAILURES failures gets blank estimates and a note.
+    Lots whose eta intervals don't overlap differ by more than chance.
+    """
+    c = components[components["component_type"] == component_type]
+    if c.empty:
+        raise ValueError(f"no {component_type} rows in the components table")
+    return _fit_rows(c.groupby("lot"), "lot").sort_values("lot").reset_index(drop=True)
+
+
+def parts_past_b10(components: pd.DataFrame, by_type: pd.DataFrame) -> pd.DataFrame:
+    """Parts still in service that are older than their type's B10 life.
+
+    These are the ones to replace at the next maintenance slot. Adds
+    b10 and pct_of_b10 (age as a % of B10), oldest first.
+    """
+    b10 = by_type.dropna(subset=["b10"]).set_index("component_type")["b10"]
+    live = components[components["end_date"].isna()].copy()
+    live["b10"] = live["component_type"].map(b10)
+    due = live[live["life_value"] > live["b10"]].copy()
+    due["pct_of_b10"] = 100 * due["life_value"] / due["b10"]
+    return due.sort_values("pct_of_b10", ascending=False).reset_index(drop=True)
+
+
+def km_curve(life: Iterable[float], status: Iterable[int]) -> pd.DataFrame:
+    """Kaplan-Meier estimate of survival straight from the data (no model).
+
+    At each failure age t: S(t) = S(previous) * (1 - failures at t / parts still at risk at t).
+    Censored parts leave the risk set without a step. Plotted next to the fitted
+    Weibull R(t) as a check that the Weibull model fits. Returns columns t, survival,
+    starting at t = 0, survival = 1.
+    """
+    t = _clean(life, minimum=1)
+    e = np.asarray([int(v) for v in status])
+    if len(e) != len(t):
+        raise ValueError("life and status have different lengths")
+    order = np.argsort(t, kind="stable")
+    t, e = t[order], e[order]
+    times, surv, s = [0.0], [1.0], 1.0
+    at_risk = len(t)
+    for u in np.unique(t):
+        here = t == u
+        d = int(e[here].sum())
+        if d:
+            s *= 1 - d / at_risk
+            times.append(float(u))
+            surv.append(s)
+        at_risk -= int(here.sum())
+    return pd.DataFrame({"t": times, "survival": surv})
+
+
+#: Columns the reliability tab needs in an uploaded components table.
+REQUIRED_COMPONENT_COLUMNS = ("component_id", "drone_id", "component_type", "lot",
+                              "end_date", "life_value", "status")
+
+
+def check_components(components: pd.DataFrame) -> pd.DataFrame:
+    """Refuse a components table the reliability tab cannot use, with a clear message."""
+    missing = [c for c in REQUIRED_COMPONENT_COLUMNS if c not in components.columns]
+    if missing:
+        raise ValueError(f"the components file is missing column(s): {', '.join(missing)} "
+                         "(see data/README.md for the expected columns)")
+    if not pd.api.types.is_numeric_dtype(components["life_value"]):
+        raise ValueError("column 'life_value' must hold numbers only")
+    if not components["status"].isin([0, 1]).all():
+        raise ValueError("column 'status' must be 1 (failed) or 0 (still working / removed early)")
+    return components

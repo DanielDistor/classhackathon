@@ -23,7 +23,7 @@ Grading: working tool 25 · valid QC statistics 25 · design for a real user 25 
 
 Data comes before charts, statistics before the app, and the first deploy happens before midnight.
 
-**Status:** Stage 0 ✅ (waiting on everyone reading SPEC section 4) · Stage 1 ✅ · Stage 2 ✅ · Stage 3: app ✅, deploy waiting on the key · **next: Stage 4** (and the deploy as soon as the key arrives)
+**Status:** Stage 0 ✅ (waiting on everyone reading SPEC section 4) · Stage 1 ✅ · Stage 2 ✅ · Stage 3: app ✅, deploy waiting on the key · Stage 4 ✅ · **next: Stage 5** (and the deploy as soon as the key arrives)
 
 ### How to run a stage yourself
 
@@ -107,14 +107,14 @@ Tell the group chat which stage is finished.
   4. After **any** change to `app/` or `data/`: run `app/manifestme.sh` and commit `app/manifest.json`.
 - **Done when:** the public URL loads in a logged-out browser and the Fleet tab grounds D-07 on the motor-drift dataset.
 
-### Stage 4 — Weibull reliability, tested · 12:00–2:00 AM · H-03 ← **next**
-- [ ] Weibull fit for each part type with right-censoring, reporting shape β, scale η, B10 life and a replacement interval; compare battery lots
-- **Done when:** the tests recover the simulated β and show lot B is shorter-lived.
+### Stage 4 — Weibull reliability, tested · 12:00–2:00 AM · H-03 ✅
+- [x] Weibull fit for each part type with right-censoring, reporting shape β, scale η, B10 life and a replacement interval; compare battery lots
+- **Done:** 56 tests pass; the fits recover the planted lives (motors η 506 vs 500, lot B 244 vs 240) and match R's `survreg` to 4 decimals. The Part reliability tab shows it.
 
 ### Sleep in shifts · 2:00–7:00 AM
 One person stays on light work: drafting the README or styling.
 
-### Stage 5 — Integrate and explain · Sat 7:00–10:00 AM · H-04
+### Stage 5 — Integrate and explain · Sat 7:00–10:00 AM · H-04 ← **next**
 - [ ] Reliability tab, a plain-English sentence next to every number, redeploy
 - [ ] p-chart of before-flight check failures, **only if time allows**
 
