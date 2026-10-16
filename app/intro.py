@@ -1,50 +1,104 @@
-"""The welcome page: what the tool does, the test datasets, key terms, the tabs.
+"""The welcome page: what the tool does, what the data is, the test datasets, key terms, the tabs.
 
 Plain content only (no statistics). Edit the wording here freely; app.py
 shows this page first and swaps to the dashboard when "Continue" is clicked.
+The example rows are read from the bundled data files, so they always match.
 """
 
 from __future__ import annotations
 
+from html import escape
+from pathlib import Path
+
+import pandas as pd
 from shiny import ui
 
-DATASET_CARDS = [
+DATA = Path(__file__).resolve().parent / "data"
+
+FACTS = [
+    ("10", "delivery drones, named D-01 to D-10"),
+    ("30 days", "of flying: September 1–30, 2026"),
+    ("~100", "flights per drone, about 3 a day"),
+    ("~1,000", "flight records in each dataset"),
+    ("~300", "part records (motors, props, batteries)"),
+]
+
+# (number, part, what it is, what the technician writes down, column names)
+PARTS = [
+    ("1", "Propellers ×4", "The spinning blades that lift the drone.",
+     "Before each flight: is any blade chipped or cracked?", "preflight_fail_item"),
+    ("2", "Motors ×4", "Spin the propellers. A worn-out motor runs hotter.",
+     "Right after landing: the temperature of the hottest motor, with an infrared thermometer.",
+     "motor_temp_max_c"),
+    ("3", "Batteries ×2", "Power the drone. Each drone has two and swaps them between flights. "
+     "Old batteries drain faster.",
+     "Battery voltage at takeoff and at landing, and how many times it has been charged "
+     "(the battery displays both).", "voltage_start_v, voltage_end_v, battery_cycles"),
+    ("4", "Flight controller", "The drone's onboard computer. It keeps a log of every flight.",
+     "From that log: how long the flight took, how much the drone shook, and any alerts.",
+     "flight_min, vibration_rms, inflight_event"),
+    ("5", "Package", "The delivery being carried.", "Its weight, from the scale at loading.",
+     "payload_kg"),
+    ("6", "Air thermometer (at the launch pad, not on the drone)",
+     "Hot days make every motor hotter.",
+     "The air temperature, so the tool can subtract it and not mistake a hot day for a worn motor.",
+     "ambient_temp_c"),
+]
+
+FLIGHT_COLS = [  # (column, friendly name)
+    ("flight_id", "Flight"), ("drone_id", "Drone"), ("datetime", "Take-off time"),
+    ("flight_min", "Minutes flown"), ("ambient_temp_c", "Air temp (°C)"),
+    ("motor_temp_max_c", "Hottest motor (°C)"), ("voltage_start_v", "Battery at take-off (V)"),
+    ("voltage_end_v", "Battery at landing (V)"), ("vibration_rms", "Vibration (m/s²)"),
+]
+PART_COLS = [
+    ("component_id", "Part"), ("drone_id", "Drone"), ("component_type", "Type"), ("lot", "Batch"),
+    ("install_date", "Installed"), ("end_date", "Removed"), ("life_value", "Used for"),
+    ("status", "Failed?"), ("failure_mode", "What happened"),
+]
+
+SCENARIOS = [
     {
-        "key": "healthy",
-        "name": "Healthy fleet",
-        "tag": "Baseline",
-        "body": "10 drones, about 100 flights each over September 2026. Nothing is planted: "
-                "every drone wears normally.",
-        "look": "Almost every drone is go. D-06 and D-07 show a 'watch' false alarm, a reminder "
-                "that 3σ limits estimated from 30 flights aren't perfect.",
+        "num": "1", "file": "healthy", "name": "A normal month",
+        "what": "Nothing unusual happens. Parts wear at their normal rate.",
+        "why": "Checks the tool doesn't raise false alarms when nothing is wrong.",
+        "expect": "Almost every drone is Go. Two drones (D-06, D-07) show Watch from ordinary random "
+                  "variation, which is expected now and then. No drone is grounded.",
+        "timeline": [],
     },
     {
-        "key": "motor_drift",
-        "name": "Motor drift + prop strike",
-        "tag": "The demo",
-        "body": "Same fleet. D-07's motor 3 bearing wears: its temperature rise climbs 0.2 °C per "
-                "flight after flight 60, and it crashes on flight 95. D-03 has a prop strike on flight 80.",
-        "look": "D-07 is grounded. Its EWMA crosses the limit at flight 74, 21 flights before the crash. "
-                "D-03's vibration chart flags flight 80.",
+        "num": "2", "file": "motor_drift", "name": "A month where a motor wears out",
+        "what": "Drone D-07: one motor (part 2, motor number 3) slowly wears out and runs a little hotter "
+                "every flight, until it fails and the drone crashes on flight 95. Drone D-03: a propeller "
+                "(part 1) hits something on flight 80.",
+        "why": "Checks the tool catches a failure before the crash, which is the whole point of the prompt.",
+        "expect": "D-07 is grounded. The tool warns at flight 74, 21 flights before the crash. "
+                  "D-03's vibration jump on flight 80 is flagged.",
+        "timeline": [(60, "D-07's motor starts wearing out", "wear"),
+                     (74, "the tool warns about D-07", "tool"),
+                     (80, "D-03's propeller hits something", "wear"),
+                     (95, "D-07 crashes", "bad")],
     },
     {
-        "key": "bad_battery_lot",
-        "name": "Bad battery lot",
-        "tag": "Reliability",
-        "body": "Same fleet, but batteries from supplier lot B wear out about 40% sooner "
-                "(true life scale 240 cycles instead of 400).",
-        "look": "The flight charts look healthy. The problem only shows in the Reliability tab "
-                "(coming in Stage 4), which compares battery lots.",
+        "num": "3", "file": "bad_battery_lot", "name": "A month with a bad batch of batteries",
+        "what": "Batteries (part 3) are bought in batches. One batch, lot B (bought Oct 2025 – Mar 2026), "
+                "was bad: those batteries wear out after about 240 charges instead of about 400.",
+        "why": "Checks the tool finds a problem no single flight shows: you only see it by comparing how "
+               "long whole batches last.",
+        "expect": "The flight charts look normal. The Reliability tab (coming in Stage 4) shows lot B "
+                  "lasting far less than lots A and C.",
+        "lots": [("Lot A", "bought before Oct 2025", 400), ("Lot B", "Oct 2025 – Mar 2026", 240),
+                 ("Lot C", "Apr 2026 onward", 400)],
     },
 ]
 
 TERMS = [
     ("Baseline", "Each drone's first 30 logged flights. The drone is assumed healthy then, and "
                  "its own normal variation sets the limits for every later flight."),
-    ("Control limits (UCL / LCL)", "The upper and lower lines on a chart: baseline mean ± 3σ̂. "
+    ("Control limits (UCL / LCL)", "The upper and lower lines on a chart: baseline mean ± 3 sigma. "
                                    "A healthy drone stays between them about 99.7% of the time."),
-    ("σ̂ (sigma-hat)", "The estimated flight-to-flight spread: the average jump between "
-                      "consecutive baseline readings ÷ 1.128."),
+    ("Sigma (σ)", "The typical flight-to-flight spread, estimated from the average jump between "
+                  "consecutive baseline readings ÷ 1.128."),
     ("Signal", "A point outside the control limits (a red ✕ on the charts). It means something "
                "has probably changed, so inspect the drone."),
     ("I chart", "Individuals chart: every reading plotted on its own. Best at catching sudden "
@@ -63,7 +117,7 @@ TERMS = [
 ]
 
 TABS = [
-    ("Fleet", "Every drone's status, go, watch or ground, with the reason in plain English. "
+    ("Fleet", "Every drone's status, Go, Watch or Ground, with the reason in plain English. "
               "Start here each morning."),
     ("Drone", "Four control charts for the drone you pick: EWMA and I chart of motor temperature "
               "rise, plus vibration and battery voltage sag. Each comes with a table explaining every number."),
@@ -72,93 +126,142 @@ TABS = [
 ]
 
 STEPS = [
-    ("1", "Log each flight", "Flight minutes, air temperature, battery voltage at takeoff and landing, "
-                             "hottest motor temperature (infrared thermometer) and vibration from "
-                             "the flight log."),
+    ("1", "Log each flight", "A few readings a technician can take in a minute: the hottest motor's "
+                             "temperature, battery voltage, and numbers from the flight log."),
     ("2", "Compare to the drone's own normal", "The tool learns each drone's normal from its first "
                                                "30 flights and checks every new flight against it."),
-    ("3", "Act on go / watch / ground", "Ground a drone before it fails in the air, instead of "
+    ("3", "Act on Go / Watch / Ground", "Ground a drone before it fails in the air, instead of "
                                         "investigating after a crash."),
 ]
 
 
-FACTS = [
-    ("10", "delivery drones (D-01 to D-10)"),
-    ("~100", "flights each, Sep 1–30, 2026"),
-    ("~1,000", "flights logged per dataset"),
-    ("~22 min", "per flight, 0.5–2.5 kg package"),
-    ("~300", "part records since spring 2025"),
-]
+# ---------------------------------------------------------------- the drone picture
 
-
-def _callout(x: int, y: int, title: str, lines: list[str], cols: list[str], anchor: str = "start") -> str:
-    """One label block: a bold title, plain lines, then the data columns in monospace."""
-    out = [f'<text x="{x}" y="{y}" text-anchor="{anchor}" class="d-title">{title}</text>']
-    yy = y + 19
-    for ln in lines:
-        out.append(f'<text x="{x}" y="{yy}" text-anchor="{anchor}" class="d-body">{ln}</text>')
-        yy += 16
-    for c in cols:
-        out.append(f'<text x="{x}" y="{yy + 2}" text-anchor="{anchor}" class="d-col">{c}</text>')
-        yy += 16
-    return "".join(out)
+def _badge(x: int, y: int, n: str) -> str:
+    return (f'<circle cx="{x}" cy="{y}" r="15" class="d-badge"/>'
+            f'<text x="{x}" y="{y + 5}" text-anchor="middle" class="d-badge-num">{n}</text>')
 
 
 def drone_diagram() -> str:
-    """Top view of a quadcopter, each part labelled with the data columns it produces."""
-    cx, cy, r_prop = 480, 270, 70
-    arms = {1: (360, 150), 2: (600, 150), 3: (600, 390), 4: (360, 390)}
-    parts = []
-    for n, (x, y) in arms.items():
-        parts.append(f'<line x1="{cx}" y1="{cy}" x2="{x}" y2="{y}" class="d-arm"/>')
-    for n, (x, y) in arms.items():
-        cls = "d-prop strike" if n == 1 else "d-prop"
-        parts.append(f'<circle cx="{x}" cy="{y}" r="{r_prop}" class="{cls}"/>')
-        parts.append(f'<line x1="{x - 58}" y1="{y + 14}" x2="{x + 58}" y2="{y - 14}" class="d-blade"/>')
-    for n, (x, y) in arms.items():
-        cls = "d-motor wear" if n == 3 else "d-motor"
-        parts.append(f'<circle cx="{x}" cy="{y}" r="20" class="{cls}"/>')
-        parts.append(f'<text x="{x}" y="{y + 5}" text-anchor="middle" class="d-motor-num">{n}</text>')
-    body = (
-        f'<rect x="410" y="215" width="140" height="110" rx="18" class="d-body-shape"/>'
-        f'<rect x="430" y="228" width="100" height="34" rx="6" class="d-battery"/>'
-        f'<text x="480" y="250" text-anchor="middle" class="d-inner">BATTERY</text>'
-        f'<rect x="455" y="275" width="50" height="36" rx="5" class="d-fc"/>'
-        f'<text x="480" y="298" text-anchor="middle" class="d-inner">FC</text>'
-        f'<text x="480" y="52" text-anchor="middle" class="d-front">▲ front</text>'
-    )
-    leaders = "".join(f'<polyline points="{p}" class="d-leader"/>' for p in (
-        "252,84 310,101",            # propellers -> prop 1 rim
-        "252,262 410,268",           # package -> body
-        "252,436 342,398",           # motors -> motor 4
-        "708,217 530,245",           # batteries -> battery
-        "708,327 505,295",           # flight controller -> FC
-    )) + "".join(f'<circle cx="{x}" cy="{y}" r="3.5" class="d-dot"/>' for x, y in (
-        (310, 101), (410, 268), (342, 398), (530, 245), (505, 295)))
-    labels = "".join([
-        _callout(24, 70, "Propellers ×4", ["Chips and cracks are caught", "at the before-flight check"],
-                 ["preflight_fail_item", "components.csv (flight hours)"]),
-        _callout(24, 248, "Package", ["Weighed at loading"], ["payload_kg"]),
-        _callout(24, 404, "Motors ×4", ["Hottest motor, infrared", "thermometer right after landing"],
-                 ["motor_temp_max_c", "components.csv (flight hours)"]),
-        _callout(936, 70, "Air at the launch pad", ["Not on the drone: subtracted so", "a hot day isn't mistaken for wear"],
-                 ["ambient_temp_c"], anchor="end"),
-        _callout(936, 203, "Batteries ×2, used in turn", ["The battery reports its own", "voltage and charge cycles"],
-                 ["battery_id · battery_cycles", "voltage_start_v · voltage_end_v", "components.csv (cycles, lot A/B/C)"],
-                 anchor="end"),
-        _callout(936, 330, "Flight controller (FC)", ["Its log gives flight time,", "vibration and alerts"],
-                 ["flight_min · vibration_rms", "inflight_event"], anchor="end"),
-    ])
-    planted = (
-        '<text x="360" y="66" text-anchor="middle" class="d-planted">D-03: prop strike on flight 80</text>'
-        '<text x="600" y="482" text-anchor="middle" class="d-planted">D-07: motor 3 wears out, crash on flight 95</text>'
-    )
-    return (
-        '<svg viewBox="0 0 960 500" role="img" class="drone-svg" '
-        'aria-label="Top view of a quadcopter with each part labelled with the data it produces">'
-        + "".join(parts) + body + leaders + labels + planted + "</svg>"
-    )
+    """Top view of a quadcopter: big numbered badges, one short name per part."""
+    cx, cy, rp = 380, 225, 64
+    arms = [(268, 113), (492, 113), (492, 337), (268, 337)]
+    g = []
+    g += [f'<line x1="{cx}" y1="{cy}" x2="{x}" y2="{y}" class="d-arm"/>' for x, y in arms]
+    for x, y in arms:
+        g.append(f'<circle cx="{x}" cy="{y}" r="{rp}" class="d-prop"/>')
+        g.append(f'<line x1="{x - 54}" y1="{y + 13}" x2="{x + 54}" y2="{y - 13}" class="d-blade"/>')
+    for x, y in arms:
+        g.append(f'<circle cx="{x}" cy="{y}" r="19" class="d-motor"/>')
+    g.append('<rect x="318" y="178" width="124" height="94" rx="16" class="d-body-shape"/>')
+    g.append('<rect x="334" y="189" width="92" height="32" rx="6" class="d-battery"/>')
+    g.append('<text x="380" y="210" text-anchor="middle" class="d-inner">BATTERY</text>')
+    g.append('<rect x="356" y="230" width="48" height="32" rx="5" class="d-fc"/>')
+    g.append('<text x="380" y="251" text-anchor="middle" class="d-inner">FC</text>')
+    g.append('<text x="380" y="34" text-anchor="middle" class="d-front">▲ FRONT</text>')
+    # leader lines from each label to its part
+    for pts in ("200,92 222,72", "200,350 250,343", "560,168 426,205", "560,282 404,250", "200,225 318,225"):
+        g.append(f'<polyline points="{pts}" class="d-leader"/>')
+    # badge + name for each part (left column ends at x=200, right column starts at x=560)
+    g.append(_badge(40, 92, "1") + '<text x="64" y="98" class="d-name">Propellers</text>')
+    g.append(_badge(40, 350, "2") + '<text x="64" y="356" class="d-name">Motors</text>')
+    g.append(_badge(590, 168, "3") + '<text x="614" y="174" class="d-name">Batteries</text>')
+    g.append(_badge(590, 282, "4") + '<text x="614" y="280" class="d-name">Flight</text>'
+             '<text x="614" y="300" class="d-name">controller</text>')
+    g.append(_badge(40, 225, "5") + '<text x="64" y="231" class="d-name">Package</text>')
+    g.append(_badge(590, 56, "6") + '<text x="614" y="54" class="d-name">Air</text>'
+             '<text x="614" y="74" class="d-name">thermometer</text>'
+             '<text x="614" y="92" class="d-sub">at the launch pad</text>')
+    return ('<svg viewBox="0 0 760 420" role="img" class="drone-svg" '
+            'aria-label="Top view of a delivery drone with its parts numbered 1 to 6">'
+            + "".join(g) + "</svg>")
 
+
+def parts_table() -> str:
+    rows = "".join(
+        f'<tr><td><span class="num-badge">{n}</span></td><td><strong>{escape(part)}</strong>'
+        f'<div class="muted">{escape(what)}</div></td><td>{escape(record)}</td>'
+        f'<td><code>{escape(cols)}</code></td></tr>'
+        for n, part, what, record, cols in PARTS)
+    return ('<table class="parts"><thead><tr><th></th><th>Part</th><th>What the technician writes down</th>'
+            f'<th>Column in the data</th></tr></thead><tbody>{rows}</tbody></table>')
+
+
+# ---------------------------------------------------------------- example rows
+
+def _example_table(df: pd.DataFrame, cols: list[tuple[str, str]]) -> str:
+    head = "".join(f"<th>{escape(name)}<div class='col-code'>{escape(c)}</div></th>" for c, name in cols)
+    body = "".join(
+        "<tr>" + "".join(f"<td>{escape('' if pd.isna(r[c]) else str(r[c]))}</td>" for c, _ in cols) + "</tr>"
+        for _, r in df.iterrows())
+    return f'<div class="scroll-x"><table class="example"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
+
+
+def example_flights() -> str:
+    f = pd.read_csv(DATA / "healthy" / "flights.csv")
+    return _example_table(f[f["drone_id"] == "D-01"].head(3), FLIGHT_COLS)
+
+
+def example_parts() -> str:
+    c = pd.read_csv(DATA / "healthy" / "components.csv")
+    picks = pd.concat([
+        c[(c.component_type == "motor") & (c.status == 1)].head(1),
+        c[(c.component_type == "propeller") & (c.status == 1)].head(1),
+        c[(c.component_type == "battery") & (c.failure_mode == "in_service")].head(1),
+    ])
+    picks = picks.assign(
+        status=picks["status"].map({1: "yes", 0: "no (still OK)"}),
+        end_date=picks["end_date"].fillna("(still in use)"),
+        life_value=[f"{v:g} {'charges' if t == 'battery' else 'flight hours'}"
+                    for v, t in zip(picks["life_value"], picks["component_type"])],
+    )
+    return _example_table(picks, PART_COLS)
+
+
+# ---------------------------------------------------------------- the three scenarios
+
+def _timeline(marks: list[tuple[int, str, str]]) -> str:
+    """A flight 1 to 100 bar with coloured dots, and the events listed underneath in order."""
+    ends = '<div class="tl-ends"><span>flight 1</span><span>flight 100</span></div>'
+    if not marks:
+        return (f'<div class="tl"><div class="tl-bar calm"></div>{ends}</div>'
+                '<ul class="tl-list"><li><span class="tl-dot calm"></span>Nothing planted in any flight</li></ul>')
+    dots = "".join(f'<span class="tl-dot {cls}" style="left:{(f - 1) / 99 * 100:.1f}%"></span>'
+                   for f, _, cls in marks)
+    items = "".join(f'<li><span class="tl-dot {cls}"></span><b>Flight {f}</b> {escape(label)}</li>'
+                    for f, label, cls in sorted(marks))
+    return (f'<div class="tl"><div class="tl-bar"></div>{dots}{ends}</div>'
+            f'<ul class="tl-list">{items}</ul>')
+
+
+def _lots(lots: list[tuple[str, str, int]]) -> str:
+    rows = "".join(
+        f'<div class="lot"><div class="lot-name">{escape(n)}<span>{escape(when)}</span></div>'
+        f'<div class="lot-track"><div class="lot-bar{" bad" if life < 400 else ""}" '
+        f'style="width:{life / 400 * 100:.0f}%">~{life} charges</div></div></div>'
+        for n, when, life in lots)
+    return f'<div class="lots"><div class="lots-cap">How long batteries from each batch last (built into the data)</div>{rows}</div>'
+
+
+def scenario_cards() -> list[ui.Tag]:
+    cards = []
+    for s in SCENARIOS:
+        visual = _lots(s["lots"]) if "lots" in s else _timeline(s["timeline"])
+        cards.append(ui.div(
+            ui.div(ui.span(f"Version {s['num']}", class_="tag"), ui.code(f"data/{s['file']}/"),
+                   class_="card-head"),
+            ui.h3(s["name"]),
+            ui.HTML(visual),
+            ui.tags.dl(
+                ui.tags.dt("What happens"), ui.tags.dd(s["what"]),
+                ui.tags.dt("Why it's here"), ui.tags.dd(s["why"]),
+                ui.tags.dt("What the tool should show"), ui.tags.dd(s["expect"]),
+                class_="scenario-dl"),
+            class_="info-card scenario"))
+    return cards
+
+
+# ---------------------------------------------------------------- the page
 
 def intro_page() -> ui.Tag:
     """The welcome page shown before the dashboard."""
@@ -179,25 +282,43 @@ def intro_page() -> ui.Tag:
             ui.div(*[ui.div(ui.span(n, class_="step-num"), ui.h3(t), ui.p(b), class_="step")
                      for n, t, b in STEPS], class_="grid-3"),
 
-            ui.h2("What we track on each drone"),
-            ui.p("Every number in the dashboard comes from something a technician can measure with "
-                 "a checklist, an infrared thermometer, the battery's own readout or the flight log. "
-                 "Gray labels are the column names in the data files.", class_="section-note"),
+            # ---- the data, from the drone up ----
+            ui.h2("What the data is"),
+            ui.p("We don't have a real startup's records, so we invented realistic ones: one small "
+                 "delivery fleet flying for one month.", class_="section-note"),
             ui.div(*[ui.div(ui.div(v, class_="fact-value"), ui.div(k, class_="fact-label"), class_="fact")
                      for v, k in FACTS], class_="facts"),
-            ui.div(ui.HTML(drone_diagram()),
-                   ui.p(ui.span("Red", class_="red-word"), " marks where the planted problems happen in the "
-                        "motor-drift dataset.", class_="diagram-note"),
-                   class_="diagram-card"),
 
-            ui.h2("The test datasets"),
-            ui.p("All three are invented, built by data/simulate.py from the same random draws, so "
-                 "they differ only in what was planted. Pick one in the sidebar.", class_="section-note"),
-            ui.div(*[ui.div(
-                ui.div(ui.h3(c["name"]), ui.span(c["tag"], class_="tag"), class_="card-head"),
-                ui.p(c["body"]),
-                ui.p(ui.strong("What to look for: "), c["look"], class_="look"),
-                class_="info-card") for c in DATASET_CARDS], class_="grid-3"),
+            ui.h3("The parts we keep track of", class_="sub-h"),
+            ui.div(ui.HTML(drone_diagram()), ui.HTML(parts_table()), class_="diagram-card"),
+
+            ui.h3("The two files", class_="sub-h"),
+            ui.div(
+                ui.div(ui.h3("flights.csv: the flight logbook"),
+                       ui.p("One line per flight. These are the first 3 flights of drone D-01. The gray text "
+                            "under each heading is the column's name in the file. Six more columns record "
+                            "the package weight, which battery flew and its charge count, the checklist "
+                            "result, and anything unusual during the flight."),
+                       ui.HTML(example_flights()), class_="info-card"),
+                ui.div(ui.h3("components.csv: the parts history"),
+                       ui.p("One line per part, from the day it was installed until it failed, was removed, "
+                            "or today. Three examples: a motor that failed, a propeller that failed, and "
+                            "a battery still in use."),
+                       ui.HTML(example_parts()), class_="info-card"),
+                class_="stack",
+            ),
+
+            # ---- the three datasets ----
+            ui.h2("The three test datasets"),
+            ui.div(
+                ui.p(ui.strong("They are three versions of the same month."),
+                     " Same 10 drones, same dates, same 1,000 flights. In each version we changed one "
+                     "thing, so we can check the tool reacts correctly. It works like testing a smoke "
+                     "alarm: once with no smoke, once with smoke, and once with a different kind of "
+                     "problem."),
+                ui.p("A real startup would simply upload its own flights.csv in the sidebar."),
+                class_="callout"),
+            ui.div(*scenario_cards(), class_="grid-3"),
 
             ui.h2("Key terms"),
             ui.div(*[ui.div(ui.tags.dt(term), ui.tags.dd(desc), class_="term")
