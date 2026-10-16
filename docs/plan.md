@@ -25,6 +25,8 @@ Done: H-02 (data). H-01: SPEC filled; only the team readback of SPEC section 4 i
 
 ## Decisions
 
+- Chance warnings are kept, not tuned away (2026-10-16): the healthy fleet shows 2 Warnings (D-06 cool baseline, D-07 one sag reading). Longer baselines (40, 50) only move the false alarms to other drones. Warning cards say "often just chance: inspect at the next check" and the healthy fleet explains the expected rate.
+
 - Two datasets, not three (2026-10-16): `problem_fleet` holds every planted problem (D-07 wear and crash, D-03 prop strike, lot B batteries) and `healthy` is the comparison, because a single-problem fleet changed only one view and switching looked random. Statuses read Can fly / Warning / Do not fly in the app.
 
 - Parts past B10 are listed on the Part reliability tab, not folded into watch (2026-10-16): 51 parts are past B10 in this run-to-failure fleet, which would put nearly every drone on watch.

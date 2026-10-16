@@ -87,6 +87,22 @@ def drone_icon(status: str) -> str:
     return f'<svg class="dc-icon" viewBox="0 0 120 120" aria-hidden="true">{g}</svg>'
 
 
+WARNING_NOTE = "Often just chance: inspect at the next check."
+
+
+def card_text(status: str, reason: str) -> str:
+    """One short line for a drone card. Warnings say which flights looked unusual, plainly."""
+    import re
+    if status == "watch":
+        flights = sorted({int(n) for grp in re.findall(r"flights? ([\d, ]+)", reason)
+                          for n in re.findall(r"\d+", grp)})
+        where = (f"on flight {flights[0]}" if len(flights) == 1
+                 else f"in flights {flights[0]}–{flights[-1]}" if flights else "recently")
+        return f"Unusual reading{'s' if len(flights) > 1 else ''} {where}. {WARNING_NOTE}"
+    short = reason.split(";")[0]
+    return short[0].upper() + short[1:] + "."
+
+
 def pct_text(health: float) -> str:
     return "–" if isinstance(health, float) and math.isnan(health) else f"{round(health * 100)}%"
 
@@ -235,15 +251,23 @@ def server(input, output, session):
             n = int((st["status"] == s_).sum())
             parts.append(f'<span class="sum-item {s_}"><span class="sym">{STATUS_SYMBOL[s_]}</span>'
                          f'<b>{n}</b> {STATUS_WORD[s_].lower()}</span>')
+        note = ""
+        n_watch = int((st["status"] == "watch").sum())
+        if input.dataset() == "healthy":
+            note = ('<p class="fleet-note"><b>Nothing was planted in this fleet.</b> '
+                    + (f"The {n_watch} warning{'s are' if n_watch != 1 else ' is'} ordinary chance readings: "
+                       if n_watch else "")
+                    + "each control limit is set so a normal reading crosses it only about 3 times in 1,000, "
+                    "and the tool checks 10 drones × 4 charts over their last 10 flights (400 checks), so one or "
+                    "two chance warnings are expected. No drone is marked Do not fly.</p>")
         return ui.HTML(f'<div class="fleet-summary">{"".join(parts)}'
-                       '<span class="sum-hint">Click a drone to see why.</span></div>')
+                       f'<span class="sum-hint">Click a drone to see why.</span>{note}</div>')
 
     @render.ui
     def fleet_cards():
         cards = []
         for r in status().sort_values("drone_id").itertuples():
             cls = STATUS_CLASS[r.status]
-            short = r.reason.split(";")[0]
             cards.append(
                 f'<button class="drone-card {cls}" data-drone="{escape(r.drone_id)}" '
                 f'aria-label="{escape(r.drone_id)}: {escape(STATUS_WORD[r.status])}. Open its details">'
@@ -251,7 +275,7 @@ def server(input, output, session):
                 f'{drone_icon(r.status)}'
                 f'<div class="dc-health">{health_bar(r.health, r.status, big=False)}'
                 f'<span>{pct_text(r.health)}</span></div>'
-                f'<div class="dc-why">{escape(short[0].upper() + short[1:])}</div>'
+                f'<div class="dc-why">{escape(card_text(r.status, r.reason))}</div>'
                 f'<div class="dc-open">Details ›</div></button>')
         legend = ("<b>Health</b> = how much room is left before the nearest control limit, on the drone's "
                   "most-stretched chart: 100% = right at its normal, 0% = at a limit or crashed. "
@@ -290,7 +314,8 @@ def server(input, output, session):
             ui.div(ui.h3(drone), ui.HTML(pill(row["status"])), class_="banner-head"),
             ui.HTML(f'<div class="banner-health">{health_bar(row["health"], row["status"])}'
                     f'<span>{pct_text(row["health"])} health</span></div>'),
-            ui.p(row["reason"][0].upper() + row["reason"][1:] + "."),
+            ui.p(row["reason"][0].upper() + row["reason"][1:] + "."
+                 + (f" {WARNING_NOTE}" if row["status"] == "watch" else "")),
             class_=f"banner {cls}")
 
     @render.ui

@@ -337,3 +337,5 @@ details.more summary { cursor: pointer; color: var(--accent-ink); font-weight: 6
 .dc-why { font-size: 0.78rem; color: var(--ink-2); line-height: 1.35; min-height: 3.1em;
           display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .dc-open { font-size: 0.8rem; font-weight: 650; color: var(--accent-ink); }
+.fleet-note { flex-basis: 100%; margin: 4px 0 0; font-size: 0.88rem; color: var(--ink-2); line-height: 1.5;
+              border-top: 1px solid var(--line); padding-top: 10px; }
