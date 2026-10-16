@@ -207,7 +207,7 @@ def server(input, output, session):
 
     # ---------- page switching ----------
     @reactive.effect
-    @reactive.event(input.enter)
+    @reactive.event(input.enter, input.enter_top)
     def _enter():
         ui.update_navset("pages", selected="dashboard")
 

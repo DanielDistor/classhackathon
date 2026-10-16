@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 21:25"
+updated: "2026-10-16 18:58"
 
 tasks:
   - id: H-01
@@ -166,7 +166,7 @@ tasks:
   - id: H-09
     title: Shorter, dashboard-first welcome page
     points: "protects Tool Design: judges see this page first - clear user and use case (5), clear demonstration (10)"
-    status: in_progress
+    status: done
     owner: "Duc + OpenCode"
     started_at: "2026-10-16 18:55"
     owns: ["app/intro.py", "app/styles.css", "app/app.py"]
@@ -185,4 +185,4 @@ tasks:
       at most 950, down from 1624 before the change; Duc confirms the title,
       the one-line purpose and the Open-the-dashboard button show without
       scrolling at 1280x800.
-    result: ""
+    result: "Welcome page reordered and folded (hero CTA + What-you-get + datasets first; parts table, three moments, example rows, key terms behind <details>): served visible words 729 (was 1624), pytest 58 passed, HTTP 200, both Open-the-dashboard and Continue buttons served; hero button shares the enter handler in app.py; Duc eyeballs 1280x800 first screen; manifest refresh still due via H-06"

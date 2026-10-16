@@ -413,3 +413,22 @@ details.stats-details[open] > summary { margin-bottom: 12px; }
 .upload-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px; }
 .upload-row .shiny-input-container { width: 320px !important; margin-bottom: 4px; }
 .upload-row .control-label { font-size: 0.82rem; font-weight: 600; }
+
+/* ---------- welcome page v2: hero call-to-action and folds ---------- */
+.hero-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 22px; }
+.stat-chip { font-size: 0.85rem; font-weight: 600; color: #c9d6e4; border: 1px solid rgba(255,255,255,.28);
+             border-radius: 999px; padding: 4px 12px; }
+.hero-cta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.btn-hero { background: #fff; color: var(--navy); border: none; font-weight: 700; font-size: 1.02rem;
+            padding: 12px 26px; border-radius: 10px; }
+.btn-hero:hover, .btn-hero:focus { background: #e8effa; color: var(--navy); }
+.hero-hint { color: #8fb3d9; font-size: 0.9rem; }
+.fold { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-top: 12px; }
+.fold > summary { cursor: pointer; font-weight: 650; color: var(--accent-ink); padding: 14px 18px; }
+.fold > summary:hover { text-decoration: underline; }
+.fold[open] > summary { border-bottom: 1px solid var(--line); }
+.fold-body { padding: 16px 18px 18px; }
+.fold-body > :first-child { margin-top: 0; }
+.fold-body .diagram-card, .fold-body .terms { border: none; padding: 0; }
+.fold-body .info-card { border: none; padding: 0; margin-bottom: 18px; }
+.fold-body .info-card:last-child { margin-bottom: 0; }
