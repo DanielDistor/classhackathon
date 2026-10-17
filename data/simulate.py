@@ -1,398 +1,536 @@
-"""Generate the two invented test datasets for the drone fleet reliability tool.
+"""Generate the invented test data for the drone fleet reliability tool.
 
 Run from the repo root:
 
     python data/simulate.py
 
-It writes one folder per dataset, each holding two tables:
+It writes one folder, data/fleet/, holding the active fleet's records:
 
-    data/problem_fleet/  flights.csv  components.csv   (the main demo)
-    data/healthy/        flights.csv  components.csv   (the comparison)
+    flights.csv       one row per flight (what the technician logs)
+    components.csv    one row per part life (the Weibull input)
+    maintenance.csv   one row per replacement, repair or no-fault inspection
+    answer_key.csv    the injected special causes (the tool never reads this;
+                      it is how the tests check that every one was caught)
 
-Every number is invented. The data are shaped like a real maintenance log
-(see data/README.md, the codebook) but describe no real fleet.
+Every number is invented. See data/README.md, the codebook.
 
-Design: both datasets are built from the SAME random draws. Each random
-stream is keyed by (seed, purpose, drone, slot), so a planted problem never
-shifts the draws anywhere else. The two fleets therefore differ ONLY by the
-planted problems:
+How the fleet is simulated
+--------------------------
+1. History (commissioning to the log start): every motor, propeller and
+   battery runs until it fails, as the startup did before this tool. Lives
+   are Weibull draws. The shop fits a Weibull to that history (qc.fit_by_type)
+   and adopts B10 as each part type's replace-at age.
+2. The flight log: 10 drones x 300 flights. Nothing is planted on a named
+   drone. Two kinds of assignable cause act at random:
+     - Wear: in the last stretch of its own Weibull life (its P-F interval)
+       every part pushes one reading upward: motor -> temperature rise,
+       propeller -> vibration, battery -> voltage sag per minute.
+     - Special causes: one physical cause per Nelson / Western Electric rule
+       shape (SPECIAL_CAUSES), each at a random drone and flight.
+3. A simulated technician runs the tool's own statistics (app/qc.py) after
+   every flight and acts:
+     - a chart signals (EWMA, or any of the 8 rules on the I chart): inspect;
+       fix any special cause found; a part found in its P-F interval is
+       warned and replaced 1-3 flights later; otherwise "no fault found";
+     - a part within WARN_FLIGHTS of its B10 is warned, and replaced at B10;
+     - a part that fails in flight is replaced before the next flight.
+   No drone ever stops flying.
 
-    problem_fleet  D-07: temp_rise_c climbs 0.20 C per flight after flight 60
-                   and motor 3 fails (crash) on flight 95.
-                   D-03: a prop strike on flight 80 (one vibration spike).
-                   Batteries from supplier lot B have a Weibull scale 40% shorter.
-    healthy        nothing planted; every chart should be in control
-
-Only numpy and pandas are needed.
+Only numpy, pandas and lifelines (through app/qc.py) are needed.
 """
 
 from __future__ import annotations
 
 import math
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-SEED = 5300
-OUT_DIR = Path(__file__).resolve().parent
+OUT_DIR = Path(__file__).resolve().parent / "fleet"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
+import qc  # noqa: E402  the simulated technician acts on the tool's own statistics
 
+SEED = 5300
 N_DRONES = 10
-FLIGHTS_PER_DRONE = 100
-WINDOW_START = pd.Timestamp("2026-09-01")  # first day of the flight log
-WINDOW_DAYS = 30                           # flights.csv covers 30 days
-HISTORY_FLIGHTS_PER_DAY = 3.3              # usage before the flight log starts
+FLIGHTS_PER_DRONE = 300
+LOG_START = pd.Timestamp("2026-07-01")      # first day of the flight log
+LOG_DAYS = 91                               # 300 flights at ~3.3 a day
+HISTORY_FLIGHTS_PER_DAY = 3.3               # usage before the flight log starts
 MEAN_FLIGHT_MIN = 22.0
 
-# True life distributions (Weibull shape beta, scale eta). Units: flight hours
-# for motors and propellers, charge cycles for batteries.
-MOTOR = dict(beta=2.5, eta=500.0)
-PROP = dict(beta=1.8, eta=150.0)
-BATTERY = dict(beta=3.0, eta=400.0)
-BAD_LOT_SCALE = 0.60          # lot B battery eta multiplier in problem_fleet
-P_REMOVED_EARLY = 0.08        # chance a part is pulled before it fails (censored)
+# True life distributions and wear behaviour per part type.
+#   beta, eta  Weibull shape and scale (flight hours; charge cycles for batteries)
+#   slots      positions per drone (batteries: 2 packs used in turn)
+#   pf         P-F interval: how long before failure the wear shows in the
+#              reading (same units as eta)
+#   chart      the reading this part type pushes up as it wears
+PARTS = {
+    "motor": dict(beta=2.5, eta=500.0, slots=4, pf=25.0, chart="temp_rise_c", prefix="M"),
+    "propeller": dict(beta=1.8, eta=150.0, slots=4, pf=8.0, chart="vibration_rms", prefix="P"),
+    "battery": dict(beta=3.0, eta=400.0, slots=2, pf=30.0, chart="sag_rate_v_per_min", prefix="B"),
+}
+CHART_TYPE = {spec["chart"]: ctype for ctype, spec in PARTS.items()}
+#: Approximate in-control standard deviation of each reading (sizes the effects below).
+CHART_SD = {"temp_rise_c": 1.45, "vibration_rms": 0.25, "sag_rate_v_per_min": 0.014}
+#: Wear drift at the moment of failure, in chart standard deviations (linear ramp over the P-F interval).
+DRIFT_AT_FAILURE = 4.0
+#: Warn this many flights before a part reaches its B10 replace-at age.
+WARN_FLIGHTS = 10
+#: Flights between a wear warning found at inspection and the replacement (part comes from stock).
+REPLACE_DELAY = (1, 3)
+P_REMOVED_EARLY = 0.08          # history only: chance a part was pulled before it failed (censored)
+FIRST_EVENT_FLIGHT = 40         # special causes start after the 30-flight baseline, with a margin
+EVENT_SPACING = 40              # no two causes on the same drone and chart within this many flights
 
-# Component wear-out physics (Point 2: telemetry driven by each part's Weibull life L).
-# When a bearing-seizure motor exceeds WEAR_ONSET_FRAC of its true life L, friction
-# adds WEAR_TEMP_PER_HOUR deg C per flight hour of wear past onset until age == L (crash).
-WEAR_ONSET_FRAC = 0.8714
-WEAR_WARN_FRAC = 0.9640
-WEAR_TEMP_PER_HOUR = 0.545
-BATTERY_WEAR_ONSET = 0.80
-BATTERY_WEAR_SAG = 0.015
-STRIKE_VIBRATION = 7.0
-# Supplier batch / installation anomalies in problem_fleet (still drawn from Weibull,
-# no hardcoded flight-number telemetry overrides).
-DRIFT_DRONE, CRASH_MOTOR, BAD_MOTOR_SCALE = "D-07", 3, 0.5969207097444028
-STRIKE_DRONE, STRIKE_PROP, BAD_PROP_SCALE = "D-03", 1, 0.5937763663142257
+# One physical special cause per SPC rule shape (rule 3, a trend, is the wear itself).
+#   shift   added to the reading, in chart standard deviations
+#   part    the part type it damages (replaced to fix it), or None (repaired)
+SPECIAL_CAUSES = {
+    1: dict(cause="prop strike", chart="vibration_rms", part="propeller",
+            how="one vibration spike of +6 sd, then +1 sd from the chipped prop"),
+    2: dict(cause="hard landing", chart="temp_rise_c", part="motor",
+            how="bent motor shaft: temperature rise steps up +1.5 sd and stays"),
+    4: dict(cause="bad battery cell", chart="sag_rate_v_per_min", part="battery",
+            how="+2.5 sd voltage sag on that pack's flights only, so readings alternate"),
+    5: dict(cause="loose power connector", chart="sag_rate_v_per_min", part=None,
+            how="+3 sd voltage sag on a random 40% of flights"),
+    6: dict(cause="prop imbalance", chart="vibration_rms", part="propeller",
+            how="badly balanced prop after a field repair: vibration +1.3 sd"),
+    7: dict(cause="vibration log over-filtered", chart="vibration_rms", part=None,
+            how="firmware update smooths the log: vibration noise shrinks to 0.2x, readings too flat"),
+    8: dict(cause="loose motor mount", chart="vibration_rms", part=None,
+            how="mount rattles in one of two modes: vibration +1.8 or -1.8 sd each flight"),
+}
 
 FAILURE_MODES = {
     "motor": (["bearing", "winding"], [0.7, 0.3]),
     "propeller": (["chip", "crack"], [0.6, 0.4]),
     "battery": (["capacity_fade", "swelling"], [0.8, 0.2]),
 }
-PREFIX = {"motor": "M", "propeller": "P", "battery": "B"}
+#: Baseline (Phase I) length in flights: the tool's own default.
+BASELINE = qc.N_BASELINE
+TYPE_KEY = {"motor": 10, "propeller": 20, "battery": 40}
 
 
 def rng_for(*key: int) -> np.random.Generator:
-    """One independent random stream per (seed, purpose, drone, slot) key."""
+    """One independent random stream per (seed, purpose, ...) key."""
     return np.random.default_rng([SEED, *key])
 
 
-def battery_lot(install: pd.Timestamp) -> str:
-    """Supplier lot by purchase period: A before Oct 2025, B to Mar 2026, C after."""
-    if install < pd.Timestamp("2025-10-01"):
-        return "A"
-    if install < pd.Timestamp("2026-04-01"):
-        return "B"
-    return "C"
-
-
 def part_lot(install: pd.Timestamp) -> str:
-    """Motors and propellers: lot = install half-year, e.g. 2026H1."""
+    """Supplier lot = install half-year, e.g. 2026H1."""
     return f"{install.year}H{1 if install.month <= 6 else 2}"
 
 
+def draw_life(rng: np.random.Generator, ctype: str) -> tuple[float, float, float]:
+    """(Weibull life, early-pull uniform, pull fraction) for one new part, by inverse transform."""
+    spec = PARTS[ctype]
+    u_life, u_pull, u_frac = rng.uniform(size=3)
+    life = spec["eta"] * (-math.log(1 - u_life)) ** (1 / spec["beta"])
+    if ctype == "battery":
+        life = max(1.0, round(life))
+    return life, u_pull, u_frac
+
+
+def drift(ctype: str, age: float, life: float) -> float:
+    """Wear added to the part's reading: 0 until the P-F interval, then a ramp to DRIFT_AT_FAILURE sd."""
+    spec = PARTS[ctype]
+    left = life - min(age, life)
+    if left >= spec["pf"]:
+        return 0.0
+    return DRIFT_AT_FAILURE * CHART_SD[spec["chart"]] * (1 - left / spec["pf"])
+
+
+@dataclass
+class Part:
+    cid: str
+    ctype: str
+    pos: int
+    gen: int
+    install: pd.Timestamp
+    age: float               # usage so far (hours or cycles)
+    life: float              # its true Weibull life (unknown to the technician)
+    warned: int | None = None        # flight after which it was warned
+    replace_at: int | None = None    # flight after which a wear replacement is booked
+
+
+def new_part(drone: str, ctype: str, pos: int, gen: int, install: pd.Timestamp,
+             rng: np.random.Generator) -> Part:
+    life, _, _ = draw_life(rng, ctype)
+    return Part(f"{PARTS[ctype]['prefix']}-{drone[2:]}-{pos}-{gen:02d}", ctype, pos, gen, install, 0.0, life)
+
+
+def comp_row(drone: str, p: Part, end: pd.Timestamp | None, status: int, mode: str) -> dict:
+    return dict(component_id=p.cid, drone_id=drone, component_type=p.ctype, lot=part_lot(p.install),
+                install_date=p.install.date(), end_date=end.date() if end is not None else None,
+                life_value=round(p.age, 1) if p.ctype != "battery" else int(round(p.age)),
+                status=status, failure_mode=mode)
+
+
 # --------------------------------------------------------------------------
-# Flights: one row per flight, before components are attached
+# 1. History: run to failure from commissioning to the log start
 # --------------------------------------------------------------------------
 
-def simulate_flight_base(d: int) -> pd.DataFrame:
-    """Schedule and baseline measurements for drone index d (no planted signals)."""
+def simulate_history(d: int) -> tuple[list[dict], dict[tuple[str, int], Part], dict[tuple[str, int], np.random.Generator]]:
+    """Completed part lives before the log, and the part in each slot at the log start."""
+    drone = f"D-{d + 1:02d}"
+    commission = pd.Timestamp("2025-04-01") + pd.Timedelta(int(rng_for(3, d).integers(0, 180)), unit="D")
+    hist_days = (LOG_START - commission).days
+    usage = {"motor": hist_days * HISTORY_FLIGHTS_PER_DAY * MEAN_FLIGHT_MIN / 60,
+             "battery": round(hist_days * HISTORY_FLIGHTS_PER_DAY / 2)}
+    usage["propeller"] = usage["motor"]
+
+    rows, current, streams = [], {}, {}
+    for ctype, spec in PARTS.items():
+        total = usage[ctype]
+
+        def when(u: float) -> pd.Timestamp:
+            return commission + (LOG_START - commission) * (u / total)
+
+        for pos in range(1, spec["slots"] + 1):
+            rng = rng_for(TYPE_KEY[ctype], d, pos)
+            streams[(ctype, pos)] = rng
+            t, gen = 0.0, 0
+            while True:
+                gen += 1
+                life, u_pull, u_frac = draw_life(rng, ctype)
+                p = Part(f"{spec['prefix']}-{drone[2:]}-{pos}-{gen:02d}", ctype, pos, gen, when(t), 0.0, life)
+                end, status, mode = t + life, 1, None
+                if u_pull < P_REMOVED_EARLY:
+                    end, status, mode = t + max(1.0, u_frac * life), 0, "removed_other"
+                    if ctype == "battery":
+                        end = t + max(1.0, round(u_frac * life))
+                if end >= total:                    # still flying at the log start
+                    p.age = total - t
+                    current[(ctype, pos)] = p
+                    break
+                p.age = end - t
+                if mode is None:
+                    names, probs = FAILURE_MODES[ctype]
+                    mode = names[int(rng_for(30, d, TYPE_KEY[ctype], pos, gen).choice(len(names), p=probs))]
+                rows.append(comp_row(drone, p, when(end), status, mode))
+                t = end
+    return rows, current, streams
+
+
+# --------------------------------------------------------------------------
+# 2. Special causes: random drone, flight and part, from the seed
+# --------------------------------------------------------------------------
+
+def place_special_causes() -> list[dict]:
+    """1 + Poisson(1) occurrences of each cause across the fleet, spaced apart per drone and chart."""
+    events = []
+    for rule, sc in SPECIAL_CAUSES.items():
+        rng = rng_for(50, rule)
+        for _ in range(1 + int(rng.poisson(1.0))):
+            for _try in range(100):
+                d = int(rng.integers(0, N_DRONES))
+                start = int(rng.integers(FIRST_EVENT_FLIGHT, FLIGHTS_PER_DRONE - 30 + 1))
+                pos = int(rng.integers(1, PARTS[sc["part"]]["slots"] + 1)) if sc["part"] else None
+                clash = any(e["d"] == d and SPECIAL_CAUSES[e["rule"]]["chart"] == sc["chart"]
+                            and abs(e["start"] - start) < EVENT_SPACING for e in events)
+                if not clash:
+                    break
+            events.append(dict(rule=rule, d=d, start=start, pos=pos, end=None,
+                               detected=None, detected_by="", fix=""))
+    events.sort(key=lambda e: (e["d"], e["start"], e["rule"]))
+    for i, e in enumerate(events, 1):
+        e["event_id"] = f"SC-{i:02d}"
+    return events
+
+
+def event_effect(e: dict, k: int, battery_pos: int, rng: np.random.Generator) -> tuple[float, float]:
+    """(shift added to the reading, multiplier on the reading's noise) for one active cause on flight k."""
+    sd = CHART_SD[SPECIAL_CAUSES[e["rule"]]["chart"]]
+    u = rng.uniform()                          # drawn every flight so streams never shift
+    match e["rule"]:
+        case 1:
+            return (6.0 if k == e["start"] else 1.0) * sd, 1.0
+        case 2:
+            return 1.5 * sd, 1.0
+        case 4:
+            return (2.5 * sd if battery_pos == e["pos"] else 0.0), 1.0
+        case 5:
+            return (3.0 * sd if u < 0.4 else 0.0), 1.0
+        case 6:
+            return 1.3 * sd, 1.0
+        case 7:
+            return 0.0, 0.2
+        case 8:
+            return (1.8 if u < 0.5 else -1.8) * sd, 1.0
+    raise ValueError(f"no effect defined for rule {e['rule']}")
+
+
+# --------------------------------------------------------------------------
+# 3. The flight log with the technician in the loop
+# --------------------------------------------------------------------------
+
+def flight_base(d: int) -> pd.DataFrame:
+    """Schedule and in-control readings for drone index d (no wear, no special causes)."""
     rng = rng_for(1, d)
     n = FLIGHTS_PER_DRONE
-    # Launch times: spread over the 30 days, between 07:00 and 19:00.
-    days = np.sort(rng.integers(0, WINDOW_DAYS, n))
+    days = np.sort(rng.integers(0, LOG_DAYS, n))
     minutes_of_day = rng.integers(7 * 60, 19 * 60, n)
     order = np.lexsort((minutes_of_day, days))
     days, minutes_of_day = days[order], minutes_of_day[order]
-    dt = WINDOW_START + pd.to_timedelta(days, "D") + pd.to_timedelta(minutes_of_day, "min")
-
+    dt = LOG_START + pd.to_timedelta(days, "D") + pd.to_timedelta(minutes_of_day, "min")
     flight_min = np.clip(rng.normal(MEAN_FLIGHT_MIN, 4.0, n), 8, 35).round(1)
-    payload = rng.uniform(0.5, 2.5, n).round(2)
-
-    # Ambient temperature: a shared daily level (same city) plus a midday bump.
-    day_level = rng_for(2).normal(17.0, 4.0, WINDOW_DAYS)
+    payload = rng.uniform(0.5, 2.5, n)
+    day_level = rng_for(2).normal(17.0, 4.0, LOG_DAYS)          # one city: shared daily weather
     hour = minutes_of_day / 60
-    ambient = day_level[days] + 3.0 * np.sin((hour - 7) / 12 * math.pi) + rng.normal(0, 0.8, n)
-
-    # Motor temperature rise over ambient: drone-specific level, payload and
-    # flight length effects, measurement noise. Total sd is about 1.4 C.
+    ambient = (day_level[days] + 3.0 * np.sin((hour - 7) / 12 * math.pi) + rng.normal(0, 0.8, n)).round(1)
     drone_level = 18.0 + rng.normal(0, 1.0)
-    temp_rise = (drone_level + 1.2 * (payload - 1.5) + 0.1 * (flight_min - MEAN_FLIGHT_MIN)
-                 + rng.normal(0, 1.2, n))
+    temp_rise = drone_level + 1.2 * (payload - 1.5) + 0.1 * (flight_min - MEAN_FLIGHT_MIN) + rng.normal(0, 1.2, n)
+    vib_level = 3.0 + rng.normal(0, 0.2)
+    vib_noise = rng.normal(0, 0.25, n)
+    sag_rate = 0.17 + 0.02 * (payload - 1.5) + rng.normal(0, 0.008, n)
+    voltage_start = rng.normal(25.15, 0.04, n).round(2)
+    return pd.DataFrame({"k": np.arange(1, n + 1), "datetime": dt, "flight_min": flight_min,
+                         "ambient_temp_c": ambient, "temp_rise": temp_rise, "vib_level": vib_level,
+                         "vib_noise": vib_noise, "sag_rate": sag_rate, "voltage_start_v": voltage_start})
 
-    vibration = 3.0 + rng.normal(0, 0.2) + rng.normal(0, 0.25, n)
-    sag_rate = 0.17 + 0.02 * (payload - 1.5) + rng.normal(0, 0.008, n)  # V per minute
-    voltage_start = rng.normal(25.15, 0.04, n)
 
-    # Before-flight checklist: random 2% fails on arms or connectors
-    # (propeller chips are added later, from the propeller life simulation).
-    pre_u = rng.uniform(size=n)
-    fail_item = np.where(pre_u < 0.01, "loose_arm", np.where(pre_u < 0.02, "connector", "none"))
+class Chart:
+    """The tool's view of one reading on one drone: baseline limits, EWMA and the 8 rules."""
 
-    return pd.DataFrame({
-        "flight_seq": np.arange(1, n + 1),
-        "datetime": dt,
-        "flight_min": flight_min,
-        "payload_kg": payload,
-        "ambient_temp_c": ambient.round(1),
-        "_temp_rise": temp_rise,
-        "_sag_rate": sag_rate,
-        "voltage_start_v": voltage_start.round(2),
-        "vibration_rms": vibration,
-        "preflight_fail_item": fail_item,
-        "inflight_event": "none",
+    def __init__(self, name: str):
+        self.name = name
+        self.values: list[float] = []      # every reading, for the baseline
+        self.since_reset: list[float] = []
+        self.lim: qc.ImrLimits | None = None
+
+    def add(self, x: float) -> str:
+        """Record a reading; return what signalled ("" if nothing), e.g. "EWMA" or "rule 1, 5"."""
+        self.values.append(x)
+        if self.lim is None:
+            if len(self.values) == BASELINE:
+                self.lim = qc.imr_limits(self.values, n_baseline=BASELINE)
+            return ""
+        self.since_reset.append(x)
+        hits = []
+        ew = qc.ewma_chart(self.since_reset, mu0=self.lim.center, sigma=self.lim.sigma_hat)
+        if ew["signal"].iloc[-1]:
+            hits.append("EWMA")
+        rules = qc.spc_rules(self.since_reset[-15:], self.lim.center, self.lim.sigma_hat).iloc[-1]
+        if rules["rules_triggered"]:
+            hits.append(f"rule {rules['rules_triggered']}")
+        return "; ".join(hits)
+
+    def reset(self) -> None:
+        """After a repair or replacement: the EWMA restarts at the center and runs count afresh."""
+        self.since_reset = []
+
+
+def flights_to_b10(p: Part, b10: float) -> float:
+    per_flight = 0.5 if p.ctype == "battery" else MEAN_FLIGHT_MIN / 60
+    return (b10 - p.age) / per_flight
+
+
+def simulate_log(d: int, current: dict[tuple[str, int], Part], streams: dict, b10: dict[str, float],
+                 events: list[dict]) -> tuple[pd.DataFrame, list[dict], list[dict]]:
+    drone = f"D-{d + 1:02d}"
+    base = flight_base(d)
+    times = list(base["datetime"])
+    mine = [e for e in events if e["d"] == d]
+    event_rng = {e["event_id"]: rng_for(51, e["rule"], d, e["start"]) for e in mine}
+    delay_rng = rng_for(60, d)
+    charts = {c: Chart(c) for c in CHART_TYPE}
+    comps, maint = [], []
+    motor_temps, vibs, v_ends, inflight = [], [], [], []
+
+    def log(k: int, action: str, p: Part | None, new: Part | None, reason: str, warned: int | None = None):
+        maint.append(dict(drone_id=drone, flight_id=f"F-{drone[2:]}-{k:03d}", datetime=times[k - 1],
+                          action=action, component_type=p.ctype if p else "", position=p.pos if p else None,
+                          removed_id=p.cid if p else "", installed_id=new.cid if new else "",
+                          warned_after_flight=warned, reason=reason))
+
+    def replace(k: int, p: Part, status: int, mode: str, reason: str, action: str = "replace") -> None:
+        when = times[k - 1]
+        comps.append(comp_row(drone, p, when, status, mode))
+        new = new_part(drone, p.ctype, p.pos, p.gen + 1, when, streams[(p.ctype, p.pos)])
+        current[(p.ctype, p.pos)] = new
+        log(k, action, p, new, reason, p.warned)
+        charts[PARTS[p.ctype]["chart"]].reset()
+        for e in mine:              # a damaged part leaves with its special cause
+            if e["end"] is None and e["start"] <= k and SPECIAL_CAUSES[e["rule"]]["part"] == p.ctype \
+                    and e["pos"] == p.pos:
+                e["end"], e["fix"] = k, e["fix"] or f"part replaced ({reason})"
+
+    for row in base.itertuples():
+        k = row.k
+        bpos = (k - 1) % 2 + 1
+        hours = row.flight_min / 60
+        # ---- the flight: usage, failures, readings ----
+        failed = []
+        for (ctype, pos), p in current.items():
+            if ctype == "battery" and pos != bpos:
+                continue
+            use = 1.0 if ctype == "battery" else hours
+            if p.age < p.life <= p.age + use:
+                failed.append(p)
+            p.age += use
+        shift = {c: 0.0 for c in CHART_TYPE}
+        noise_mult = {c: 1.0 for c in CHART_TYPE}
+        for e in mine:
+            active = e["start"] <= k and (e["end"] is None or k <= e["end"])
+            dx, nm = event_effect(e, k, bpos, event_rng[e["event_id"]])
+            if active:
+                c = SPECIAL_CAUSES[e["rule"]]["chart"]
+                if e["rule"] == 2:      # the damaged motor runs hotter; the hottest motor is what's read
+                    continue
+                shift[c] += dx
+                noise_mult[c] *= nm
+        motor_heat = []
+        for pos in range(1, PARTS["motor"]["slots"] + 1):
+            p = current[("motor", pos)]
+            heat = drift("motor", p.age, p.life)
+            heat += sum(1.5 * CHART_SD["temp_rise_c"] for e in mine if e["rule"] == 2 and e["pos"] == pos
+                        and e["start"] <= k and (e["end"] is None or k <= e["end"]))
+            motor_heat.append(heat)
+        tr = row.temp_rise + max(motor_heat) + shift["temp_rise_c"]
+        vb = (row.vib_level + row.vib_noise * noise_mult["vibration_rms"] + shift["vibration_rms"]
+              + sum(drift("propeller", current[("propeller", q)].age, current[("propeller", q)].life)
+                    for q in range(1, PARTS["propeller"]["slots"] + 1)))
+        bp = current[("battery", bpos)]
+        sr = row.sag_rate + drift("battery", bp.age, bp.life) + shift["sag_rate_v_per_min"]
+        # rounded exactly as logged, so the technician's charts match what the tool will read
+        motor_temp = round(row.ambient_temp_c + tr, 1)
+        v_end = round(row.voltage_start_v - sr * row.flight_min, 2)
+        vb = round(vb, 2)
+        motor_temps.append(motor_temp)
+        vibs.append(vb)
+        v_ends.append(v_end)
+        inflight.append("return_home" if failed else "none")
+        reading = {"temp_rise_c": motor_temp - row.ambient_temp_c, "vibration_rms": vb,
+                   "sag_rate_v_per_min": (row.voltage_start_v - v_end) / row.flight_min}
+        signals = {c: charts[c].add(reading[c]) for c in CHART_TYPE}
+
+        # ---- after landing, before the next flight: the technician acts ----
+        for p in failed:
+            names, probs = FAILURE_MODES[p.ctype]
+            mode = names[int(rng_for(30, d, TYPE_KEY[p.ctype], p.pos, p.gen).choice(len(names), p=probs))]
+            replace(k, p, 1, mode, "failed in flight")
+        for c, what in signals.items():
+            if not what:
+                continue
+            ctype = CHART_TYPE[c]
+            found = False
+            for e in mine:
+                sc = SPECIAL_CAUSES[e["rule"]]
+                if sc["chart"] != c or e["start"] > k or e["end"] is not None:
+                    continue
+                found = True
+                if e["detected"] is None:
+                    e["detected"], e["detected_by"] = k, what
+                if sc["part"]:
+                    replace(k, current[(sc["part"], e["pos"])], 0, "damaged_" + sc["cause"].replace(" ", "_"),
+                            f"special cause: {sc['cause']} ({what})")
+                else:
+                    e["end"], e["fix"] = k, "repaired"
+                    log(k, "repair", None, None, f"special cause: {sc['cause']} ({what})")
+            for (t2, pos), p in current.items():
+                if t2 == ctype and p.life - p.age < PARTS[ctype]["pf"]:
+                    found = True                       # worn: warn and book it (once)
+                    p.warned = p.warned or k
+                    if p.replace_at is None:
+                        p.replace_at = k + int(delay_rng.integers(REPLACE_DELAY[0], REPLACE_DELAY[1] + 1))
+            if not found:
+                log(k, "inspect", None, None, f"no fault found ({c}: {what})")
+            charts[c].reset()
+        for key in list(current):
+            p = current[key]
+            if p.replace_at is not None and p.replace_at <= k:
+                # A part found inside its P-F interval was about to fail: a potential failure,
+                # logged as a failure (status 1) so the Weibull fit is not biased by informative censoring.
+                replace(k, p, 1, "worn_potential_failure", "worn: found at inspection after a chart signal")
+        for key in list(current):
+            p = current[key]
+            left = flights_to_b10(p, b10[p.ctype])
+            if left <= 0:
+                replace(k, p, 0, "replaced_scheduled", "reached replace-at age (B10)")
+            elif left <= WARN_FLIGHTS and p.warned is None:
+                p.warned = k
+
+    end = None
+    for p in current.values():
+        comps.append(comp_row(drone, p, end, 0, "in_service"))
+    f = pd.DataFrame({
+        "flight_id": [f"F-{drone[2:]}-{k:03d}" for k in base["k"]],
+        "drone_id": drone,
+        "datetime": base["datetime"],
+        "flight_min": base["flight_min"],
+        "ambient_temp_c": base["ambient_temp_c"],
+        "voltage_start_v": base["voltage_start_v"],
+        "voltage_end_v": v_ends,
+        "motor_temp_max_c": motor_temps,
+        "vibration_rms": vibs,
+        "inflight_event": inflight,
     })
+    return f, comps, maint
 
 
-# --------------------------------------------------------------------------
-# Components: a renewal process per slot (motor position, prop position,
-# battery slot). Each part lives until it fails, is pulled early (censored),
-# or the log ends (censored, still in service).
-# --------------------------------------------------------------------------
+def build_fleet() -> dict[str, pd.DataFrame]:
+    """Every table for the fleet, as DataFrames (nothing written)."""
+    history, start_parts, streams = {}, {}, {}
+    hist_rows = []
+    for d in range(N_DRONES):
+        rows, current, st = simulate_history(d)
+        history[d], start_parts[d], streams[d] = rows, current, st
+        hist_rows += rows + [comp_row(f"D-{d + 1:02d}", p, None, 0, "in_service") for p in current.values()]
+    fits = qc.fit_by_type(pd.DataFrame(hist_rows)).set_index("component_type")
+    b10 = fits["b10"].to_dict()
 
-@dataclass
-class Life:
-    start: float          # on the slot's usage axis (hours or cycles)
-    end: float
-    status: int           # 1 = failed, 0 = censored
-    mode: str
-    true_life: float = 0.0  # uncensored Weibull life L drawn for this component
-
-
-def component_reliability(age: float | np.ndarray, beta: float, eta: float):
-    """Weibull reliability R(t) = exp(-(t/eta)^beta) for a drone component."""
-    return np.exp(-(np.asarray(age, dtype=float) / eta) ** beta)
-
-
-def component_hazard(age: float | np.ndarray, beta: float, eta: float):
-    """Weibull instantaneous failure/hazard rate z(t) = (beta/eta) * (t/eta)^(beta-1)."""
-    t = np.maximum(np.asarray(age, dtype=float), 0.0)
-    return (beta / eta) * (t / eta) ** (beta - 1)
-
-
-def simulate_slot(rng: np.random.Generator, beta: float, eta_of, total: float,
-                  forced: tuple[float, str] | None, end_mode: str, integer: bool,
-                  stop_on_mode: str | None = None) -> list[Life]:
-    """Lives laid end to end on one slot's usage axis, up to `total`.
-
-    eta_of(start) gives the scale for a part installed at usage `start`
-    (this is how a bad supplier lot shortens some lives). Lives are drawn by
-    inverse transform from uniforms, so changing eta never shifts the stream.
-    """
-    lives, t = [], 0.0
-    g = 0
-    while t < total:
-        g += 1
-        u_life, u_pull, u_frac = rng.uniform(size=3)
-        eta = eta_of(t, g) if eta_of.__code__.co_argcount >= 2 else eta_of(t)
-        life = eta * (-math.log(1 - u_life)) ** (1 / beta)
-        if integer:
-            life = max(1.0, round(life))
-        end, status, mode = t + life, 1, "failure"
-        if u_pull < P_REMOVED_EARLY:
-            end, status, mode = t + max(1.0, round(u_frac * life) if integer else u_frac * life), 0, "removed_other"
-        if forced and t < forced[0] <= end:
-            end, status, mode = forced[0], 1, forced[1]
-            life = forced[0] - t
-        if end >= total and not (forced and end == forced[0]):
-            end, status, mode = total, 0, end_mode
-        lives.append(Life(t, end, status, mode, true_life=life))
-        t = end
-        if (forced and end == forced[0] and total == forced[0]) or (stop_on_mode and status == 1 and mode == stop_on_mode):
-            break
-    return lives
-
-
-def usage_to_time(usage, hist_usage, commission, cum_window, flight_times):
-    """Map a point on a slot's usage axis to a calendar timestamp.
-
-    Before the flight log: linear between commissioning and the log start.
-    During the log: the launch time of the flight in which that usage is reached.
-    """
-    if usage <= hist_usage:
-        span = WINDOW_START - commission
-        return commission + span * (usage / hist_usage)
-    k = int(np.searchsorted(cum_window, usage - hist_usage, side="left"))
-    return flight_times[min(k, len(flight_times) - 1)]
-
-
-def build_dataset(scenario: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-    flights_all, comps_all = [], []
+    events = place_special_causes()
+    flights, comps, maint = [], [], []
     for d in range(N_DRONES):
         drone = f"D-{d + 1:02d}"
-        f = simulate_flight_base(d)
-        times = list(f["datetime"])
-        hours_window = np.cumsum(f["flight_min"].to_numpy() / 60)
-        commission = pd.Timestamp("2025-04-01") + pd.Timedelta(int(rng_for(3, d).integers(0, 180)), unit="D")
-        hist_days = (WINDOW_START - commission).days
-        hist_hours = hist_days * HISTORY_FLIGHTS_PER_DAY * MEAN_FLIGHT_MIN / 60
-        total_hours = hist_hours + hours_window[-1]
-        cum_hours = hist_hours + hours_window
+        current = start_parts[d]
+        launch = []
+        for key, p in list(current.items()):   # launch inspection: anything past its B10 goes
+            if p.age >= b10[p.ctype]:
+                launch.append(comp_row(drone, p, LOG_START, 0, "replaced_scheduled"))
+                current[key] = new_part(drone, p.ctype, p.pos, p.gen + 1, LOG_START, streams[d][key])
+        f, c, m = simulate_log(d, current, streams[d], b10, events)
+        flights.append(f)
+        comps += history[d] + launch + c
+        maint += m
 
-        # ---- 1. Simulate motor and propeller Weibull renewal processes first ----
-        slot_lives: dict[tuple[str, int], list[Life]] = {}
-        crash_flight: int | None = None
-        for ctype, spec, n_slots, key in (("motor", MOTOR, 4, 10), ("propeller", PROP, 4, 20)):
-            for pos in range(1, n_slots + 1):
-                def eta_part(t, g, ctype=ctype, pos=pos):
-                    if scenario == "problem_fleet" and drone == DRIFT_DRONE and ctype == "motor" and pos == CRASH_MOTOR and g == 2:
-                        return spec["eta"] * BAD_MOTOR_SCALE
-                    if scenario == "problem_fleet" and drone == STRIKE_DRONE and ctype == "propeller" and pos == STRIKE_PROP and g == 4:
-                        return spec["eta"] * BAD_PROP_SCALE
-                    return spec["eta"]
-
-                rng = rng_for(key, d, pos)
-                lives = simulate_slot(rng, spec["beta"], eta_part, total_hours,
-                                      None, "in_service", integer=False)
-                slot_lives[(ctype, pos)] = lives
-
-                # Coupling component wear w(t) = age(t) / true_life to flight telemetry:
-                for g, life in enumerate(lives, 1):
-                    if life.status == 1 and life.end > hist_hours:
-                        k_fail = int(np.searchsorted(hours_window, life.end - hist_hours, side="left"))
-                        k_fail = min(k_fail, len(f) - 1)
-                        # Defective 2026H2 motor bearing on D-07 motor 3 wears out continuously
-                        # above WEAR_ONSET_FRAC of its Weibull life L until bearing seizure at w = 1.0.
-                        if scenario == "problem_fleet" and drone == DRIFT_DRONE and ctype == "motor" and pos == CRASH_MOTOR:
-                            life.mode = "bearing"
-                            ages = cum_hours - life.start
-                            wear = ages / life.true_life
-                            onset_age = WEAR_ONSET_FRAC * life.true_life
-                            f["_temp_rise"] += np.where(
-                                (cum_hours > life.start + onset_age) & (cum_hours <= life.end + 1e-6),
-                                WEAR_TEMP_PER_HOUR * (ages - onset_age),
-                                0.0,
-                            )
-                            f.loc[(wear > WEAR_WARN_FRAC) & (f["flight_seq"] <= k_fail + 1), "inflight_event"] = "warning"
-                            f.loc[f["flight_seq"] == k_fail + 1, "inflight_event"] = "crash"
-                            crash_flight = k_fail + 1
-                        # Propeller fatigue/strike at w = 1.0 spikes rotor vibration on that flight.
-                        elif scenario == "problem_fleet" and drone == STRIKE_DRONE and ctype == "propeller" and pos == STRIKE_PROP:
-                            life.mode = "strike"
-                            f.loc[f["flight_seq"] == k_fail + 1, "vibration_rms"] = STRIKE_VIBRATION
-                            f.loc[f["flight_seq"] == k_fail + 1, "inflight_event"] = "warning"
-
-        # If a motor bearing seized in flight (crash), truncate subsequent flights and mark surviving parts crash_loss.
-        if crash_flight is not None:
-            f = f[f["flight_seq"] <= crash_flight].copy()
-            times = list(f["datetime"])
-            hours_window = np.cumsum(f["flight_min"].to_numpy() / 60)
-            total_hours = hist_hours + hours_window[-1]
-        end_mode = "crash_loss" if crash_flight is not None else "in_service"
-
-        for ctype, spec, n_slots, key in (("motor", MOTOR, 4, 10), ("propeller", PROP, 4, 20)):
-            for pos in range(1, n_slots + 1):
-                lives = []
-                for life in slot_lives[(ctype, pos)]:
-                    if life.start >= total_hours:
-                        break
-                    if life.end >= total_hours and not (crash_flight is not None and ctype == "motor" and pos == CRASH_MOTOR and abs(life.end - total_hours) < 1e-3):
-                        life = Life(life.start, total_hours, 0, end_mode, life.true_life)
-                    elif crash_flight is not None and ctype == "motor" and pos == CRASH_MOTOR and abs(life.end - total_hours) < 1e-3:
-                        life = Life(life.start, total_hours, 1, "bearing", life.true_life)
-                    lives.append(life)
-                for g, life in enumerate(lives, 1):
-                    install = usage_to_time(life.start, hist_hours, commission, hours_window, times)
-                    end = usage_to_time(life.end, hist_hours, commission, hours_window, times)
-                    mode = life.mode
-                    if mode == "failure":
-                        names, probs = FAILURE_MODES[ctype]
-                        mode = names[int(rng_for(30, d, pos, g, key).choice(len(names), p=probs))]
-                    comps_all.append(dict(
-                        component_id=f"{PREFIX[ctype]}-{drone[2:]}-{pos}-{g:02d}", drone_id=drone,
-                        component_type=ctype, lot=part_lot(install), install_date=install.date(),
-                        end_date=end.date() if mode != "in_service" else None,
-                        life_value=round(life.end - life.start, 1), status=life.status,
-                        failure_mode=mode))
-                    unhandled = life.mode == "failure"
-                    if life.status == 1 and life.end > hist_hours and unhandled:
-                        k = int(np.searchsorted(hours_window, life.end - hist_hours, side="left"))
-                        k = min(k, len(f) - 1)
-                        if ctype == "propeller":
-                            k2 = min(k + 1, len(f) - 1)
-                            f.iloc[k2, f.columns.get_loc("preflight_fail_item")] = "prop_chip"
-                        elif f.iloc[k]["inflight_event"] == "none":
-                            f.iloc[k, f.columns.get_loc("inflight_event")] = "return_home"
-
-        # ---- batteries: 2 slots used alternately, on a charge-cycle axis ----
-        slot_of_flight = (f["flight_seq"].to_numpy() - 1) % 2 + 1
-        f["battery_id"], f["battery_cycles"] = "", 0
-        hist_cycles = round(hist_days * HISTORY_FLIGHTS_PER_DAY / 2)
-        for slot in (1, 2):
-            idx = np.flatnonzero(slot_of_flight == slot)
-            cyc_window = np.arange(1, len(idx) + 1, dtype=float)       # cycles reached per use
-            total_cycles = hist_cycles + len(idx)
-
-            def eta_of(t, slot=slot):
-                install = usage_to_time(t, hist_cycles, commission, cyc_window, [times[i] for i in idx])
-                bad = scenario == "problem_fleet" and battery_lot(install) == "B"
-                return BATTERY["eta"] * (BAD_LOT_SCALE if bad else 1.0)
-
-            lives = simulate_slot(rng_for(40, d, slot), BATTERY["beta"], eta_of, total_cycles,
-                                  None, end_mode, integer=True)
-            slot_times = [times[i] for i in idx]
-            for g, life in enumerate(lives, 1):
-                bid = f"B-{drone[2:]}-{slot}-{g:02d}"
-                install = usage_to_time(life.start, hist_cycles, commission, cyc_window, slot_times)
-                end = usage_to_time(life.end, hist_cycles, commission, cyc_window, slot_times)
-                mode = life.mode
-                if mode == "failure":
-                    names, probs = FAILURE_MODES["battery"]
-                    mode = names[int(rng_for(41, d, slot, g).choice(len(names), p=probs))]
-                comps_all.append(dict(
-                    component_id=bid, drone_id=drone, component_type="battery",
-                    lot=battery_lot(install), install_date=install.date(),
-                    end_date=end.date() if mode != "in_service" else None,
-                    life_value=int(life.end - life.start), status=life.status, failure_mode=mode))
-                # Attach this battery to the flights it powered (cycle c is
-                # flown by the battery installed at cycle < c <= its end).
-                for j, i in enumerate(idx):
-                    c = hist_cycles + j + 1
-                    if life.start < c <= life.end:
-                        f.iloc[i, f.columns.get_loc("battery_id")] = bid
-                        f.iloc[i, f.columns.get_loc("battery_cycles")] = int(c - life.start)
-                        if scenario == "problem_fleet" and life.true_life > 0:
-                            w_bat = (c - life.start) / life.true_life
-                            if w_bat > BATTERY_WEAR_ONSET:
-                                f.iloc[i, f.columns.get_loc("_sag_rate")] += (
-                                    BATTERY_WEAR_SAG * ((w_bat - BATTERY_WEAR_ONSET) / (1.0 - BATTERY_WEAR_ONSET))
-                                )
-                        if life.status == 1 and c == life.end and f.iloc[i]["inflight_event"] == "none":
-                            f.iloc[i, f.columns.get_loc("inflight_event")] = "return_home"
-
-        # ---- finish measured columns ----
-        motor_temp = (f["ambient_temp_c"] + f["_temp_rise"]).round(1)
-        f["motor_temp_max_c"] = motor_temp.where(f["inflight_event"] != "crash")  # wreck: no reading
-        f["voltage_end_v"] = (f["voltage_start_v"] - f["_sag_rate"] * f["flight_min"]).round(2)
-        f["vibration_rms"] = f["vibration_rms"].round(2)
-        f["preflight_pass"] = (f["preflight_fail_item"] == "none").astype(int)
-        f["drone_id"] = drone
-        f["flight_id"] = [f"F-{drone[2:]}-{k:03d}" for k in f["flight_seq"]]
-        flights_all.append(f)
-
-    flights = pd.concat(flights_all, ignore_index=True).sort_values(["datetime", "drone_id"])
+    flights = pd.concat(flights, ignore_index=True).sort_values(["datetime", "drone_id"], kind="stable")
     flights["datetime"] = flights["datetime"].dt.strftime("%Y-%m-%dT%H:%M")
-    flights = flights[[
-        # Only the columns the tool uses (minimal inputs). Payload weight, battery IDs and the
-        # checklist still shape the simulation above, but a technician doesn't need to log them.
-        "flight_id", "drone_id", "datetime", "flight_min", "ambient_temp_c",
-        "voltage_start_v", "voltage_end_v", "motor_temp_max_c", "vibration_rms", "inflight_event"]]
-    comps = pd.DataFrame(comps_all).sort_values(["drone_id", "component_id"])
-    return flights.reset_index(drop=True), comps.reset_index(drop=True)
+    components = pd.DataFrame(comps).sort_values(["drone_id", "component_id"]).reset_index(drop=True)
+    maintenance = pd.DataFrame(maint).sort_values(["datetime", "drone_id"], kind="stable").reset_index(drop=True)
+    maintenance["datetime"] = maintenance["datetime"].dt.strftime("%Y-%m-%dT%H:%M")
+    maintenance["position"] = maintenance["position"].astype("Int64")
+    maintenance["warned_after_flight"] = maintenance["warned_after_flight"].astype("Int64")
+    key = pd.DataFrame([dict(event_id=e["event_id"], drone_id=f"D-{e['d'] + 1:02d}", rule_shape=e["rule"],
+                             cause=SPECIAL_CAUSES[e["rule"]]["cause"], chart=SPECIAL_CAUSES[e["rule"]]["chart"],
+                             component_type=SPECIAL_CAUSES[e["rule"]]["part"] or "", position=e["pos"],
+                             start_flight=e["start"], detected_after_flight=e["detected"],
+                             detected_by=e["detected_by"], fixed_after_flight=e["end"], fix=e["fix"],
+                             how=SPECIAL_CAUSES[e["rule"]]["how"]) for e in events])
+    for col in ("position", "detected_after_flight", "fixed_after_flight"):
+        key[col] = key[col].astype("Int64")
+    return {"flights": flights.reset_index(drop=True), "components": components,
+            "maintenance": maintenance, "answer_key": key, "b10": pd.Series(b10)}
 
 
 def main() -> None:
-    for scenario in ("problem_fleet", "healthy"):
-        flights, comps = build_dataset(scenario)
-        folder = OUT_DIR / scenario
-        folder.mkdir(exist_ok=True)
-        flights.to_csv(folder / "flights.csv", index=False, lineterminator="\n")
-        comps.to_csv(folder / "components.csv", index=False, lineterminator="\n")
-        print(f"{scenario:16s} flights={len(flights):4d}  components={len(comps):4d}  "
-              f"failed={int(comps['status'].sum()):3d}")
+    tables = build_fleet()
+    OUT_DIR.mkdir(exist_ok=True)
+    for name in ("flights", "components", "maintenance", "answer_key"):
+        tables[name].to_csv(OUT_DIR / f"{name}.csv", index=False, lineterminator="\n")
+    f, c, m, k = (tables[n] for n in ("flights", "components", "maintenance", "answer_key"))
+    print(f"fleet: flights={len(f)}  components={len(c)} (failed {int(c['status'].sum())})  "
+          f"maintenance rows={len(m)}  special causes={len(k)}")
+    print("replace-at ages (B10 fitted to the run-to-failure history): "
+          + ", ".join(f"{t} {v:.1f}" for t, v in tables["b10"].items()))
+    print("actions:", m["action"].value_counts().to_dict())
+    print("replacement reasons:", m.loc[m["action"] == "replace", "reason"].str.split(" \\(").str[0]
+          .str.replace(r"special cause: .*", "special cause", regex=True).value_counts().to_dict())
+    print(f"special causes detected: {int(k['detected_after_flight'].notna().sum())} of {len(k)}")
 
 
 if __name__ == "__main__":

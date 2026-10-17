@@ -25,6 +25,14 @@ Done: H-02 (data). H-01: SPEC filled; only the team readback of SPEC section 4 i
 
 ## Decisions
 
+- **Redesign: one active fleet with a replacement loop (Div, 2026-10-16, task H-10).** Supersedes the "Two datasets" and "Run rules: rule 1 only" decisions below, and removes crashes.
+  - The healthy fleet is removed everywhere. The scripted faults (D-07 ramp and crash, D-03 strike, lot B ×0.6, magic-decimal life scales) are removed.
+  - 10 drones × 300 flights (~90 days). Every part wears: in the last stretch of its own Weibull life (its P-F interval) its reading drifts up (motor → temperature rise, propeller → vibration, battery → voltage sag).
+  - Special causes are random (seeded): one physical cause per Nelson / Western Electric rule shape, 1 = prop strike, 2 = hard landing (motor), 3 = wear trend, 4 = one bad battery of the alternating pair, 5 = loose power connector, 6 = prop imbalance, 7 = vibration log over-filtered after a firmware update (readings too flat), 8 = loose motor mount (vibration rattles in one of two modes). All 8 rules run on the I charts; rules 2-8 are not applied to the EWMA (its points are autocorrelated). Expected cost: more false alarms than rule 1 alone, shown and explained, not tuned away.
+  - Warning (W) = whichever comes first: the part is within 10 flights of its B10 replace-at age, or a chart signals (EWMA or any rule) and inspection finds that part worn. The technician then replaces (R) or repairs; a part that fails before that is an F and is replaced at once. No drone stops flying.
+  - After every repair or replacement the EWMA restarts at the center line and the run rules start counting afresh. Control limits are kept: a new part returns the drone to its baseline process.
+  - Timeline display: one row per part slot, flight number on the X axis, markers W / R / F / S (H-04 rework).
+
 - Chance warnings are kept, not tuned away (2026-10-16): the healthy fleet shows 2 Warnings (D-06 cool baseline, D-07 one sag reading). Longer baselines (40, 50) only move the false alarms to other drones. Warning cards say "often just chance: inspect at the next check" and the healthy fleet explains the expected rate.
 
 - Two datasets, not three (2026-10-16): `problem_fleet` holds every planted problem (D-07 wear and crash, D-03 prop strike, lot B batteries) and `healthy` is the comparison, because a single-problem fleet changed only one view and switching looked random. Statuses read Can fly / Warning / Do not fly in the app.

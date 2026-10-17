@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 18:58"
+updated: "2026-10-16 20:45"
 
 tasks:
   - id: H-01
@@ -186,3 +186,31 @@ tasks:
       the one-line purpose and the Open-the-dashboard button show without
       scrolling at 1280x800.
     result: "Welcome page reordered and folded (hero CTA + What-you-get + datasets first; parts table, three moments, example rows, key terms behind <details>): served visible words 729 (was 1624), pytest 58 passed, HTTP 200, both Open-the-dashboard and Continue buttons served; hero button shares the enter handler in app.py; Duc eyeballs 1280x800 first screen; manifest refresh still due via H-06"
+
+  - id: H-10
+    title: Re-simulate one active fleet with wear, random special causes and replacements
+    points: "protects Statistical Validity (25): every chart signal comes from a simulated cause, not a script; Tool Design (10): test data shows the replacement loop"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-16 20:16"
+    owns: ["data/simulate.py", "data/README.md", "data/fleet/", "app/data/fleet/", "tests/test_simulate.py"]
+    notes: >
+      Agreed with Div on 2026-10-16 (docs/plan.md Decisions). One fleet, 10
+      drones x 300 flights. Every part wears: in its last P-F interval its
+      reading drifts (motor -> temp rise, prop -> vibration, battery -> sag).
+      One random special cause per SPC rule shape (rules 1-8), random drone and
+      flight from the seed. Closed loop: the simulated technician acts on the
+      warning (Weibull age near B10, or an EWMA / rule 1-8 signal) and replaces
+      or repairs; a part that fails first is an F and is replaced; no drone
+      stops flying. Writes data/fleet/{flights,components,maintenance,answer_key}.csv.
+      The old problem_fleet/ and healthy/ folders stay untouched until H-03 and
+      H-04 move the tests and the app to data/fleet/, then they are deleted.
+    definition_of_done: >
+      python data/simulate.py prints the fleet summary and two runs give
+      byte-identical CSVs; python -m pytest tests/test_simulate.py -q passes
+      (every injected special cause is detected and acted on, no drone stops
+      flying, the Weibull fit of components.csv recovers the true shape and
+      scale of every part type within Bonferroni-adjusted 95% intervals, i.e.
+      99.2% each, because six intervals are checked at once); python -m pytest
+      tests -q still passes.
+    result: "One active fleet, 10 drones x 300 flights, no scripted drone: simulate.py prints flights=3000 components=431 maintenance=344, 17 of 17 random special causes detected (median 2 flights), 2 in-flight failures each replaced before the next flight; two runs byte-identical; test_simulate 13 passed; full suite 75 passed. Weibull fit recovers every true beta/eta inside Bonferroni 95% intervals (battery eta 356 [317, 396] just misses its plain 95% interval). False alarms 2.8% of chart points with a 30-flight baseline (2.2% at 50, an H-03 decision)"
