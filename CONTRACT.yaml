@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 20:57"
+updated: "2026-10-16 21:08"
 
 tasks:
   - id: H-01
@@ -90,18 +90,25 @@ tasks:
     points: "25 - Tool Implementation: an effective, working tool (does it run?)"
     status: done
     owner: "Claude + DanielDistor"
-    started_at: "2026-10-16 18:20"
-    owns: ["app/"]
+    started_at: "2026-10-16 21:00"
+    owns: ["app/", "data/problem_fleet/", "data/healthy/"]
     notes: >
       Copy ONE folder from demos/ (the one named in SPEC section 5) to app/.
       Everything in app/ except the H-03 files. Load fastapi-react-scaffold or
       plumber-react-scaffold for an API plus React front end.
+      Rework 2026-10-16 (Div, after H-10 and H-03): one active fleet from
+      data/fleet (no dataset switch, no healthy fleet, no crash screens);
+      Fleet tab with a Due soon list (parts within 10 flights of B10) and a
+      fleet maintenance timeline (W/R/F/S); drone pop-up with a per-slot
+      timeline, flights left per part, and control charts that restart at
+      each logged action (qc.monitor_chart); welcome page rewritten for the
+      one fleet. Deletes data/problem_fleet/ and data/healthy/ (and their
+      app/data copies) once nothing reads them.
     definition_of_done: >
       The testme script in app/ starts the tool with one command, and a call
       on one data/ file (endpoint, function call or app upload) returns the
       same numbers as the H-03 known-answer test.
-    result: "app/testme.sh serves the Shiny app at 127.0.0.1:8000 (HTTP 200); Fleet tab on problem_fleet grounds D-07 with EWMA first crossed on flight 74, same as tests/test_qc.py; 31 tests pass; checked in a browser."
-
+    result: "Rework: app serves data/fleet only (HTTP 200, server log clean); a scripted Shiny session renders all 13 outputs with no error: 10 can fly, 8 parts due within 10 flights, 95 R / 3 F / 17 S / 168 N on the fleet timeline, D-10 pop-up with per-slot timeline, parts and restarting control charts; numbers come from qc.py (same functions as the 79 passing tests). Old datasets deleted. manifest.json still lists them: regenerate via H-06 before deploying."
   - id: H-05
     title: Demonstration of the tool on every test dataset
     points: "10 - Tool Design: a clear demonstration of the tool, using test datasets"

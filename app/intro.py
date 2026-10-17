@@ -45,7 +45,7 @@ MOMENTS = [
     ("During the flight", "Recorded automatically by the drone's flight controller", [
         ("How long it flew", "flight_min"),
         ("How much it shook", "vibration_rms"),
-        ("Any alert: warning, auto-return, crash", "inflight_event"),
+        ("Any alert: auto-return after a part failed", "inflight_event"),
     ]),
     ("Right after landing", "Technician, within a minute of landing", [
         ("Hottest motor temperature (infrared thermometer)", "motor_temp_max_c"),
@@ -78,76 +78,61 @@ PART_COLS = [
     ("status", "Failed?"), ("failure_mode", "What happened"),
 ]
 
-SCENARIOS = [
-    {
-        "num": "1", "file": "problem_fleet", "name": "Fleet with problems (the main demo)",
-        "what": "Three things go wrong - the kind this startup only finds after a crash today. "
-                "(a) D-07: a motor wears out and runs a little hotter every flight, until it fails "
-                "and the drone crashes on flight 95. (b) D-03: a propeller hits something on flight 80. "
-                "(c) Batteries from supplier batch lot B are faulty and die after about 240 charges "
-                "instead of about 400.",
-        "expect": "D-07 is marked Do not fly, with its first warning at flight 74 - 21 flights before the "
-                  "crash. D-03's vibration jump on flight 80 is flagged. Lot B batteries show up as dying early.",
-        "timeline": [(60, "D-07's motor starts wearing out", "wear"),
-                     (74, "the tool warns about D-07", "tool"),
-                     (80, "D-03's propeller hits something", "wear"),
-                     (95, "D-07 crashes", "bad")],
-        "lots": [("Lot A", "bought before Oct 2025", 400), ("Lot B", "Oct 2025 – Mar 2026", 240),
-                 ("Lot C", "Apr 2026 onward", 400)],
-    },
-    {
-        "num": "2", "file": "healthy", "name": "Healthy fleet (for comparison)",
-        "what": "The same 10 drones and the same flights, with nothing planted. Parts wear at their normal "
-                "rate and every battery batch is fine.",
-        "expect": "Almost every drone Can fly. A couple show a Warning from ordinary random variation. "
-                  "No drone is marked Do not fly.",
-        "timeline": [],
-        "lots": [("Lot A", "bought before Oct 2025", 400), ("Lot B", "Oct 2025 – Mar 2026", 400),
-                 ("Lot C", "Apr 2026 onward", 400)],
-    },
-]
+FLEET = DATA / "fleet"
+#: How each injected special cause is described on the welcome page.
+CAUSE_CLASS = {"prop strike": "bad", "hard landing": "bad", "bad battery cell": "bad"}
+
 
 TERMS = [
-    ("Baseline", "Each drone's first 30 logged flights. The drone is assumed healthy then, and "
-                 "its own normal variation sets the limits for every later flight."),
+    ("Baseline", "Each drone's first 50 logged flights. The drone is assumed healthy then, and "
+                 "its own normal variation sets the limits for every later flight. The limits never move."),
     ("Control limits (UCL / LCL)", "The upper and lower lines on a chart: baseline mean ± 3 sigma. "
                                    "A healthy drone stays between them about 99.7% of the time."),
     ("Sigma (σ)", "The typical flight-to-flight spread, estimated from the average jump between "
                   "consecutive baseline readings ÷ 1.128."),
-    ("Signal", "A point outside the control limits (a red ✕ on the charts). It means something "
-               "has probably changed, so inspect the drone."),
-    ("I chart", "Individuals chart: every reading plotted on its own. Best at catching sudden "
-                "damage, like a prop strike."),
+    ("The 8 rules", "Nelson / Western Electric tests on each reading: rule 1 is one point beyond 3σ; "
+                    "rules 2-8 are patterns (a run on one side, a trend, a zig-zag, points piling up near a "
+                    "limit, or readings suspiciously flat). Each points to a different kind of special cause."),
     ("EWMA", "Exponentially weighted moving average: a running average that weights recent "
              "flights most (λ = 0.2). Catches slow wear long before any single reading looks odd."),
+    ("Restart after a repair", "When the technician replaces a part, repairs something or inspects a "
+                               "signal, that chart's EWMA starts again at the center line and the rules count "
+                               "afresh, so old readings from a removed part don't keep raising alarms."),
+    ("Common and special causes", "Common cause: the ordinary flight-to-flight noise. Special cause: "
+                                  "something that changed, such as a worn part, a strike or a loose connector. "
+                                  "Charts separate the two."),
     ("Temperature rise", "Hottest motor right after landing minus the air temperature (°C). "
                          "Subtracting the air temperature means a hot day isn't mistaken for wear."),
     ("Voltage sag", "Battery voltage at takeoff minus at landing, per flight minute (V/min). "
                     "It rises as a battery degrades."),
-    ("Can fly / Warning / Do not fly", "Can fly: every chart in control. Warning: a warning sign in the last 10 "
-                                       "flights, so fly but inspect soon. Do not fly: a reading is out of limits now, "
-                                       "or the drone crashed."),
+    ("Can fly / Warning / Do not fly", "Can fly: no open signal. Warning: a signal nobody has inspected "
+                                       "yet. Do not fly: the latest flight is beyond 3σ or the EWMA is beyond its "
+                                       "limit now, so inspect before the next flight."),
     ("Weibull life, B10, censored", "A model of how long each part type lasts, fitted from the parts "
                                     "history. B10 = the age by which 10% have failed - the replace-at "
-                                    "age. Censored = parts still in use, counted in the fit."),
+                                    "age. Censored = parts still in use or removed for another reason, "
+                                    "counted in the fit as 'lasted at least this long'."),
+    ("W / R / F / S on the timeline", "W: warning (near the replace-at age, or found worn). R: replaced. "
+                                      "F: failed in flight, replaced before the next one. S: special cause "
+                                      "found and fixed."),
 ]
 
 WHAT_YOU_GET = [
     ("Fleet status at a glance", "All 10 drones on one screen: can fly, warning or do not fly, each "
-                                 "with the reason. Start here every morning."),
-    ("Charts for any drone", "Click a drone card to open its control charts - motor temperature, "
-                             "vibration, battery voltage - with the numbers behind them and what to inspect."),
-    ("Parts replacement", "When to replace each part type, worked out from this fleet's own history: "
-                          "how much life each part has left, and the battery-batch check."),
+                                 "with the reason, plus every part due for replacement soon."),
+    ("Replacement timeline", "Every warning, replacement, in-flight failure and special cause, flight by "
+                             "flight, for the whole fleet and for each part slot of each drone."),
+    ("Charts for any drone", "Click a drone card for its control charts - motor temperature, vibration, "
+                             "battery voltage - with all 8 rules, an EWMA, and a restart at each repair."),
 ]
 
 STEPS = [
     ("1", "Log each flight", "A minute of readings: the hottest motor's temperature, battery voltage, "
-                             "and numbers from the flight log."),
-    ("2", "Compare to the drone's own normal", "The first 30 flights set each drone's baseline; every "
-                                               "later flight is checked against it."),
-    ("3", "Act before the flight", "Can fly, warning or do not fly - stop a drone before it fails in "
-                                   "the air, instead of investigating after a crash."),
+                             "and numbers from the flight log. Log every part you replace."),
+    ("2", "Compare to the drone's own normal", "The first 50 flights set each drone's baseline; every "
+                                               "later flight is checked against it with 8 rules and an EWMA."),
+    ("3", "Replace before it fails", "Each part is warned 10 flights before its replace-at age, or as soon "
+                                     "as a chart shows it wearing. Swap it and the drone keeps flying."),
 ]
 
 
@@ -213,15 +198,15 @@ def _example_table(df: pd.DataFrame, cols: list[tuple[str, str]]) -> str:
 
 
 def example_flights() -> str:
-    f = pd.read_csv(DATA / "healthy" / "flights.csv")
+    f = pd.read_csv(FLEET / "flights.csv")
     return _example_table(f[f["drone_id"] == "D-01"].head(3), FLIGHT_COLS)
 
 
 def example_parts() -> str:
-    c = pd.read_csv(DATA / "healthy" / "components.csv")
+    c = pd.read_csv(FLEET / "components.csv")
     picks = pd.concat([
         c[(c.component_type == "motor") & (c.status == 1)].head(1),
-        c[(c.component_type == "propeller") & (c.status == 1)].head(1),
+        c[c.failure_mode == "replaced_scheduled"].head(1),
         c[(c.component_type == "battery") & (c.failure_mode == "in_service")].head(1),
     ])
     picks = picks.assign(
@@ -233,15 +218,12 @@ def example_parts() -> str:
     return _example_table(picks, PART_COLS)
 
 
-# ---------------------------------------------------------------- the two test datasets
+# ---------------------------------------------------------------- the test fleet
 
-def _timeline(marks: list[tuple[int, str, str]]) -> str:
-    """A flight 1 to 100 bar with coloured dots, and the events listed underneath in order."""
-    ends = '<div class="tl-ends"><span>flight 1</span><span>flight 100</span></div>'
-    if not marks:
-        return (f'<div class="tl"><div class="tl-bar calm"></div>{ends}</div>'
-                '<ul class="tl-list"><li><span class="tl-dot calm"></span>Nothing planted in any flight</li></ul>')
-    dots = "".join(f'<span class="tl-dot {cls}" style="left:{(f - 1) / 99 * 100:.1f}%"></span>'
+def _timeline(marks: list[tuple[int, str, str]], n: int) -> str:
+    """A flight 1 to n bar with coloured dots, and the events listed underneath in order."""
+    ends = f'<div class="tl-ends"><span>flight 1</span><span>flight {n}</span></div>'
+    dots = "".join(f'<span class="tl-dot {cls}" style="left:{(f - 1) / (n - 1) * 100:.1f}%"></span>'
                    for f, _, cls in marks)
     items = "".join(f'<li><span class="tl-dot {cls}"></span><b>Flight {f}</b> {escape(label)}</li>'
                     for f, label, cls in sorted(marks))
@@ -249,31 +231,42 @@ def _timeline(marks: list[tuple[int, str, str]]) -> str:
             f'<ul class="tl-list">{items}</ul>')
 
 
-def _lots(lots: list[tuple[str, str, int]]) -> str:
-    rows = "".join(
-        f'<div class="lot"><div class="lot-name">{escape(n)}<span>{escape(when)}</span></div>'
-        f'<div class="lot-track"><div class="lot-bar{" bad" if life < 400 else ""}" '
-        f'style="width:{life / 400 * 100:.0f}%">~{life} charges</div></div></div>'
-        for n, when, life in lots)
-    return f'<div class="lots"><div class="lots-cap">How long batteries from each batch last (built into the data)</div>{rows}</div>'
-
-
-def scenario_cards() -> list[ui.Tag]:
-    cards = []
-    for s in SCENARIOS:
-        cards.append(ui.div(
-            ui.div(ui.span(f"Dataset {s['num']}", class_="tag"), ui.code(f"data/{s['file']}/"),
-                   class_="card-head"),
-            ui.h3(s["name"]),
-            ui.p("Flights, September 2026", class_="mini-cap"),
-            ui.HTML(_timeline(s["timeline"])),
-            ui.HTML(_lots(s["lots"])),
-            ui.tags.dl(
-                ui.tags.dt("What happens"), ui.tags.dd(s["what"]),
-                ui.tags.dt("What the tool should show"), ui.tags.dd(s["expect"]),
-                class_="scenario-dl"),
-            class_="info-card scenario"))
-    return cards
+def fleet_card() -> ui.Tag:
+    """The one test fleet: what was injected (from the answer key) and what the technician did."""
+    key = pd.read_csv(FLEET / "answer_key.csv")
+    m = pd.read_csv(FLEET / "maintenance.csv")
+    f = pd.read_csv(FLEET / "flights.csv")
+    n = int(f["flight_id"].str.rsplit("-", n=1).str[-1].astype(int).max())
+    marks = [(int(e.start_flight), f"{e.drone_id}: {e.cause} (rule {e.rule_shape} shape), caught after "
+              f"flight {int(e.detected_after_flight)} by {e.detected_by}", CAUSE_CLASS.get(e.cause, "wear"))
+             for e in key.itertuples()]
+    reasons = m.loc[m["action"] == "replace", "reason"]
+    n_sched = int((reasons == "reached replace-at age (B10)").sum())
+    n_worn = int(reasons.str.startswith("worn").sum())
+    n_fail = int((reasons == "failed in flight").sum())
+    n_none = int((m["action"] == "inspect").sum() - m["reason"].str.startswith("worn").sum())
+    return ui.div(
+        ui.div(ui.span("Test fleet", class_="tag"), ui.code("data/fleet/"), class_="card-head"),
+        ui.h3(f"10 drones, {len(f):,} flights, Jul–Sep 2026"),
+        ui.p(f"The {len(key)} special causes injected at random (the simulation's answer key)", class_="mini-cap"),
+        ui.HTML(_timeline(marks, n)),
+        ui.tags.dl(
+            ui.tags.dt("What happens"),
+            ui.tags.dd("Every part wears out at its own random Weibull life, and in its last stretch it "
+                       "pushes one reading up (motor → temperature, propeller → vibration, battery → voltage "
+                       "sag). On top of that, the special causes above strike random drones. Nothing is "
+                       "scripted on a named drone."),
+            ui.tags.dt("What the technician did"),
+            ui.tags.dd(f"{n_sched} parts replaced at their replace-at age after a warning, {n_worn} replaced "
+                       f"early because a chart showed them wearing, {n_fail} failed in flight and were replaced "
+                       f"before the next flight, and {n_none} inspections found nothing (the false alarms that "
+                       "come with using all 8 rules). No drone ever stopped flying."),
+            ui.tags.dt("What the tool should show"),
+            ui.tags.dd("Every special cause above is signalled, on the flight listed. Run on these files, the "
+                       "tool signals on exactly the flights where the technician acted - checked for all 30 "
+                       "drone charts in the tests."),
+            class_="scenario-dl"),
+        class_="info-card scenario")
 
 
 # ---------------------------------------------------------------- the page
@@ -295,12 +288,13 @@ def intro_page() -> ui.Tag:
                 ui.p("Six Sigma Hackathon · Team Flight Control", class_="eyebrow"),
                 ui.h1("Drone Fleet Reliability Monitor"),
                 ui.p("Catch wear before it becomes a mid-air failure. Every morning, the fleet "
-                     "maintenance technician sees which of the 10 drones can fly - and why.",
+                     "maintenance technician sees which of the 10 drones can fly, which parts to swap "
+                     "next - and why.",
                      class_="lede"),
                 ui.div(
                     ui.span("10 drones", class_="stat-chip"),
-                    ui.span("~1,000 flights", class_="stat-chip"),
-                    ui.span("2 test datasets", class_="stat-chip"),
+                    ui.span("3,000 flights", class_="stat-chip"),
+                    ui.span("every replacement logged", class_="stat-chip"),
                     class_="hero-stats",
                 ),
                 ui.div(
@@ -322,30 +316,27 @@ def intro_page() -> ui.Tag:
             ui.div(*[ui.div(ui.span(n, class_="step-num"), ui.h3(t), ui.p(b), class_="step")
                      for n, t, b in STEPS], class_="grid-3"),
 
-            # ---- the two datasets ----
-            ui.h2("The two test datasets"),
+            # ---- the test fleet ----
+            ui.h2("The test fleet"),
             ui.div(
-                ui.p(ui.strong("Two invented fleets: one with problems, one without."),
-                     " Both are the same 10 drones flying the same ~1,000 flights in September 2026. "
-                     "The only difference is the problems we planted, so we know the right answer and "
-                     "can check the tool finds it, like testing a smoke alarm once with smoke and once "
-                     "without."),
-                ui.p("The dashboard opens on the fleet with problems; the switch at the top swaps to "
-                     "the healthy one."),
+                ui.p(ui.strong("One invented fleet, flying for three months."),
+                     " Parts wear out and get replaced, and random problems strike - the kind a real "
+                     "delivery fleet sees. Because we generated it, we know every problem we put in, so we "
+                     "can check the tool catches each one, like testing a smoke alarm with real smoke."),
                 class_="callout"),
-            ui.div(*scenario_cards(), class_="grid-2"),
+            fleet_card(),
 
             # ---- the data, folded away ----
             ui.h2("The data, from the drone up"),
             ui.p("We don't have a real startup's records, so we invented realistic ones: one small "
-                 "delivery fleet flying for one month.", class_="section-note"),
+                 "delivery fleet flying for three months.", class_="section-note"),
             _fold("The drone and the 5 things the technician measures",
                   ui.div(ui.HTML(drone_diagram()), ui.HTML(parts_table()), class_="diagram-card")),
             _fold("One flight, three moments",
                   ui.p("Every line of the flight logbook is one whole flight, with readings from before, "
-                       "during and after it. Both datasets have all three.", class_="section-note"),
+                       "during and after it.", class_="section-note"),
                   moments_strip()),
-            _fold("Example rows from the two files",
+            _fold("Example rows from the data files",
                   ui.div(
                       ui.div(ui.h3("flights.csv: the flight logbook"),
                              ui.p("One line per flight - here, the first 3 flights of D-01. The gray text "

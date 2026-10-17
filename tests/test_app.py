@@ -30,11 +30,13 @@ def test_app_module_builds():
         html = str(mod.app.ui)
         # Dashboard is the active landing tab, not the intro essay
         assert "Drone Fleet Health &amp; Part Wear Monitor" in html
-        assert "Weibull Reliability &amp; B10 Thresholds" in html
-        assert "compare_lots" not in html and "lot_plot" not in html
+        assert "Weibull reliability &amp; replace-at ages" in html
+        assert "due_soon" in html and "fleet_timeline" in html          # the replacement views
+        assert 'id="dataset"' not in html                              # one fleet, no switch
+        assert "healthy fleet" not in html.lower() and "crash" not in html.lower()
         detail_html = str(mod.drone_detail_body())
-        assert "drone_parts_wear" in detail_html
-        assert "drone_charts" in detail_html
+        for output in ("drone_timeline", "drone_parts", "drone_charts"):
+            assert output in detail_html
     finally:
         sys.path.remove(str(ROOT / "app"))
 
