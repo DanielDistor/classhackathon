@@ -130,50 +130,25 @@ def test_bad_known_sigma_is_refused():
         ewma_chart([1.0, 2.0], mu0=1, sigma=0)
 
 
-# ---------------------------------------------------------------- 3. planted signals in data/
+# ---------------------------------------------------------------- 3. the simulated fleet (data/fleet)
 
-def load(dataset: str) -> pd.DataFrame:
+def load(dataset: str = "fleet") -> pd.DataFrame:
     return add_derived(pd.read_csv(DATA / dataset / "flights.csv"))
-
-
-def first_flight(series: pd.DataFrame, signal: pd.Series):
-    hits = series.loc[signal.to_numpy(), "flight_no"]
-    return int(hits.iloc[0]) if len(hits) else None
-
-
-def test_problem_fleet_ewma_catches_d07_before_crash():
-    s = drone_series(load("problem_fleet"), "D-07", "temp_rise_c")
-    ewma = ewma_chart(s["value"])
-    imr = imr_chart(s["value"])
-    assert first_flight(s, ewma["signal"]) == 74          # drift starts after 60, crash at 95
-    assert first_flight(s, imr["signal_i"]) == 83         # a raw chart is 9 flights later
-    assert s["flight_no"].max() == 94                     # crash flight has no temperature
-
-
-def test_problem_fleet_i_chart_catches_d03_prop_strike():
-    s = drone_series(load("problem_fleet"), "D-03", "vibration_rms")
-    imr = imr_chart(s["value"])
-    assert list(s.loc[imr["signal_i"].to_numpy(), "flight_no"]) == [80]
-
-
-def test_healthy_d07_stays_in_control():
-    s = drone_series(load("healthy"), "D-07", "temp_rise_c")
-    assert not ewma_chart(s["value"])["signal"].any()
 
 
 def test_drone_series_unknown_drone_is_refused():
     with pytest.raises(ValueError, match="no flights"):
-        drone_series(load("healthy"), "D-99", "temp_rise_c")
+        drone_series(load(), "D-99", "temp_rise_c")
 
 
 # ---------------------------------------------------------------- fleet status (go / watch / ground)
 
-def synthetic_flights(n=40, spike_at=None, drone="D-01"):
-    """A steady drone; optionally one vibration spike at flight `spike_at`."""
+def synthetic_flights(n=60, spike_at=None, drone="D-01", spike=9.0):
+    """A steady drone; optionally one vibration spike (to `spike` m/s²) at flight `spike_at`."""
     rng = np.random.default_rng(7)
     vib = 3 + rng.normal(0, 0.2, n)
     if spike_at:
-        vib[spike_at - 1] = 9.0
+        vib[spike_at - 1] = spike
     return pd.DataFrame({
         "flight_id": [f"F-01-{k:03d}" for k in range(1, n + 1)],
         "drone_id": drone,
@@ -194,15 +169,17 @@ def test_fleet_status_go_when_nothing_signals():
 
 
 def test_fleet_status_ground_when_latest_flight_is_out():
-    st = fleet_status(synthetic_flights(spike_at=40)).set_index("drone_id")
+    st = fleet_status(synthetic_flights(spike_at=60)).set_index("drone_id")
     assert st.loc["D-01", "status"] == "ground"
-    assert "vibration" in st.loc["D-01", "reason"] and "flight 40" in st.loc["D-01", "reason"]
+    assert "vibration" in st.loc["D-01", "reason"] and "flight 60" in st.loc["D-01", "reason"]
 
 
 def test_fleet_status_watch_when_recent_signal_cleared():
-    st = fleet_status(synthetic_flights(spike_at=35)).set_index("drone_id")
+    # a ~4.5 sigma spike 9 flights ago: its EWMA effect has decayed below the limit by now,
+    # but the I-chart hit is within the last 10 flights and nobody logged an inspection
+    st = fleet_status(synthetic_flights(spike_at=51, spike=3.9)).set_index("drone_id")
     assert st.loc["D-01", "status"] == "watch"
-    assert "flight 35" in st.loc["D-01", "reason"]
+    assert "flight 51" in st.loc["D-01", "reason"] and "not yet inspected" in st.loc["D-01", "reason"]
 
 
 def test_fleet_status_too_few_flights():
@@ -210,35 +187,19 @@ def test_fleet_status_too_few_flights():
     assert st.loc["D-01", "status"] == "not enough data"
 
 
-def test_fleet_status_problem_fleet_grounds_d07():
-    st = fleet_status(load("problem_fleet")).set_index("drone_id")
-    assert st.loc["D-07", "status"] == "ground"
-    assert "crash" in st.loc["D-07", "reason"]
-    assert "first crossed on flight 74" in st.loc["D-07", "reason"]
-    assert len(st) == 10
-
-
-def test_fleet_status_grounds_no_healthy_drone():
-    # The healthy fleet raises a couple of "watch" false alarms (3-sigma charts on
-    # 10 drones; D-06's cool baseline, see data/README.md) but must ground nobody.
-    st = fleet_status(load("healthy"))
-    assert (st["status"] != "ground").all()
-    assert (st["status"] == "go").sum() >= 8
-
-
 def test_check_flights_accepts_bundled_data():
-    f = pd.read_csv(DATA / "healthy" / "flights.csv")
+    f = pd.read_csv(DATA / "fleet" / "flights.csv")
     assert check_flights(f) is f
 
 
 def test_check_flights_names_missing_columns():
-    f = pd.read_csv(DATA / "healthy" / "flights.csv").drop(columns=["vibration_rms"])
+    f = pd.read_csv(DATA / "fleet" / "flights.csv").drop(columns=["vibration_rms"])
     with pytest.raises(ValueError, match="vibration_rms"):
         check_flights(f)
 
 
 def test_check_flights_refuses_text_in_numbers():
-    f = pd.read_csv(DATA / "healthy" / "flights.csv").astype({"vibration_rms": str})
+    f = pd.read_csv(DATA / "fleet" / "flights.csv").astype({"vibration_rms": str})
     f.loc[0, "vibration_rms"] = "high"
     with pytest.raises(ValueError, match="numbers"):
         check_flights(f)
@@ -261,7 +222,7 @@ def test_chart_margin_refuses_zero_width_limits():
 
 
 def test_health_is_zero_when_latest_reading_is_out():
-    st = fleet_status(synthetic_flights(spike_at=40)).set_index("drone_id")
+    st = fleet_status(synthetic_flights(spike_at=60)).set_index("drone_id")
     assert st.loc["D-01", "health"] == 0.0
     assert st.loc["D-01", "health_driver"] == "vibration"
 
@@ -269,14 +230,6 @@ def test_health_is_zero_when_latest_reading_is_out():
 def test_health_is_high_for_a_steady_drone():
     st = fleet_status(synthetic_flights()).set_index("drone_id")
     assert 0.3 < st.loc["D-01", "health"] <= 1.0
-
-
-def test_health_problem_fleet_d07_is_zero_and_healthy_fleet_is_not():
-    drift = fleet_status(load("problem_fleet")).set_index("drone_id")
-    assert drift.loc["D-07", "health"] == 0.0
-    healthy = fleet_status(load("healthy"))
-    assert healthy["health"].between(0, 1).all()
-    assert (healthy["health"] > 0).sum() >= 8
 
 
 def test_health_missing_when_not_enough_data():
@@ -333,19 +286,12 @@ def test_spc_rules_refuses_bad_sigma():
 
 
 def test_fleet_status_watch_on_spc_rules_2_to_8():
-    # A sustained +0.8 sigma shift on the last 9 flights stays well inside +/- 3 sigma (no Rule 1),
-    # but triggers SPC Rule 2 (9 points in a row on the same side) -> status is "watch", not "ground".
-    df = synthetic_flights(n=45)
-    df.loc[36:, "vibration_rms"] = 3.25
+    # The last 14 readings alternate up and down around the center, well inside +/- 3 sigma
+    # (no rule 1) and with no shift in the mean (no EWMA signal), but they trigger rule 4
+    # (14 points in a row alternating) -> "watch", not "ground".
+    df = synthetic_flights(n=65)
+    center = df["vibration_rms"].iloc[:50].mean()
+    df.loc[51:, "vibration_rms"] = [center + (0.15 if i % 2 else -0.15) for i in range(14)]
     st = fleet_status(df).set_index("drone_id")
     assert st.loc["D-01", "status"] == "watch"
-    assert "SPC rule 2" in st.loc["D-01", "reason"]
-
-
-def test_natural_battery_wear_triggers_spc_watch_on_d03():
-    # In problem_fleet, D-03's slot-1 battery reaches 98% of its Weibull life by flight 99,
-    # naturally raising voltage sag enough to trigger SPC Rule 2 (watch) without crossing 3 sigma.
-    st = fleet_status(load("problem_fleet")).set_index("drone_id")
-    assert st.loc["D-03", "status"] == "watch"
-    assert "SPC rule 2" in st.loc["D-03", "reason"]
-
+    assert "rule 4" in st.loc["D-01", "reason"]

@@ -14,7 +14,7 @@ import pandas as pd
 import pytest
 from scipy import stats
 
-from app.qc import b_life, compare_lots, fit_by_type, km_curve, parts_past_b10, reliability, weibull_fit
+from app.qc import b_life, compare_lots, fit_by_type, km_curve, reliability, weibull_fit
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 
@@ -99,42 +99,29 @@ def test_status_must_be_0_or_1_and_match_length():
         weibull_fit([10, 20, 30], [1, 1])
 
 
-# ---------------------------------------------------------------- the planted data
+# ---------------------------------------------------------------- the simulated fleet (data/fleet)
 
-def comps(dataset):
+def comps(dataset="fleet"):
     return pd.read_csv(DATA / dataset / "components.csv")
 
 
-def test_problem_fleet_battery_lot_b_is_short_lived():
-    lots = compare_lots(comps("problem_fleet"), "battery").set_index("lot")
-    assert lots.loc["B", "eta"] == pytest.approx(240, rel=0.10)   # planted: 240 cycles
-    assert lots.loc["A", "eta"] > lots.loc["B", "eta"] * 1.3
-    assert lots.loc["B", "b10"] < lots.loc["A", "b10"]
-    assert lots.loc["B", "eta_hi"] < lots.loc["A", "eta_lo"]      # the intervals don't overlap
-
-
-def test_healthy_batteries_have_no_bad_lot():
-    lots = compare_lots(comps("healthy"), "battery").set_index("lot")
-    fitted = lots.dropna(subset=["eta"])
-    assert (fitted["eta"] > 330).all()                             # planted: 400 for every lot
-
-
-def test_fit_by_type_units_and_planted_motor_life():
-    by = fit_by_type(comps("healthy")).set_index("component_type")
+def test_fit_by_type_units_and_true_life_on_the_fleet():
+    # True lives in data/simulate.py: motor eta 500 h, propeller 150 h, battery 400 cycles.
+    by = fit_by_type(comps()).set_index("component_type")
     assert set(by.index) == {"motor", "propeller", "battery"}
     assert by.loc["battery", "unit"] == "charge cycles"
     assert by.loc["motor", "unit"] == "flight hours"
-    assert by.loc["motor", "eta"] == pytest.approx(500, rel=0.10)  # planted: 500 h
+    assert by.loc["motor", "eta"] == pytest.approx(500, rel=0.10)
     assert by.loc["propeller", "eta"] == pytest.approx(150, rel=0.10)
+    assert by.loc["battery", "eta"] == pytest.approx(400, rel=0.15)   # 356: potential failures come early
 
 
-def test_parts_past_b10_are_in_service_and_older_than_b10():
-    c = comps("healthy")
-    by = fit_by_type(c)
-    due = parts_past_b10(c, by)
-    assert (due["end_date"].isna()).all()
-    b10 = by.set_index("component_type")["b10"]
-    assert (due["life_value"] > due["component_type"].map(b10)).all()
+def test_no_lot_differs_from_the_rest():
+    # No defective lot is simulated, so every lot's battery life interval overlaps the fleet's.
+    fleet = fit_by_type(comps()).set_index("component_type").loc["battery"]
+    lots = compare_lots(comps(), "battery").dropna(subset=["eta"])
+    assert len(lots) >= 2
+    assert ((lots["eta_lo"] <= fleet["eta_hi"]) & (lots["eta_hi"] >= fleet["eta_lo"])).all()
 
 
 def test_km_known_answer():
@@ -154,7 +141,7 @@ def test_km_matches_lifelines():
 
 def test_check_components_accepts_bundled_and_refuses_bad_status():
     from app.qc import check_components
-    c = comps("healthy")
+    c = comps()
     assert check_components(c) is c
     bad = c.copy()
     bad.loc[0, "status"] = 2
@@ -203,12 +190,12 @@ def test_replacement_plan_known_answers():
     assert p["overdue"] and p["flights_left"] == pytest.approx(-40)   # 20 h past B10 = 40 flights
 
 
-def test_replacement_plan_on_problem_fleet():
-    from app.qc import replacement_plan
-    c = comps("problem_fleet")
-    f = pd.read_csv(DATA / "problem_fleet" / "flights.csv")
+def test_replacement_plan_on_the_fleet():
+    from app.qc import WARN_FLIGHTS, replacement_plan
+    c = comps()
+    f = pd.read_csv(DATA / "fleet" / "flights.csv")
     plan = replacement_plan(c, f, fit_by_type(c))
     assert set(plan["component_id"]) == set(c.loc[c["end_date"].isna(), "component_id"])
-    assert "D-07" not in set(plan["drone_id"])                # lost in its crash: nothing to replace
     assert plan["overdue"].equals(plan["remaining"] <= 0)
-    assert plan.groupby("drone_id").size().max() == 10        # 4 motors, 4 props, 2 batteries
+    assert plan["due"].equals(plan["flights_left"] <= WARN_FLIGHTS)
+    assert plan.groupby("drone_id").size().to_dict() == {f"D-{i:02d}": 10 for i in range(1, 11)}

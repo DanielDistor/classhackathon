@@ -27,8 +27,8 @@ assignable cause, both random:
    | Battery | 2 packs, used in turn | 3.0 | 400 charge cycles | 30 cycles (~60 flights) | Voltage sag per minute, on that pack's flights |
 
 2. **Special causes.** One physical cause per Nelson / Western Electric rule shape, each placed at a
-   random drone, flight and part (1 + Poisson(1) of each across the fleet, all after flight 40 so the
-   30-flight baseline is clean, and at least 40 flights apart on the same drone and chart):
+   random drone, flight and part (1 + Poisson(1) of each across the fleet, all after flight 60, so the
+   50-flight baseline stays clean, and at least 40 flights apart on the same drone and chart):
 
    | Rule shape | Cause | What it does to the reading | Fix |
    |---|---|---|---|
@@ -42,8 +42,8 @@ assignable cause, both random:
    | 8: 8 beyond 1σ, both sides | Loose motor mount | Vibration +1.8 or −1.8 sd each flight (two rattle modes) | Repair (tighten) |
 
    The rule shape is the pattern each cause is built to produce. The rule that fires *first* is often
-   another one: in this run the EWMA or rules 1 and 5 got there first for 11 of the 17 causes. Every cause
-   was detected within 0–14 flights (median 2).
+   another one: in this run the EWMA or rules 1 and 5 got there first for 12 of the 17 causes. Every cause
+   was detected within 0–12 flights (median 1).
 
 ### The technician in the loop
 
@@ -57,12 +57,14 @@ After every flight a simulated technician runs the tool's own statistics (`app/q
 | Trigger | Action | `maintenance.csv` reason |
 |---|---|---|
 | A part fails in flight (the drone returns home: `inflight_event = return_home`) | Replace before the next flight | `failed in flight` |
-| A chart signals (EWMA, or any of the 8 rules on the I chart, after the 30-flight baseline) | Inspect. A special cause found is fixed. A part found inside its P-F interval is **warned** and replaced 1–3 flights later. Nothing found = a false alarm | `special cause: …`, `worn: found at inspection after a chart signal`, `no fault found` |
+| A chart signals (EWMA, or any of the 8 rules on the I chart, after the 50-flight baseline) | Inspect. A special cause found is fixed. A part found inside its P-F interval is **warned** (an `inspect` row `worn: … found, replacement booked`) and replaced 1–3 flights later. Nothing found = a false alarm | `special cause: …`, `worn: found at inspection after a chart signal`, `no fault found` |
 | A part comes within 10 flights of its B10 | **Warn**, then replace when it reaches B10 | `reached replace-at age (B10)` |
 
-After any repair or replacement, that chart's EWMA restarts at the center line and its run rules start
-counting afresh. The control limits are kept, because a new part puts the drone back on its baseline.
-**No drone ever stops flying.**
+After every logged action on a chart (replacement of a part that drives it, repair, or inspection), its
+EWMA restarts at the center line and its run rules start counting afresh. The control limits are kept,
+because a new part puts the drone back on its baseline. **No drone ever stops flying.** The tool does the
+same from the CSVs (`qc.monitor_chart`, reading the resets from `maintenance.csv`), and the tests check
+that it signals on exactly the flights where the simulated technician acted: all 30 drone charts agree.
 
 ## Files in `fleet/`
 
@@ -84,7 +86,7 @@ counting afresh. The control limits are kept, because a new part puts the drone 
 Derived by the tool, never typed in: `temp_rise_c = motor_temp_max_c − ambient_temp_c` and
 `sag_rate_v_per_min = (voltage_start_v − voltage_end_v) / flight_min`.
 
-### `components.csv`: one row per part life (431 rows), the Weibull input
+### `components.csv`: one row per part life (430 rows), the Weibull input
 
 | Column | Meaning |
 |---|---|
@@ -105,20 +107,21 @@ Two censoring choices, both standard and both checked:
   because the potential-failure age comes a little before the true failure.
 - **A part damaged by a special cause is censored.** External damage is a competing risk, not wear-out.
 
-Fitted to this file (lifelines, right-censored maximum likelihood, 95% intervals): motor β 2.61 [1.65,
-3.57], η 508 [392, 624]; propeller β 1.88 [1.64, 2.12], η 152 [137, 167]; battery β 3.57 [2.64, 4.50],
+Fitted to this file (lifelines, right-censored maximum likelihood, 95% intervals): motor β 2.62 [1.66,
+3.59], η 507 [392, 623]; propeller β 1.92 [1.67, 2.16], η 154 [139, 169]; battery β 3.57 [2.64, 4.50],
 η 356 [317, 396]. Every true value is inside its Bonferroni-adjusted interval (the test); the battery η is
 just outside its plain 95% interval, which happens about once in 20 by construction.
 
-### `maintenance.csv`: one row per technician action (344 rows)
+### `maintenance.csv`: one row per technician action (301 rows)
 
 | Column | Meaning |
 |---|---|
 | `drone_id`, `flight_id`, `datetime` | The action happened after this flight, before the next |
-| `action` | `replace`, `repair` (no part changed) or `inspect` (a chart signalled, no fault found) |
-| `component_type`, `position`, `removed_id`, `installed_id` | The part swapped (blank for repairs and inspections) |
+| `action` | `replace`, `repair` (no part changed) or `inspect` (a chart signalled: a worn part found and booked, or no fault found) |
+| `chart` | The reading the action concerns (`temp_rise_c`, `vibration_rms`, `sag_rate_v_per_min`): the chart that restarts after it |
+| `component_type`, `position`, `removed_id`, `installed_id` | The part concerned; `removed_id`/`installed_id` only on replacements (blank for repairs and no-fault inspections) |
 | `warned_after_flight` | Flight after which the tool first warned about this part (blank if it failed or was damaged without a warning) |
-| `reason` | Why, from the trigger table above. Chart-driven reasons name the chart and what fired, e.g. `(vibration_rms: EWMA; rule 1)` |
+| `reason` | Why, from the trigger table above. Chart-driven reasons end with what fired, e.g. `(EWMA; rule 1)` |
 
 ### `answer_key.csv`: the injected special causes (17 rows)
 
@@ -144,9 +147,10 @@ For checking the tool's numbers. A real fleet would not come with these.
 
 - **False alarms are the price of using all 8 rules.** For a stable process, rules 1–8 together trip
   roughly once every 50–90 points, against once in 370 for rule 1 alone, and the EWMA adds a little more.
-  Limits estimated from only 30 flights add more again. In this run 228 inspections (2.8% of chart points
-  after the baseline) found nothing. With a 50-flight baseline the rate falls to 2.2% (a decision for H-03).
-- **Some baselines are unlucky.** By chance, D-01's first 30 voltage-sag readings are unusually steady
-  (sd 0.008 against 0.014 later; the raw random draws themselves are that steady), so its sag limits sit
-  too tight and it collects 26 of the false alarms. We kept the seed rather than re-pick it.
+  Limits estimated from a 50-flight baseline add a little more. In this run 170 inspections (2.3% of chart
+  points after the baseline) found nothing; with a 30-flight baseline it was 2.8%.
+- **A failure inside the baseline.** D-05's propeller 1 failed on flight 25, so its wear ramp sits inside
+  D-05's baseline: baseline vibration averages 3.23 m/s² against 3.02 afterwards. The center line is too
+  high, later readings run below it, and D-05 collects 42 of the 170 false alarms. A real Phase I would
+  drop the flights just before a logged failure; we kept it as the visible cost of a contaminated baseline.
 - `life_value` prints with one decimal for motors and props; battery cycles are whole numbers.

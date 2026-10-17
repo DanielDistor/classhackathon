@@ -32,6 +32,8 @@ Done: H-02 (data). H-01: SPEC filled; only the team readback of SPEC section 4 i
   - Warning (W) = whichever comes first: the part is within 10 flights of its B10 replace-at age, or a chart signals (EWMA or any rule) and inspection finds that part worn. The technician then replaces (R) or repairs; a part that fails before that is an F and is replaced at once. No drone stops flying.
   - After every repair or replacement the EWMA restarts at the center line and the run rules start counting afresh. Control limits are kept: a new part returns the drone to its baseline process.
   - Timeline display: one row per part slot, flight number on the X axis, markers W / R / F / S (H-04 rework).
+  - Baseline = the first 50 flights per drone (Div, 2026-10-16, H-03 rework; supersedes 30). With 30, the baseline sigma ranged 0.6x to 1.4x the true value and false alarms were 2.8% of chart points; with 50 they are 2.3%. Phase I cleaning (dropping baseline points outside first-pass limits) was tried and barely helped, so it is not used. Special causes start after flight 60.
+  - The tool reads its resets from `maintenance.csv` (`chart` column): any logged replacement, repair or inspection on a chart restarts it. Run on the CSVs it signals on exactly the flights the simulated technician acted on (all 30 drone charts, tested).
 
 - Chance warnings are kept, not tuned away (2026-10-16): the healthy fleet shows 2 Warnings (D-06 cool baseline, D-07 one sag reading). Longer baselines (40, 50) only move the false alarms to other drones. Warning cards say "often just chance: inspect at the next check" and the healthy fleet explains the expected rate.
 

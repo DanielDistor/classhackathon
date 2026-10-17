@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 20:45"
+updated: "2026-10-16 20:57"
 
 tasks:
   - id: H-01
@@ -67,17 +67,24 @@ tasks:
     points: "25 - Tool Implementation: valid analyses relevant to quality control in R or Python"
     status: done
     owner: "Claude + DanielDistor"
-    started_at: "2026-10-16 17:40"
-    owns: ["app/qc.py", "app/requirements.txt", "tests/"]
+    started_at: "2026-10-16 20:50"
+    owns: ["app/qc.py", "app/requirements.txt", "tests/", "data/simulate.py", "data/README.md", "data/fleet/", "app/data/fleet/"]
     notes: >
       Load the stats-first-steering skill before writing any statistics. Plain
       inputs (a data frame or vector), plain outputs (numbers), no framework.
+      Rework 2026-10-16 (Div, after H-10): baseline 50 flights; charts restart
+      (EWMA at the center, run rules afresh, limits kept) after every logged
+      repair, replacement or inspection (qc.monitor_chart); the tool run on
+      data/fleet must signal on exactly the flights the simulated technician
+      acted on; maintenance_timeline() gives the W/R/F/S markers; remove
+      parts_past_b10 and the crash logic; move every test to data/fleet.
+      data/ paths are owned here only to add a chart column and a row for each
+      worn part found to maintenance.csv, and to regenerate with baseline 50.
     definition_of_done: >
       pytest tests (Python) or Rscript -e "testthat::test_dir('tests')" (R)
       passes, including one test that reproduces the SPEC section 4
       known-answer check and one degenerate case (constant data or n = 1).
-    result: "app/qc.py control charts + fleet status/health + Weibull (weibull_fit, fit_by_type, compare_lots, km_curve, parts_past_b10); pytest 56 passed (SPEC known answers: I-MR 15.589, EWMA 10.2/10.56, B10 32.459; degenerate cases refused; D-07 EWMA flight 74; lot B eta 244 vs planted 240); control charts match R qcc and Weibull fits match R survreg to 4 decimals."
-
+    result: "Rework for the active fleet: baseline 50; qc.monitor_chart restarts the EWMA and run rules after every logged action (limits kept); run on data/fleet the tool signals on exactly the flights the simulated technician acted on (30 of 30 charts); maintenance_timeline gives W/R/F/S/N markers; parts_past_b10 and crash logic removed; every test moved off problem_fleet/healthy. pytest 79 passed (SPEC known answers I-MR 15.589, EWMA 10.2/10.56 and restart 11.88, B10 32.459; degenerate cases refused). Earlier: control charts match R qcc and Weibull fits match R survreg to 4 decimals."
   - id: H-04
     title: Working tool - one demo copied to app/ and wired to the H-03 function
     points: "25 - Tool Implementation: an effective, working tool (does it run?)"

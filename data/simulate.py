@@ -77,12 +77,11 @@ CHART_TYPE = {spec["chart"]: ctype for ctype, spec in PARTS.items()}
 CHART_SD = {"temp_rise_c": 1.45, "vibration_rms": 0.25, "sag_rate_v_per_min": 0.014}
 #: Wear drift at the moment of failure, in chart standard deviations (linear ramp over the P-F interval).
 DRIFT_AT_FAILURE = 4.0
-#: Warn this many flights before a part reaches its B10 replace-at age.
-WARN_FLIGHTS = 10
+#: Warn this many flights before a part reaches its B10 replace-at age: the tool's own setting.
+WARN_FLIGHTS = qc.WARN_FLIGHTS
 #: Flights between a wear warning found at inspection and the replacement (part comes from stock).
 REPLACE_DELAY = (1, 3)
 P_REMOVED_EARLY = 0.08          # history only: chance a part was pulled before it failed (censored)
-FIRST_EVENT_FLIGHT = 40         # special causes start after the 30-flight baseline, with a margin
 EVENT_SPACING = 40              # no two causes on the same drone and chart within this many flights
 
 # One physical special cause per SPC rule shape (rule 3, a trend, is the wear itself).
@@ -112,6 +111,8 @@ FAILURE_MODES = {
 }
 #: Baseline (Phase I) length in flights: the tool's own default.
 BASELINE = qc.N_BASELINE
+#: Special causes start after the baseline, with a margin, so the baseline limits stay clean.
+FIRST_EVENT_FLIGHT = BASELINE + 10
 TYPE_KEY = {"motor": 10, "propeller": 20, "battery": 40}
 
 
@@ -341,10 +342,12 @@ def simulate_log(d: int, current: dict[tuple[str, int], Part], streams: dict, b1
     comps, maint = [], []
     motor_temps, vibs, v_ends, inflight = [], [], [], []
 
-    def log(k: int, action: str, p: Part | None, new: Part | None, reason: str, warned: int | None = None):
+    def log(k: int, action: str, p: Part | None, new: Part | None, reason: str, warned: int | None = None,
+            chart: str = ""):
         maint.append(dict(drone_id=drone, flight_id=f"F-{drone[2:]}-{k:03d}", datetime=times[k - 1],
-                          action=action, component_type=p.ctype if p else "", position=p.pos if p else None,
-                          removed_id=p.cid if p else "", installed_id=new.cid if new else "",
+                          action=action, chart=chart or PARTS[p.ctype]["chart"],
+                          component_type=p.ctype if p else "", position=p.pos if p else None,
+                          removed_id=p.cid if p and action == "replace" else "", installed_id=new.cid if new else "",
                           warned_after_flight=warned, reason=reason))
 
     def replace(k: int, p: Part, status: int, mode: str, reason: str, action: str = "replace") -> None:
@@ -430,15 +433,17 @@ def simulate_log(d: int, current: dict[tuple[str, int], Part], streams: dict, b1
                             f"special cause: {sc['cause']} ({what})")
                 else:
                     e["end"], e["fix"] = k, "repaired"
-                    log(k, "repair", None, None, f"special cause: {sc['cause']} ({what})")
+                    log(k, "repair", None, None, f"special cause: {sc['cause']} ({what})", chart=c)
             for (t2, pos), p in current.items():
                 if t2 == ctype and p.life - p.age < PARTS[ctype]["pf"]:
                     found = True                       # worn: warn and book it (once)
                     p.warned = p.warned or k
+                    booked = "already booked" if p.replace_at is not None else "replacement booked"
                     if p.replace_at is None:
                         p.replace_at = k + int(delay_rng.integers(REPLACE_DELAY[0], REPLACE_DELAY[1] + 1))
+                    log(k, "inspect", p, None, f"worn: {p.cid} found, {booked} ({what})", p.warned)
             if not found:
-                log(k, "inspect", None, None, f"no fault found ({c}: {what})")
+                log(k, "inspect", None, None, f"no fault found ({what})", chart=c)
             charts[c].reset()
         for key in list(current):
             p = current[key]

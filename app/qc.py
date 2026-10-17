@@ -14,7 +14,8 @@ I-MR chart (individuals + moving range), for sudden damage
     sigma_hat = MRbar / d2, with d2 = 1.128 (moving range of 2 points).
     I chart:  center = baseline mean, limits = center +/- 3 * sigma_hat.
     MR chart: UCL = D4 * MRbar with D4 = 3.267, LCL = 0.
-    Signal = a point beyond a limit (Western Electric rule 1 only).
+    Signals = the 8 Nelson / Western Electric rules (spc_rules); rule 1 is a
+    point beyond a limit.
 
 EWMA chart (exponentially weighted moving average), for slow wear
     z_0 = mu0 (the baseline mean), z_t = lam * x_t + (1 - lam) * z_(t-1).
@@ -23,6 +24,10 @@ EWMA chart (exponentially weighted moving average), for slow wear
     mu0 +/- L * sigma * sqrt(lam / (2 - lam)).
     Defaults lam = 0.2, L = 3; sigma = the I-MR sigma_hat of the baseline.
     Signal = z_t beyond a limit.
+
+monitor_chart() runs both on one drone's reading and restarts them after each
+logged repair or replacement (the EWMA at the center, the run rules afresh),
+keeping the baseline limits.
 """
 
 from __future__ import annotations
@@ -37,8 +42,9 @@ import pandas as pd
 D2_N2 = 1.128
 #: Upper-limit constant D4 for a moving range of span 2.
 D4_N2 = 3.267
-#: Default baseline (Phase I) length, in flights. Team decision, docs/plan.md.
-N_BASELINE = 30
+#: Default baseline (Phase I) length, in flights. Team decision, docs/plan.md: 50 since the
+#: 300-flight fleet (30 gave limits whose sigma ranged 0.6x to 1.4x the true value).
+N_BASELINE = 50
 #: Fewest baseline points we accept before refusing to draw limits.
 MIN_BASELINE = 20
 
@@ -301,19 +307,98 @@ def drone_series(flights: pd.DataFrame, drone_id: str, column: str) -> pd.DataFr
 
 
 # --------------------------------------------------------------------------
-# Fleet status: go / watch / ground for every drone (SPEC.md section 4)
+# Monitoring with repairs: charts that restart after the technician acts
 # --------------------------------------------------------------------------
 
-#: (column, plain name, units, also gets an EWMA chart?)
-#: (column, plain name, units, chart). One chart per measurement, the same ones the
-#: dashboard shows: an EWMA for slow motor wear, I charts for sudden vibration or battery changes.
+#: (column, plain name, units). Every reading gets both charts: an EWMA for slow wear and an
+#: I chart with all 8 rules for sudden changes. Which part pushes each reading up:
 MONITORED = (
-    ("temp_rise_c", "motor temperature rise", "°C", "ewma"),
-    ("vibration_rms", "vibration", "m/s²", "i"),
-    ("sag_rate_v_per_min", "voltage sag", "V/min", "i"),
+    ("temp_rise_c", "motor temperature rise", "°C"),
+    ("vibration_rms", "vibration", "m/s²"),
+    ("sag_rate_v_per_min", "voltage sag", "V/min"),
 )
+#: The reading each part type pushes up as it wears (data/README.md).
+PART_CHART = {"motor": "temp_rise_c", "propeller": "vibration_rms", "battery": "sag_rate_v_per_min"}
 #: How many of a drone's latest readings count as "recent" for a watch.
 RECENT_FLIGHTS = 10
+#: Warn this many flights before a part reaches its replace-at age (B10).
+WARN_FLIGHTS = 10
+
+
+def flight_numbers(flight_ids: pd.Series) -> pd.Series:
+    """The sequence number at the end of each flight_id, e.g. 74 for F-07-074."""
+    return flight_ids.astype(str).str.rsplit("-", n=1).str[-1].astype(int)
+
+
+def reset_flights(maintenance: pd.DataFrame | None, drone_id: str, column: str) -> list[int]:
+    """Flights after which the technician acted on this drone's `column` chart, in order.
+
+    Any logged replacement of a part that drives the reading, any repair, and any
+    inspection of that chart counts. With no maintenance log there are no resets.
+    """
+    if maintenance is None or maintenance.empty:
+        return []
+    m = maintenance[(maintenance["drone_id"] == drone_id) & (maintenance["chart"] == column)]
+    return sorted(set(flight_numbers(m["flight_id"]).tolist()))
+
+
+def monitor_chart(values: Iterable[float], flight_no: Iterable[int], resets: Iterable[int] = (),
+                  n_baseline: int = N_BASELINE, min_baseline: int = MIN_BASELINE,
+                  lam: float = 0.2, L: float = 3.0) -> pd.DataFrame:
+    """I chart (all 8 rules) and EWMA on one drone's reading, restarting after each repair.
+
+    values, flight_no
+        the readings in flight order and their flight numbers (drone_series() gives both)
+    resets
+        flight numbers after which a part was replaced, repaired or inspected
+        (reset_flights() reads them from maintenance.csv)
+
+    Limits come from the first `n_baseline` readings, exactly as imr_limits(), and are
+    kept: a repaired drone is back on its baseline process. Readings after the
+    baseline are split into segments: one starts after the baseline and after every
+    reset flight. In each segment the EWMA starts again at the center line (z_0 = mu0)
+    and the run rules look only at that segment's own points, so a run never spans a
+    repair. Baseline rows carry no signals.
+
+    Columns: t, flight_no, value, center, lcl, ucl, sigma, baseline, segment (0 for the
+    baseline, then 1, 2, ...), z, ewma_lcl, ewma_ucl, signal_ewma, rule_1 .. rule_8,
+    rules_triggered, signal (EWMA or any rule) and what (e.g. "EWMA; rule 1, 5").
+    """
+    xs = _clean(values, minimum=2)
+    fn = np.asarray(list(flight_no), dtype=int)
+    if len(fn) != len(xs):
+        raise ValueError(f"values and flight_no have different lengths ({len(xs)} vs {len(fn)})")
+    lim = imr_limits(xs, n_baseline, min_baseline)
+    n_base = lim.n_baseline
+    reset_set = set(int(r) for r in resets)
+    segment = np.zeros(len(xs), dtype=int)
+    seg = 0
+    for i in range(n_base, len(xs)):
+        if i == n_base or int(fn[i - 1]) in reset_set:
+            seg += 1
+        segment[i] = seg
+    out = pd.DataFrame({
+        "t": np.arange(1, len(xs) + 1), "flight_no": fn, "value": xs,
+        "center": lim.center, "lcl": lim.lcl, "ucl": lim.ucl, "sigma": lim.sigma_hat,
+        "baseline": segment == 0, "segment": segment,
+        "z": np.nan, "ewma_lcl": np.nan, "ewma_ucl": np.nan, "signal_ewma": False,
+        **{f"rule_{k}": False for k in range(1, 9)}, "rules_triggered": "",
+    })
+    for s in range(1, seg + 1):
+        idx = np.flatnonzero(segment == s)
+        ew = ewma_chart(xs[idx], lam=lam, L=L, mu0=lim.center, sigma=lim.sigma_hat)
+        out.loc[idx, ["z", "ewma_lcl", "ewma_ucl"]] = ew[["z", "lcl", "ucl"]].to_numpy()
+        out.loc[idx, "signal_ewma"] = ew["signal"].to_numpy()
+        rules = spc_rules(xs[idx], lim.center, lim.sigma_hat)
+        for k in range(1, 9):
+            out.loc[idx, f"rule_{k}"] = rules[f"rule_{k}"].to_numpy()
+        out.loc[idx, "rules_triggered"] = rules["rules_triggered"].to_numpy()
+    out["signal_ewma"] = out["signal_ewma"].astype(bool)
+    rule_any = out["rules_triggered"] != ""
+    out["signal"] = out["signal_ewma"] | rule_any
+    out["what"] = [("EWMA" if e else "") + ("; " if e and r else "") + (f"rule {r}" if r else "")
+                   for e, r in zip(out["signal_ewma"], out["rules_triggered"])]
+    return out
 
 
 def chart_margin(value: float, center: float, lcl: float, ucl: float) -> float:
@@ -329,6 +414,73 @@ def chart_margin(value: float, center: float, lcl: float, ucl: float) -> float:
     return float(min(1.0, max(0.0, room)))
 
 
+def fleet_status(flights: pd.DataFrame, maintenance: pd.DataFrame | None = None,
+                 recent: int = RECENT_FLIGHTS, n_baseline: int = N_BASELINE,
+                 min_baseline: int = MIN_BASELINE) -> pd.DataFrame:
+    """Decide go / watch / ground for every drone from its open (not yet acted on) signals.
+
+    For each reading in MONITORED it runs monitor_chart(), restarting after every
+    action in `maintenance` (leave it out and nothing restarts). A signal is "open"
+    if it came after the latest action on that chart. Then:
+
+      ground  the latest reading is open and outside its I-chart 3-sigma limits
+              (rule 1), or the EWMA is outside its limits now: inspect before flying
+      watch   no ground reason, but an open signal (EWMA or any of the 8 rules)
+              within the last `recent` readings
+      go      no open signal in the last `recent` readings
+      not enough data
+              fewer than `min_baseline` readings (or no variation): no limits
+
+    Returns one row per drone: drone_id, status, reason (plain English, reasons
+    joined by "; "), last_flight_no, n_flights, health and health_driver. health =
+    chart_margin() of the latest point on the most-stretched chart, using the EWMA
+    (the smoothed wear level) once past the baseline and the reading itself before.
+    """
+    f = flights if "temp_rise_c" in flights.columns else add_derived(flights)
+    rows = []
+    for drone in sorted(f["drone_id"].unique()):
+        d = f[f["drone_id"] == drone].sort_values("datetime")
+        last_no = int(flight_numbers(d["flight_id"]).iloc[-1])
+        ground, watch, margins = [], [], {}
+        try:
+            for col, name, unit in MONITORED:
+                s = drone_series(f, drone, col)
+                resets = reset_flights(maintenance, drone, col)
+                ch = monitor_chart(s["value"], s["flight_no"], resets, n_baseline, min_baseline)
+                r = ch.iloc[-1]
+                if r.baseline:
+                    margins[name] = chart_margin(r.value, r.center, r.lcl, r.ucl)
+                else:
+                    margins[name] = chart_margin(r.z, r.center, r.ewma_lcl, r.ewma_ucl)
+                last_action = max(resets) if resets else 0
+                open_ = ch[~ch["baseline"] & (ch["flight_no"] > last_action)]
+                latest_open = len(open_) and open_.index[-1] == ch.index[-1]
+                if latest_open and r.rule_1:
+                    ground.append(f"{name} {r.value:.2f} {unit} on flight {r.flight_no} is outside "
+                                  f"its normal range ({r.lcl:.2f} to {r.ucl:.2f})")
+                elif latest_open and r.signal_ewma:
+                    side = "above its upper" if r.z > r.center else "below its lower"
+                    start = _run_start(open_["signal_ewma"], open_["flight_no"])
+                    ground.append(f"{name} trend (EWMA) {side} limit since flight {start}")
+                else:
+                    hits = open_[open_["signal"] & (open_.index >= ch.index[-1] - recent + 1)]
+                    if len(hits):
+                        what = ", ".join(f"flight {h.flight_no} ({h.what})" for h in hits.itertuples())
+                        watch.append(f"{name} signalled on {what}, not yet inspected")
+        except ValueError as err:
+            rows.append(dict(drone_id=drone, status="not enough data", reason=str(err),
+                             last_flight_no=last_no, n_flights=len(d),
+                             health=float("nan"), health_driver=""))
+            continue
+        status = "ground" if ground else "watch" if watch else "go"
+        reason = "; ".join(ground or watch) or f"no open signal in the last {recent} flights"
+        driver = min(margins, key=margins.get)
+        rows.append(dict(drone_id=drone, status=status, reason=reason,
+                         last_flight_no=last_no, n_flights=len(d),
+                         health=margins[driver], health_driver=driver))
+    return pd.DataFrame(rows)
+
+
 def _run_start(signal: pd.Series, flight_no: pd.Series) -> int:
     """Flight number where the current unbroken run of signals began."""
     flags = signal.to_numpy()
@@ -338,98 +490,60 @@ def _run_start(signal: pd.Series, flight_no: pd.Series) -> int:
     return int(flight_no.iloc[k])
 
 
-def fleet_status(flights: pd.DataFrame, recent: int = RECENT_FLIGHTS,
-                 n_baseline: int = N_BASELINE, min_baseline: int = MIN_BASELINE) -> pd.DataFrame:
-    """Decide go / watch / ground for every drone in the flights table.
+#: Columns the timeline needs in a maintenance log (data/README.md).
+REQUIRED_MAINTENANCE_COLUMNS = ("drone_id", "flight_id", "action", "chart", "component_type",
+                                "position", "warned_after_flight", "reason")
+#: What each timeline marker means.
+MARKERS = {"W": "warning: part near its replace-at age, or found worn",
+           "R": "part replaced on schedule or because it was worn",
+           "F": "part failed in flight, replaced before the next flight",
+           "S": "special cause found and fixed (part replaced or repaired)",
+           "N": "chart signalled, inspected, no fault found"}
+CHART_NAME = {col: name for col, name, _ in MONITORED}
 
-    For each drone it runs the charts in MONITORED: an EWMA on motor temperature
-    rise (slow wear), and I charts with all 8 SPC tests on vibration and voltage
-    sag, with limits from that drone's own first `n_baseline` readings, then applies:
 
-      ground  the drone's latest flight was a crash, OR its latest reading is
-              outside an I-chart 3σ limit (SPC Rule 1), OR its EWMA is outside
-              its 3σ control limit now
-      watch   no ground reason, but a chart signalled within the last
-              `recent` readings, OR an SPC run/trend/zone test (Rules 2-8) is
-              active on the latest reading
-      go      every chart in control over the last `recent` readings
-      not enough data
-              fewer than `min_baseline` readings (or no variation), so no
-              limits can be drawn
+def check_maintenance(maintenance: pd.DataFrame) -> pd.DataFrame:
+    """Refuse a maintenance log the timeline cannot use, with a clear message."""
+    missing = [c for c in REQUIRED_MAINTENANCE_COLUMNS if c not in maintenance.columns]
+    if missing:
+        raise ValueError(f"the maintenance file is missing column(s): {', '.join(missing)} "
+                         "(see data/README.md for the expected columns)")
+    bad = set(maintenance["action"]) - {"replace", "repair", "inspect"}
+    if bad:
+        raise ValueError(f"action must be replace, repair or inspect, got {sorted(bad)}")
+    return maintenance
 
-    Returns one row per drone: drone_id, status, reason (plain English, every
-    reason joined by "; "), last_flight_no, n_flights, health and
-    health_driver. health = chart_margin() of the latest point on the drone's
-    most-stretched chart (1 = at its normal, 0 = at a limit or crashed);
-    health_driver names that chart.
+
+def maintenance_timeline(maintenance: pd.DataFrame) -> pd.DataFrame:
+    """Every W / R / F / S / N marker for the timeline, one row each (see MARKERS).
+
+    lane is the part slot ("propeller 2") for part actions, or the chart's plain name
+    for repairs and no-fault inspections. A W comes from a worn part found at
+    inspection, or from warned_after_flight on a replacement (the age warning).
+    Returns drone_id, lane, flight_no, marker, detail; in flight order.
     """
-    f = flights if "temp_rise_c" in flights.columns else add_derived(flights)
+    m = check_maintenance(maintenance)
+    fno = flight_numbers(m["flight_id"])
     rows = []
-    for drone in sorted(f["drone_id"].unique()):
-        d = f[f["drone_id"] == drone].sort_values("datetime")
-        last_no = int(d["flight_id"].iloc[-1].rsplit("-", 1)[-1])
-        ground, watch, margins = [], [], {}
-        crashed = "inflight_event" in d.columns and d["inflight_event"].iloc[-1] == "crash"
-        if crashed:
-            ground.append(f"crashed on flight {last_no}")
-        try:
-            for col, name, unit, chart in MONITORED:
-                s = drone_series(f, drone, col)
-                if chart == "i":
-                    im = imr_chart(s["value"], n_baseline, min_baseline)
-                    r = im.iloc[-1]
-                    margins[name] = chart_margin(r.value, r.center, r.lcl, r.ucl)
-                    if im["signal_i"].iloc[-1]:
-                        ground.append(f"{name} {r.value:.2f} {unit} on flight {s.flight_no.iloc[-1]} is outside "
-                                      f"its normal range ({r.lcl:.2f} to {r.ucl:.2f})")
-                    else:
-                        hit = s.loc[im["signal_i"].to_numpy(), "flight_no"]
-                        hit = hit[hit.index >= len(s) - recent]
-                        if len(hit):
-                            watch.append(f"{name} was outside its normal range on flight "
-                                         f"{', '.join(map(str, hit))}")
-                        elif not r.baseline and im["signal_watch"].iloc[-1]:
-                            rnums = [k for k in range(2, 9) if r[f"rule_{k}"]]
-                            rdesc = SPC_RULES[rnums[0]]
-                            watch.append(f"{name} triggered SPC rule {rnums[0]} ({rdesc}) on flight "
-                                         f"{s.flight_no.iloc[-1]}")
-                else:
-                    ew = ewma_chart(s["value"], n_baseline=n_baseline, min_baseline=min_baseline)
-                    e = ew.iloc[-1]
-                    margins[name] = chart_margin(e.z, e.center, e.lcl, e.ucl)
-                    if ew["signal"].iloc[-1]:
-                        side = "above its upper" if ew["z"].iloc[-1] > ew["center"].iloc[-1] else "below its lower"
-                        start = _run_start(ew["signal"], s["flight_no"])
-                        first = int(s.loc[ew["signal"].to_numpy(), "flight_no"].iloc[0])
-                        note = f" (first crossed on flight {first})" if first != start else ""
-                        ground.append(f"{name} trend (EWMA) {side} limit since flight {start}{note}")
-                    else:
-                        hit = s.loc[ew["signal"].to_numpy(), "flight_no"]
-                        hit = hit[hit.index >= len(s) - recent]
-                        if len(hit):
-                            watch.append(f"{name} trend (EWMA) was outside its limits on flight "
-                                         f"{', '.join(map(str, hit))}, now back inside")
-                        else:
-                            im = imr_chart(s["value"], n_baseline, min_baseline)
-                            r = im.iloc[-1]
-                            if not r.baseline and im["signal_watch"].iloc[-1]:
-                                rnums = [k for k in range(2, 9) if r[f"rule_{k}"]]
-                                rdesc = SPC_RULES[rnums[0]]
-                                watch.append(f"{name} triggered SPC rule {rnums[0]} ({rdesc}) on flight "
-                                             f"{s.flight_no.iloc[-1]}")
-        except ValueError as err:
-            rows.append(dict(drone_id=drone, status="not enough data", reason=str(err),
-                             last_flight_no=last_no, n_flights=len(d),
-                             health=float("nan"), health_driver=""))
-            continue
-        status = "ground" if ground else "watch" if watch else "go"
-        reason = "; ".join(ground or watch) or f"all charts in control over the last {recent} flights"
-        driver = min(margins, key=margins.get)
-        health = 0.0 if crashed else margins[driver]
-        rows.append(dict(drone_id=drone, status=status, reason=reason,
-                         last_flight_no=last_no, n_flights=len(d),
-                         health=health, health_driver="crash" if crashed else driver))
-    return pd.DataFrame(rows)
+    for r, k in zip(m.itertuples(), fno):
+        part = isinstance(r.component_type, str) and r.component_type != ""
+        lane = f"{r.component_type} {int(r.position)}" if part else CHART_NAME.get(r.chart, r.chart)
+        if r.action == "replace":
+            if pd.notna(r.warned_after_flight):
+                rows.append((r.drone_id, lane, int(r.warned_after_flight), "W", "warned"))
+            marker = ("F" if r.reason == "failed in flight"
+                      else "S" if r.reason.startswith("special cause") else "R")
+            rows.append((r.drone_id, lane, int(k), marker, r.reason))
+        elif r.action == "repair":
+            rows.append((r.drone_id, lane, int(k), "S", r.reason))
+        elif r.reason.startswith("worn"):
+            rows.append((r.drone_id, lane, int(k), "W", r.reason))
+        else:
+            rows.append((r.drone_id, lane, int(k), "N", r.reason))
+    out = pd.DataFrame(rows, columns=["drone_id", "lane", "flight_no", "marker", "detail"])
+    # the same warning can come from the inspection row and from the replacement row
+    out = out.drop_duplicates(subset=["drone_id", "lane", "flight_no", "marker"])
+    return out.sort_values(["drone_id", "flight_no", "lane"], kind="stable").reset_index(drop=True)
 
 
 #: Columns fleet_status() and the charts need in an uploaded flights table.
@@ -582,20 +696,6 @@ def compare_lots(components: pd.DataFrame, component_type: str = "battery") -> p
     return _fit_rows(c.groupby("lot"), "lot").sort_values("lot").reset_index(drop=True)
 
 
-def parts_past_b10(components: pd.DataFrame, by_type: pd.DataFrame) -> pd.DataFrame:
-    """Parts still in service that are older than their type's B10 life.
-
-    These are the ones to replace at the next maintenance slot. Adds
-    b10 and pct_of_b10 (age as a % of B10), oldest first.
-    """
-    b10 = by_type.dropna(subset=["b10"]).set_index("component_type")["b10"]
-    live = components[components["end_date"].isna()].copy()
-    live["b10"] = live["component_type"].map(b10)
-    due = live[live["life_value"] > live["b10"]].copy()
-    due["pct_of_b10"] = 100 * due["life_value"] / due["b10"]
-    return due.sort_values("pct_of_b10", ascending=False).reset_index(drop=True)
-
-
 def km_curve(life: Iterable[float], status: Iterable[int]) -> pd.DataFrame:
     """Kaplan-Meier estimate of survival straight from the data (no model).
 
@@ -654,7 +754,8 @@ def replacement_plan(components: pd.DataFrame, flights: pd.DataFrame, by_type: p
         batteries: remaining charges x BATTERIES_PER_DRONE (the drone alternates its
         batteries, so each one is charged on every second flight)
     days_left  = flights_left / the drone's flights per day in the logbook
-    Negative values mean the part is already past its replace-at age (overdue = True).
+    Negative values mean the part is already past its replace-at age (overdue = True);
+    due = True within WARN_FLIGHTS flights of it (the timeline's W).
     Returns one row per in-service part with drone_id, component_id, component_type,
     position (from the id), lot, age, b10, unit, remaining, pct_used, flights_left,
     days_left, overdue; most urgent first.
@@ -681,7 +782,8 @@ def replacement_plan(components: pd.DataFrame, flights: pd.DataFrame, by_type: p
                                     live["remaining"] / hours_per_flight)
     live["days_left"] = live["flights_left"] / live["drone_id"].map(pace["per_day"])
     live["overdue"] = live["remaining"] <= 0
+    live["due"] = live["flights_left"] <= WARN_FLIGHTS
     live["position"] = live["component_id"].str.split("-").str[2].astype(int)
     cols = ["drone_id", "component_id", "component_type", "position", "lot", "age", "b10", "unit",
-            "remaining", "pct_used", "flights_left", "days_left", "overdue"]
+            "remaining", "pct_used", "flights_left", "days_left", "overdue", "due"]
     return live[cols].sort_values("days_left").reset_index(drop=True)
