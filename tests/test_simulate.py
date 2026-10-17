@@ -185,3 +185,48 @@ def test_summary_counts_match_each_run():
         assert row["parts_replaced"] == (m["action"] == "replace").sum()
         assert row["failed_in_flight"] == (f["inflight_event"] == "return_home").sum()
         assert row["false_alarms"] == (m["action"] == "no_fault").sum()
+
+
+# ---------------------------------------------------------------- the second dataset: Fleet B (H-17)
+
+FLEET_B = DATA / "fleet_b"
+
+
+@pytest.fixture(scope="module")
+def built_b():
+    S.use_dataset("fleet_b")
+    try:
+        return S.build_fleet()
+    finally:
+        S.use_dataset("fleet")          # every other test uses Fleet A's seed
+
+
+def test_two_datasets_with_different_seeds():
+    assert S.DATASETS == {"fleet": 5300, "fleet_b": 7100}
+    a = pd.read_csv(FLEET / "answer_key.csv")[["drone_id", "cause", "start_flight"]]
+    b = pd.read_csv(FLEET_B / "answer_key.csv")[["drone_id", "cause", "start_flight"]]
+    assert not a.equals(b)               # independent problems, not a copy
+
+
+def test_fleet_b_csvs_match_a_fresh_build(built_b):
+    for name in ("flights", "components", "maintenance", "answer_key", "replace_at", "fleet_reference"):
+        on_disk = pd.read_csv(FLEET_B / f"{name}.csv")
+        fresh = pd.read_csv(pd.io.common.StringIO(built_b[name].to_csv(index=False)))
+        pd.testing.assert_frame_equal(on_disk, fresh, check_dtype=False)
+
+
+def test_fleet_b_keeps_flying_and_catches_every_special_cause(built_b):
+    f, k = built_b["flights"], built_b["answer_key"]
+    assert f.groupby("drone_id").size().to_dict() == {f"D-{i:02d}": 300 for i in range(1, 11)}
+    assert k["detected_after_flight"].notna().all() and k["fixed_after_flight"].notna().all()
+    assert ((k["detected_after_flight"] - k["start_flight"]) >= 0).all()
+
+
+@pytest.mark.parametrize("ctype", list(S.PARTS))
+def test_fleet_b_weibull_fit_recovers_the_true_life(built_b, ctype):
+    fit = fit_by_type(built_b["components"]).set_index("component_type").loc[ctype]
+    true = S.PARTS[ctype]
+    b_lo, b_hi = widened(fit["beta"], fit["beta_lo"], fit["beta_hi"])
+    e_lo, e_hi = widened(fit["eta"], fit["eta_lo"], fit["eta_hi"])
+    assert b_lo <= true["beta"] <= b_hi
+    assert e_lo <= true["eta"] <= e_hi

@@ -198,10 +198,12 @@ def test_no_part_in_service_is_past_the_shops_replace_at_age():
 
 
 
-@pytest.mark.parametrize("pct", [1, 30])
-def test_tool_matches_the_technician_in_the_extreme_runs(pct, ref):
-    # the same agreement as above, in the earliest and latest retirement runs
-    run = FLEET / "runs" / f"p{pct:02d}"
+@pytest.mark.parametrize("dataset,pct", [("fleet", 1), ("fleet", 30), ("fleet_b", 10), ("fleet_b", 1), ("fleet_b", 30)])
+def test_tool_matches_the_technician_in_other_runs(dataset, pct):
+    # the same agreement as above: other retirement runs, and the second dataset (Fleet B)
+    folder = FLEET.parent / dataset
+    ref = fleet_reference(pd.read_csv(folder / "fleet_reference.csv"))
+    run = folder / "runs" / f"p{pct:02d}"
     f = add_derived(pd.read_csv(run / "flights.csv"))
     m = pd.read_csv(run / "maintenance.csv")
     acted = m[m["action"].isin(["no_fault", "repair"]) | m["reason"].str.startswith(("special cause", "worn"))]
@@ -210,4 +212,4 @@ def test_tool_matches_the_technician_in_the_extreme_runs(pct, ref):
             s = drone_series(f, drone, col)
             ch = monitor_chart(s["value"], s["flight_no"], reset_flights(m, drone, col), fleet=ref[col])
             tech = set(flight_numbers(acted.loc[(acted["drone_id"] == drone) & (acted["chart"] == col), "flight_id"]))
-            assert set(ch.loc[ch["signal"], "flight_no"]) == tech, (pct, drone, col)
+            assert set(ch.loc[ch["signal"], "flight_no"]) == tech, (dataset, pct, drone, col)

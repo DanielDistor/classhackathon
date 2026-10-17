@@ -120,7 +120,7 @@ function FleetTimeline({ events, n }) {
 function FleetCard({ g }) {
   return (
     <div className="info-card scenario">
-      <div className="card-head"><span className="tag">Test fleet</span><code>data/fleet/</code></div>
+      <div className="card-head"><span className="tag">{g.dataset_name}</span><code>data/{g.dataset}/</code></div>
       <h3>10 drones, {g.n_rows.toLocaleString('en-US')} flights, Jul–Sep 2026</h3>
       <p className="mini-cap">The {g.events.length} special causes injected at random (the simulation's answer key)</p>
       <FleetTimeline events={g.events} n={g.n_flights} />
@@ -142,8 +142,8 @@ const Fold = ({ summary, children }) => (
   <details className="fold"><summary>{summary}</summary><div className="fold-body">{children}</div></details>
 )
 
-export default function Guide({ onEnter }) {
-  const { data: g, error } = useApi(getGuide, 'guide')
+export default function Guide({ dataset, onEnter }) {
+  const { data: g, error } = useApi(() => getGuide(dataset), `guide-${dataset}`)
   const parts = g && g.example_parts.map((p) => ({
     ...p,
     status: p.status === 1 ? 'yes' : 'no (still OK)',

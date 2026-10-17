@@ -96,8 +96,8 @@ function PartsByDrone({ plan, warnFlights }) {
   )
 }
 
-export default function ReliabilityTab({ retire }) {
-  const { data: d, error } = useApi(() => getReliability(retire), `rel-${retire}`)
+export default function ReliabilityTab({ retire, dataset }) {
+  const { data: d, error } = useApi(() => getReliability(retire, dataset), `rel-${dataset}-${retire}`)
   const [type, setType] = useState('propeller')
   if (error) return <Failed error={error} />
   if (!d) return <Loading what="the Weibull fits" />

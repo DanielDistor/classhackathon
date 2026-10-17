@@ -65,6 +65,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 import qc  # noqa: E402  the simulated technician acts on the tool's own statistics
 
 SEED = 5300
+#: The test datasets: one folder per fleet, the same simulator with a different seed, so each
+#: fleet has its own part lifetimes, special causes and timing. "fleet" is Fleet A, the main one.
+DATASETS = {"fleet": 5300, "fleet_b": 7100}
 N_DRONES = 10
 FLIGHTS_PER_DRONE = 300
 LOG_START = pd.Timestamp("2026-07-01")      # first day of the flight log
@@ -583,8 +586,16 @@ def run_summary(t: dict, retire_pct: int) -> dict:
     return row
 
 
-def main() -> None:
-    runs_dir = OUT_DIR / "runs"
+def use_dataset(name: str) -> Path:
+    """Point the simulator at one dataset: its seed (every random stream) and its folder."""
+    global SEED
+    SEED = DATASETS[name]
+    return Path(__file__).resolve().parent / name
+
+
+def write_dataset(out_dir: Path) -> None:
+    """Simulate every retirement run of the current seed and write them under out_dir."""
+    runs_dir = out_dir / "runs"
     summary = []
     for pct in RETIRE_PCTS:
         t = build_fleet(pct)
@@ -594,11 +605,18 @@ def main() -> None:
             t[name].to_csv(folder / f"{name}.csv", index=False, lineterminator="\n")
         if pct == DEFAULT_RETIRE_PCT:
             for name in RUN_TABLES + ("fleet_reference",):
-                t[name].to_csv(OUT_DIR / f"{name}.csv", index=False, lineterminator="\n")
+                t[name].to_csv(out_dir / f"{name}.csv", index=False, lineterminator="\n")
         summary.append(run_summary(t, pct))
         print(f"B{pct:<2d}: " + ", ".join(f"{k}={v}" for k, v in summary[-1].items() if k != "retire_pct"))
     pd.DataFrame(summary).to_csv(runs_dir / "summary.csv", index=False, lineterminator="\n")
-    print(f"wrote {len(RETIRE_PCTS)} runs to {runs_dir}; fleet/*.csv = the B{DEFAULT_RETIRE_PCT} run")
+    print(f"wrote {len(RETIRE_PCTS)} runs to {runs_dir}; {out_dir.name}/*.csv = the B{DEFAULT_RETIRE_PCT} run")
+
+
+def main() -> None:
+    for name, seed in DATASETS.items():
+        print(f"--- {name} (seed {seed})")
+        write_dataset(use_dataset(name))
+    use_dataset("fleet")
 
 
 if __name__ == "__main__":

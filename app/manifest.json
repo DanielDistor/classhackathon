@@ -29,7 +29,7 @@
       "checksum": "28de13dc8140a1fad3010d1bd35f230e"
     },
     "api.py": {
-      "checksum": "83dd0ec379a53d41b0066bb626f9355b"
+      "checksum": "9bd247ca06f49e2381ee0b9601a32fba"
     },
     "data/fleet/answer_key.csv": {
       "checksum": "be1678d874785221947a8fd9ad616284"
@@ -157,17 +157,143 @@
     "data/fleet/runs/summary.csv": {
       "checksum": "50d3cc1420338d5c5a3f42bdee07658f"
     },
+    "data/fleet_b/answer_key.csv": {
+      "checksum": "eabb493819943420ab7bed2f711c00d4"
+    },
+    "data/fleet_b/components.csv": {
+      "checksum": "7c4781a308d34b4cb502e4584be79bfa"
+    },
+    "data/fleet_b/fleet_reference.csv": {
+      "checksum": "83d76b1958e3efc2a5a9bd7e8c9c797d"
+    },
+    "data/fleet_b/flights.csv": {
+      "checksum": "b1c155f474991240f5bc388caf17bfe2"
+    },
+    "data/fleet_b/maintenance.csv": {
+      "checksum": "23d6a964b496882436ce629f8248fb48"
+    },
+    "data/fleet_b/replace_at.csv": {
+      "checksum": "20ce2867dcd8024a55332db5ea127409"
+    },
+    "data/fleet_b/runs/p01/answer_key.csv": {
+      "checksum": "bd2c427aab95e84e1408371aa4eef1db"
+    },
+    "data/fleet_b/runs/p01/components.csv": {
+      "checksum": "5ab7fd106e31be11dbb6986b2012fe70"
+    },
+    "data/fleet_b/runs/p01/flights.csv": {
+      "checksum": "ea50133be4e5f3ca4439aa0dbbc647b3"
+    },
+    "data/fleet_b/runs/p01/maintenance.csv": {
+      "checksum": "66cb9b2577e0a9ebaad61ceef4354128"
+    },
+    "data/fleet_b/runs/p01/replace_at.csv": {
+      "checksum": "16e0fdfbc799a1bb5cabe634ce33fa51"
+    },
+    "data/fleet_b/runs/p02/answer_key.csv": {
+      "checksum": "3a97d2d27b2e37d1b109d7e488e6f035"
+    },
+    "data/fleet_b/runs/p02/components.csv": {
+      "checksum": "6b6043f10a737bea5882dcf37c16f768"
+    },
+    "data/fleet_b/runs/p02/flights.csv": {
+      "checksum": "e5b66007c0be347a9f26b206d3c3b65f"
+    },
+    "data/fleet_b/runs/p02/maintenance.csv": {
+      "checksum": "cc02f3d86e292628fa90d2eb21792a63"
+    },
+    "data/fleet_b/runs/p02/replace_at.csv": {
+      "checksum": "6d9e8d406245310392e6927778749d1e"
+    },
+    "data/fleet_b/runs/p05/answer_key.csv": {
+      "checksum": "dbdf93a829f15642f718b697e6130d70"
+    },
+    "data/fleet_b/runs/p05/components.csv": {
+      "checksum": "a2d5ce5d03b4da5bd549d24c43ff5e3f"
+    },
+    "data/fleet_b/runs/p05/flights.csv": {
+      "checksum": "b066c4dbe0f5e05bc8afb34861cf2cbb"
+    },
+    "data/fleet_b/runs/p05/maintenance.csv": {
+      "checksum": "bb1133b5fdf78088c212c3771fa1ba81"
+    },
+    "data/fleet_b/runs/p05/replace_at.csv": {
+      "checksum": "bc3fa5e903bae6544ca690cdf0f5f990"
+    },
+    "data/fleet_b/runs/p10/answer_key.csv": {
+      "checksum": "eabb493819943420ab7bed2f711c00d4"
+    },
+    "data/fleet_b/runs/p10/components.csv": {
+      "checksum": "7c4781a308d34b4cb502e4584be79bfa"
+    },
+    "data/fleet_b/runs/p10/flights.csv": {
+      "checksum": "b1c155f474991240f5bc388caf17bfe2"
+    },
+    "data/fleet_b/runs/p10/maintenance.csv": {
+      "checksum": "23d6a964b496882436ce629f8248fb48"
+    },
+    "data/fleet_b/runs/p10/replace_at.csv": {
+      "checksum": "20ce2867dcd8024a55332db5ea127409"
+    },
+    "data/fleet_b/runs/p15/answer_key.csv": {
+      "checksum": "69c4b412ab3071c8cff51ffc133c8075"
+    },
+    "data/fleet_b/runs/p15/components.csv": {
+      "checksum": "8ac06df310615ac2c6377079d76a79ed"
+    },
+    "data/fleet_b/runs/p15/flights.csv": {
+      "checksum": "7ba0daa3146576bdb0503d57aa1e162c"
+    },
+    "data/fleet_b/runs/p15/maintenance.csv": {
+      "checksum": "cbd4f187e2963a41d5c66ae7ba6ba027"
+    },
+    "data/fleet_b/runs/p15/replace_at.csv": {
+      "checksum": "903918e6653645161884425d2552178f"
+    },
+    "data/fleet_b/runs/p20/answer_key.csv": {
+      "checksum": "d96e2a6a464a76fe2b7cb150e0d3aeaf"
+    },
+    "data/fleet_b/runs/p20/components.csv": {
+      "checksum": "1ace787e1e0d304617d234cf62e8bf19"
+    },
+    "data/fleet_b/runs/p20/flights.csv": {
+      "checksum": "82b6268127d2b311ff0af4150725d1d0"
+    },
+    "data/fleet_b/runs/p20/maintenance.csv": {
+      "checksum": "3b33fab19814abe21233e5b1bb16876c"
+    },
+    "data/fleet_b/runs/p20/replace_at.csv": {
+      "checksum": "1e1caaf11d0160b6d67eb0a547a34e4f"
+    },
+    "data/fleet_b/runs/p30/answer_key.csv": {
+      "checksum": "4c3868a4dba6bd9de4e7be56b4728068"
+    },
+    "data/fleet_b/runs/p30/components.csv": {
+      "checksum": "3447d5f9aaac3876b136125781c3ca64"
+    },
+    "data/fleet_b/runs/p30/flights.csv": {
+      "checksum": "344cbedef386497e0e5bfb60f1a2b54d"
+    },
+    "data/fleet_b/runs/p30/maintenance.csv": {
+      "checksum": "639da8eb9e74a84651e9a39a9ed192e9"
+    },
+    "data/fleet_b/runs/p30/replace_at.csv": {
+      "checksum": "bb90bb52a1db606c2b6f5dc8d03ebd5a"
+    },
+    "data/fleet_b/runs/summary.csv": {
+      "checksum": "5cb425985b8ba97d231e6210c5a8fff7"
+    },
     "qc.py": {
       "checksum": "27f61725cd4f9aae289604327f875a18"
     },
     "static/assets/index-B_3nuZvZ.css": {
       "checksum": "37a94070d66e85d4b930782dd72d320c"
     },
-    "static/assets/index-Bgp50XFl.js": {
-      "checksum": "ab81c66b500cd6e3fa8c0566a3038a8e"
+    "static/assets/index-C_qN2-Cm.js": {
+      "checksum": "682df7a47ae91a24dde99be2c09860ac"
     },
     "static/index.html": {
-      "checksum": "c9b56674e47e31cf8a05a0f84af8760f"
+      "checksum": "e2c2a9ee64a95c2bd5743a5d27fa43bf"
     }
   }
 }

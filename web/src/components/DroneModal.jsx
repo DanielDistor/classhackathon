@@ -75,8 +75,8 @@ function ReadMe({ nBaseline }) {
   )
 }
 
-export default function DroneModal({ droneId, retire, onClose }) {
-  const { data: d, error } = useApi(() => getDrone(droneId, retire), `${droneId}-${retire}`)
+export default function DroneModal({ droneId, retire, dataset, onClose }) {
+  const { data: d, error } = useApi(() => getDrone(droneId, retire, dataset), `${droneId}-${dataset}-${retire}`)
   const [showAll, setShowAll] = useState(false)
   const [reading, setReading] = useState(0)
 

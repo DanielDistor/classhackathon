@@ -85,6 +85,10 @@ smoke). Running `python data/simulate.py` always produces exactly the same files
 **What is simulated:** 10 drones × 300 flights = **3,000 flights**, from **1 July to 29 September 2026**
 (about 3.3 flights a day per drone).
 
+**Two datasets.** The same simulation is run twice with different random seeds: **Fleet A** (`data/fleet/`,
+the one described in this guide) and **Fleet B** (`data/fleet_b/`, its own part lifetimes and 11 different
+problems). A dropdown on the dashboard switches between them.
+
 Inside the simulation, three things happen:
 
 1. **Every part has a hidden lifetime.** When a part is installed it gets a random lifetime from its

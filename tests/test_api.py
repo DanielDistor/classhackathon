@@ -145,3 +145,24 @@ def test_unknown_retire_setting_is_422():
     for url in ("/api/fleet?retire=7", "/api/drones/D-01?retire=50", "/api/reliability?retire=0"):
         r = client.get(url)
         assert r.status_code == 422, url
+
+
+# ---------------------------------------------------------------- second dataset (H-17)
+
+def test_runs_lists_both_datasets():
+    r = client.get("/api/runs").json()
+    assert [d["id"] for d in r["datasets"]] == ["fleet", "fleet_b"]
+
+
+def test_fleet_b_is_served_from_its_own_folder():
+    r = client.get("/api/fleet?dataset=fleet_b").json()
+    m = pd.read_csv(ROOT / "app" / "data" / "fleet_b" / "maintenance.csv")
+    assert len(r["timeline"]) == (m["action"] != "no_fault").sum()
+    g = client.get("/api/guide?dataset=fleet_b").json()
+    assert g["dataset_name"] == "Fleet B"
+    assert len(g["events"]) == len(pd.read_csv(ROOT / "app" / "data" / "fleet_b" / "answer_key.csv"))
+    assert client.get("/api/drones/D-05?dataset=fleet_b&retire=30").status_code == 200
+
+
+def test_unknown_dataset_is_422():
+    assert client.get("/api/fleet?dataset=fleet_c").status_code == 422

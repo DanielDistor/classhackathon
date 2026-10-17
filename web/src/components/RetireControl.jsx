@@ -35,7 +35,7 @@ function Bars({ title, rows, field, retire, onPick }) {
  * The retirement slider: parts retire at B_p, the age by which p% of that part type fails.
  * Each setting is a precomputed run of the same fleet (same part lifetimes and problems).
  */
-export default function RetireControl({ runs, retire, onChange }) {
+export default function RetireControl({ runs, retire, onChange, dataset, onDataset }) {
   const options = runs.options
   const idx = Math.max(0, options.indexOf(retire))
   // warned and replaced = at the replace-at age + caught worn (the R markers; special-cause swaps are S)
@@ -45,7 +45,12 @@ export default function RetireControl({ runs, retire, onChange }) {
   return (
     <div className="retire">
       <div className="retire-left">
-        <label className="ctl-title" htmlFor="retire">Retire parts at B{retire}</label>
+        <div className="chart-controls">
+          <select value={dataset} onChange={(e) => onDataset(e.target.value)} aria-label="Test dataset">
+            {runs.datasets.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+          <label className="ctl-title" htmlFor="retire">Retire parts at B{retire}</label>
+        </div>
         <input id="retire" type="range" min={0} max={options.length - 1} step={1} value={idx}
                onChange={(e) => onChange(options[Number(e.target.value)])} />
         <div className="retire-ticks">{options.map((p) => <span key={p}>{p}%</span>)}</div>

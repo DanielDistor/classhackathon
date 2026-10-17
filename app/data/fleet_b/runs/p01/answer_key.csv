@@ -1,0 +1,12 @@
+event_id,drone_id,rule_shape,cause,chart,component_type,position,start_flight,detected_after_flight,detected_by,fixed_after_flight,fix,how
+SC-01,D-04,1,prop strike,vibration_rms,propeller,1,142,142,EWMA; rule 1,142,part replaced (special cause: prop strike (EWMA; rule 1)),"one vibration spike of +6 sd, then +1 sd from the chipped prop"
+SC-02,D-04,6,prop imbalance,vibration_rms,propeller,2,238,239,rule 5,239,part replaced (special cause: prop imbalance (rule 5)),badly balanced prop after a field repair: vibration +1.3 sd
+SC-03,D-05,5,loose power connector,sag_rate_v_per_min,,,170,172,"EWMA; rule 1, 5",172,repaired,+3 sd voltage sag on a random 40% of flights
+SC-04,D-05,2,hard landing,temp_rise_c,motor,1,193,193,rule 1,193,part replaced (special cause: hard landing (rule 1)),bent motor shaft: temperature rise steps up +1.5 sd and stays
+SC-05,D-05,7,vibration log over-filtered,vibration_rms,,,194,207,rule 7,207,repaired,"firmware update smooths the log: vibration noise shrinks to 0.2x, readings too flat"
+SC-06,D-05,4,bad battery cell,sag_rate_v_per_min,battery,2,224,224,EWMA; rule 1,224,part replaced (special cause: bad battery cell (EWMA; rule 1)),"+2.5 sd voltage sag on that pack's flights only, so readings alternate"
+SC-07,D-06,8,loose motor mount,vibration_rms,,,78,95,rule 6,95,repaired,mount rattles in one of two modes: vibration +1.8 or -1.8 sd each flight
+SC-08,D-06,8,loose motor mount,vibration_rms,,,224,228,EWMA; rule 6,228,repaired,mount rattles in one of two modes: vibration +1.8 or -1.8 sd each flight
+SC-09,D-09,1,prop strike,vibration_rms,propeller,4,111,111,EWMA; rule 1,111,part replaced (special cause: prop strike (EWMA; rule 1)),"one vibration spike of +6 sd, then +1 sd from the chipped prop"
+SC-10,D-09,5,loose power connector,sag_rate_v_per_min,,,120,122,rule 1,122,repaired,+3 sd voltage sag on a random 40% of flights
+SC-11,D-10,7,vibration log over-filtered,vibration_rms,,,157,163,rule 2,163,repaired,"firmware update smooths the log: vibration noise shrinks to 0.2x, readings too flat"

@@ -19,8 +19,9 @@ function readHash() {
 export default function App() {
   const [view, setView] = useState(readHash)
   const [retire, setRetire] = useState(10)
-  const runs = useApi(getRuns, 'runs')
-  const fleet = useApi(() => getFleet(retire), `fleet-${retire}`)
+  const [dataset, setDataset] = useState('fleet')
+  const runs = useApi(() => getRuns(dataset), `runs-${dataset}`)
+  const fleet = useApi(() => getFleet(retire, dataset), `fleet-${dataset}-${retire}`)
 
   useEffect(() => {
     const onHash = () => setView(readHash())
@@ -31,7 +32,7 @@ export default function App() {
   const closeDrone = useCallback(() => { window.location.hash = 'fleet' }, [])
 
   if (view.page === 'guide') {
-    return <Guide onEnter={() => { go('fleet'); window.scrollTo(0, 0) }} />
+    return <Guide dataset={dataset} onEnter={() => { go('fleet'); window.scrollTo(0, 0) }} />
   }
   return (
     <div>
@@ -44,7 +45,8 @@ export default function App() {
       </div>
       <div className="dash">
         <div className="controls">
-          {runs.data && <RetireControl runs={runs.data} retire={retire} onChange={setRetire} />}
+          {runs.data && <RetireControl runs={runs.data} retire={retire} onChange={setRetire}
+                                       dataset={dataset} onDataset={setDataset} />}
           {runs.error && <Failed error={runs.error} />}
         </div>
         <nav className="nav nav-pills" role="tablist">
@@ -55,9 +57,9 @@ export default function App() {
         </nav>
         {view.tab === 'fleet' && (fleet.error ? <Failed error={fleet.error} />
           : fleet.data ? <FleetTab d={fleet.data} onOpen={(id) => go(`fleet/${id}`)} /> : <Loading what="the fleet" />)}
-        {view.tab === 'weibull' && <ReliabilityTab retire={retire} />}
+        {view.tab === 'weibull' && <ReliabilityTab retire={retire} dataset={dataset} />}
       </div>
-      {view.drone && <DroneModal droneId={view.drone} retire={retire} onClose={closeDrone} />}
+      {view.drone && <DroneModal droneId={view.drone} retire={retire} dataset={dataset} onClose={closeDrone} />}
     </div>
   )
 }

@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 23:09"
+updated: "2026-10-16 23:21"
 
 tasks:
   - id: H-01
@@ -359,3 +359,27 @@ tasks:
       technician actions, the API serves each run); npm run build and vitest
       pass; the served dashboard switches runs from the slider with no error.
     result: "Slider over 7 precomputed runs (B1-B30, same seed): B1 312 warned replacements / 9 caught worn, B10 99 / 15, B30 65 / 23, 0 in-flight failures in every run; API ?retire= on every route + /api/runs; reading dropdown, Weibull part dropdown, folded Due soon / how-to-read / tables, Guide trimmed and dots coloured by fix. Fixed a qc bug: same-minute flights could reorder a chart (now time then flight number). pytest 108 passed, vitest 6 passed, all 4 screens render with live data; manifest regenerated (Python 3.12 kept)."
+
+  - id: H-17
+    title: Second test dataset - Fleet B, the same simulator with another seed
+    points: "5 - Test datasets: 2-3 accurate, working test datasets"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-16 23:18"
+    owns: ["data/simulate.py", "data/README.md", "data/fleet_b/", "app/data/fleet_b/", "app/api.py", "app/static/", "app/manifest.json", "web/src/", "tests/", "SPEC.md", "docs/how-it-works.md"]
+    notes: >
+      Asked by Div on 2026-10-16: the rubric wants 2-3 working test datasets and
+      we had one (data/fleet; its runs/ are the same fleet under other retire
+      rules). Fleet B = data/simulate.py with seed 7100 instead of 5300: same
+      design (10 drones x 300 flights, wear, 8 special-cause shapes, technician
+      loop, 7 retirement runs) but independent part lives, problems and timing.
+      Chosen over splitting Fleet A in half, which would halve every Weibull
+      fit. The dashboard gets a fleet dropdown; the API a dataset parameter.
+      SPEC.md section 7 (still describing the deleted problem_fleet/healthy)
+      is corrected here.
+    definition_of_done: >
+      python data/simulate.py writes both fleets; pytest passes with Fleet B
+      covered (CSV = fresh build, every special cause caught, the tool signals
+      on exactly the technician's flights, the API serves it); npm run build and
+      vitest pass; every screen renders for both fleets.
+    result: "Fleet B (seed 7100) added beside Fleet A (5300): 10 drones x 300 flights, 7 retirement runs; 11/11 special causes caught (all 7 injected shapes), tool = technician on 30/30 charts at B1, B10 and B30, Weibull recovers every true beta/eta inside the plain 95% intervals. Fleet dropdown in the dashboard, dataset= on every API route, SPEC section 7 and the codebook updated. pytest 124 passed, vitest 6 passed; all 4 screens render for both fleets."

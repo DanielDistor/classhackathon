@@ -1,0 +1,8 @@
+retire_pct,replace_at_battery,replace_at_motor,replace_at_propeller,parts_replaced,at_replace_age,found_worn,special_causes_fixed,failed_in_flight,false_alarms
+1,89.1,118.4,10.6,442,427,10,11,0,140
+2,113.0,147.7,15.9,288,272,11,11,0,143
+5,155.3,198.4,27.3,182,162,15,11,0,156
+10,198.5,249.2,41.4,124,104,15,11,0,153
+15,230.2,285.9,53.1,105,79,21,11,0,155
+20,256.4,316.1,63.8,81,52,24,11,0,155
+30,300.9,366.7,83.7,67,34,28,11,0,159

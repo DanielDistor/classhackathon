@@ -29,12 +29,24 @@ from pydantic import BaseModel, Field
 import qc
 
 HERE = Path(__file__).resolve().parent
-FLEET = HERE / "data" / "fleet"  # a copy of the repo's data/fleet/; sync_data.sh refreshes it
-RUNS = FLEET / "runs"            # one simulated run per retirement setting (data/simulate.py)
+DATA = HERE / "data"             # a copy of the repo's data/; sync_data.sh refreshes it
+#: The test datasets (data/simulate.py, one seed each): folder -> name shown in the dashboard.
+DATASET_NAMES = {"fleet": "Fleet A", "fleet_b": "Fleet B"}
+DATASETS = [k for k in DATASET_NAMES if (DATA / k / "flights.csv").exists()]
+DEFAULT_DATASET = "fleet"
+FLEET = DATA / DEFAULT_DATASET
 #: Retirement settings available (a part retires at B_p): one precomputed run each.
-RETIRE_PCTS = sorted(int(p.name[1:]) for p in RUNS.glob("p[0-9][0-9]")) if RUNS.is_dir() else [10]
+RETIRE_PCTS = sorted(int(p.name[1:]) for p in (FLEET / "runs").glob("p[0-9][0-9]")) or [10]
 DEFAULT_RETIRE_PCT = 10
 RETIRE = Query(DEFAULT_RETIRE_PCT, description="retire parts at B_p: when p% of that part type has failed")
+DATASET = Query(DEFAULT_DATASET, description="test dataset: " + ", ".join(f"{k} ({v})" for k, v in DATASET_NAMES.items()))
+
+
+def dataset_dir(dataset: str) -> Path:
+    """The folder of one test dataset; 422 for an unknown name."""
+    if dataset not in DATASETS:
+        raise HTTPException(422, f"dataset must be one of {DATASETS}, got {dataset!r}")
+    return DATA / dataset
 STATIC = HERE / "static"         # the built React app (cd ../web && npm run build)
 
 #: Parts within this many flights of their replace-at age are listed as "coming up".
@@ -79,23 +91,24 @@ def records(df: pd.DataFrame) -> list[dict]:
 
 # ---------------------------------------------------------------- the data, computed once
 
-def run_dir(retire: int) -> Path:
-    """The folder of one retirement run; 422 for a setting that was not simulated."""
+def run_dir(dataset: str, retire: int) -> Path:
+    """The folder of one retirement run of one dataset; 422 for a setting that was not simulated."""
     if retire not in RETIRE_PCTS:
         raise HTTPException(422, f"retire must be one of {RETIRE_PCTS} (percent), got {retire}")
-    return RUNS / f"p{retire:02d}" if RUNS.is_dir() else FLEET
+    runs = dataset_dir(dataset) / "runs"
+    return runs / f"p{retire:02d}" if runs.is_dir() else dataset_dir(dataset)
 
 
-@lru_cache(maxsize=8)
-def fleet(retire: int = DEFAULT_RETIRE_PCT) -> dict:
-    """Load one retirement run and compute every qc.py result the dashboard shows (once per run)."""
-    folder = run_dir(retire)
+@lru_cache(maxsize=16)
+def fleet(dataset: str = DEFAULT_DATASET, retire: int = DEFAULT_RETIRE_PCT) -> dict:
+    """Load one retirement run of one dataset and compute every qc.py result the dashboard shows (once)."""
+    folder = run_dir(dataset, retire)
     flights_raw = qc.check_flights(pd.read_csv(folder / "flights.csv"))
     flights = qc.add_derived(flights_raw)
     maintenance = qc.check_maintenance(pd.read_csv(folder / "maintenance.csv"))
     components = qc.check_components(pd.read_csv(folder / "components.csv"))
     policy = qc.check_replace_at(pd.read_csv(folder / "replace_at.csv"))
-    reference = qc.fleet_reference(pd.read_csv(FLEET / "fleet_reference.csv"))
+    reference = qc.fleet_reference(pd.read_csv(dataset_dir(dataset) / "fleet_reference.csv"))
 
     status = qc.fleet_status(flights, maintenance, fleet=reference)
     status["_order"] = status["status"].map(STATUS_ORDER)
@@ -128,16 +141,18 @@ def health() -> dict:
 
 
 @app.get("/api/runs")
-def runs_view() -> dict:
-    """The retirement settings, and what each run cost and prevented (data/fleet/runs/summary.csv)."""
-    summary = pd.read_csv(RUNS / "summary.csv") if (RUNS / "summary.csv").exists() else pd.DataFrame()
-    return {"default": DEFAULT_RETIRE_PCT, "options": RETIRE_PCTS, "summary": records(summary)}
+def runs_view(dataset: str = DATASET) -> dict:
+    """The retirement settings, and what each run cost and prevented (data/<dataset>/runs/summary.csv)."""
+    path = dataset_dir(dataset) / "runs" / "summary.csv"
+    summary = pd.read_csv(path) if path.exists() else pd.DataFrame()
+    return {"default": DEFAULT_RETIRE_PCT, "options": RETIRE_PCTS, "summary": records(summary),
+            "dataset": dataset, "datasets": [{"id": k, "name": DATASET_NAMES[k]} for k in DATASETS]}
 
 
 @app.get("/api/fleet")
-def fleet_view(retire: int = RETIRE) -> dict:
+def fleet_view(retire: int = RETIRE, dataset: str = DATASET) -> dict:
     """Fleet tab: every drone's status, every installed part's replace-at countdown, the timeline."""
-    d = fleet(retire)
+    d = fleet(dataset, retire)
     tl = d["timeline"]
     replaced = tl[tl["marker"] == "R"]
     by_chart = int(replaced["trigger"].str.startswith("chart").sum())
@@ -160,9 +175,9 @@ def fleet_view(retire: int = RETIRE) -> dict:
 
 
 @app.get("/api/drones/{drone_id}")
-def drone_view(drone_id: str, retire: int = RETIRE) -> dict:
+def drone_view(drone_id: str, retire: int = RETIRE, dataset: str = DATASET) -> dict:
     """Drone pop-up: status, part countdowns, timeline and the three restarting control charts."""
-    d = fleet(retire)
+    d = fleet(dataset, retire)
     st = d["status"].set_index("drone_id")
     if drone_id not in st.index:
         raise HTTPException(404, f"no drone called {drone_id}")
@@ -201,9 +216,9 @@ def drone_view(drone_id: str, retire: int = RETIRE) -> dict:
 
 
 @app.get("/api/reliability")
-def reliability_view(retire: int = RETIRE) -> dict:
+def reliability_view(retire: int = RETIRE, dataset: str = DATASET) -> dict:
     """Weibull tab: fits per part type, the shop's replace-at ages and the R(t) vs Kaplan-Meier curves."""
-    d = fleet(retire)
+    d = fleet(dataset, retire)
     c, by_type = d["components"], d["by_type"]
     shop = d["policy"].set_index("component_type")["replace_at"]
     mean_min = float(d["flights"]["flight_min"].mean())
@@ -226,10 +241,11 @@ def reliability_view(retire: int = RETIRE) -> dict:
 
 
 @app.get("/api/guide")
-def guide_view() -> dict:
+def guide_view(dataset: str = DATASET) -> dict:
     """Guide page: the injected special causes (answer key), what the technician did, example rows."""
-    key = pd.read_csv(FLEET / "answer_key.csv")
-    m, f, c = fleet()["maintenance"], fleet()["flights"], fleet()["components"]
+    key = pd.read_csv(dataset_dir(dataset) / "answer_key.csv")
+    d = fleet(dataset)
+    m, f, c = d["maintenance"], d["flights"], d["components"]
     reasons = m.loc[m["action"] == "replace", "reason"]
     parts = pd.concat([
         c[(c.component_type == "motor") & (c.status == 1)].head(1),
@@ -239,7 +255,8 @@ def guide_view() -> dict:
     flight_cols = ["flight_id", "drone_id", "datetime", "flight_min", "ambient_temp_c", "motor_temp_max_c",
                    "voltage_start_v", "voltage_end_v", "vibration_rms"]
     return {
-        "n_flights": fleet()["n_flights"], "n_rows": len(f), "n_baseline": qc.N_BASELINE,
+        "dataset": dataset, "dataset_name": DATASET_NAMES[dataset],
+        "n_flights": d["n_flights"], "n_rows": len(f), "n_baseline": qc.N_BASELINE,
         "events": records(key[["drone_id", "cause", "rule_shape", "start_flight", "detected_after_flight",
                                "detected_by", "fix"]]),
         "n_scheduled": int(reasons.str.startswith("reached replace-at age").sum()),
