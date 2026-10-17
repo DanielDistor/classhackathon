@@ -1,151 +1,146 @@
-![](docs/images/banner_thin.png)
+# Drone Fleet Reliability Monitor
 
-# 🎯 Cornell Six Sigma Hackathon
+**Team Flight Control** · Cornell Six Sigma Hackathon 2026 · prompt: *Drone Delivery Fleet Maintenance*
 
-*Tackle real-world quality control problems drawn from industrial engineering,
-healthcare systems, and energy systems!*
+A maintenance tool for a delivery drone fleet. Before each flight it tells the technician which drones can
+fly, which need a check and which should not fly, and why. It also tells them which motors, propellers
+and batteries to replace before they fail.
 
----
+> **The problem (from the prompt).** A drone delivery startup is experiencing mid-air failures, but it only
+> investigates after a crash. Technicians need a way to log wear and tear before and during each flight,
+> and to use it to manage and improve the fleet's reliability.
 
-Your team picks a prompt, creates the data, and ships a working quality-control
-tool. **👉 [Register on Devpost](https://six-sigma-hackathon.devpost.com/)**
-(required, even if you don't have a team yet).
+**Live app:** not deployed yet (see [Deploy](#deploy)). **Walkthrough with every number:** [`demo/README.md`](demo/README.md).
 
-### 📍 When & where
+## Run it
 
-| | 🏫 On-campus (24 hours) | 🌐 Virtual DL Challenge (7 days) |
+```bash
+git clone https://github.com/DanielDistor/classhackathon.git
+cd classhackathon
+./run.sh            # then open http://127.0.0.1:8000
+```
+
+`run.sh` installs the Python packages if they are missing (Python 3.12, `app/requirements.txt`), copies the
+test data into `app/`, rebuilds the React app if its code changed, and starts the server. Node.js is only
+needed if you edit `web/`. Run the tests with:
+
+```bash
+python3 -m pip install pytest httpx
+python3 -m pytest -q          # statistics, API and data tests
+cd web && npm ci && npm test  # front-end formatting and chart-scale tests
+```
+
+## Who it is for and what they do
+
+The user is the **fleet maintenance technician**. Their only inputs are the readings they already take:
+
+| When | What they record | Column |
 |---|---|---|
-| **Who** | on-campus students (required unless excused) | distance-learning students, and anyone who can't attend in person |
-| **Runs** | Fri Oct 16, 3 PM → Sat Oct 17, 3 PM ET | Fri Oct 16, 3 PM → Fri Oct 23, 3 PM ET |
-| **Where** | Upson Hall 116 | online |
-| **Submissions due** | Sat Oct 17, **1 PM ET** sharp | Fri Oct 23, **3 PM ET** |
-| **Showcase** | Sat Oct 17, 2-3 PM (must attend) | — |
+| Before take-off | battery voltage, air temperature | `voltage_start_v`, `ambient_temp_c` |
+| During the flight (from the flight controller log) | flight time, vibration, any alert | `flight_min`, `vibration_rms`, `inflight_event` |
+| Right after landing | hottest motor temperature, battery voltage | `motor_temp_max_c`, `voltage_end_v` |
+| Whenever a part changes | which part, and why | `maintenance.csv`, `components.csv` |
 
-Submit on **[Devpost](https://six-sigma-hackathon.devpost.com/)**: your repo
-link plus a demo. Full run of show: [🗓️ Schedule](docs/schedule.md).
+The tool turns these into three views:
 
----
+1. **Fleet health & replacements.** Every drone marked *Can fly*, *Warning* or *Do not fly* with the reason,
+   a parts health bar, the parts due soon, and a timeline of every replacement and repair. Clicking a
+   drone opens its parts, its timeline and its three control charts (one at a time, picked from a dropdown).
+2. **Weibull reliability & replace-at ages.** How long each part type lasts and the age to replace it at.
+3. **Cost & savings.** What the replacement policy costs per flight, with and without the control charts.
 
-### Quick Links
+A slider sets the replacement policy (replace parts at B1 to B30, below), and a dropdown switches between the
+two test fleets.
 
-- [🗓️ Schedule of Events](docs/schedule.md)
-- [💬 Prompts](docs/prompts.md) — *revealed at the start of the event*
-- [🔢 Evaluation Criteria](docs/criteria.md)
-- [📚 Resources for Building Your Tool](docs/resources.md)
-- [🧰 Starter Templates](demos/README.md)
-- [🤖 Agent Start Tutorial](docs/start.md) — type `/superagent` and your agent reads it for you
-- [⁉️ FAQ](#️-frequently-asked-questions)
+## The statistics
 
----
+All the statistics are plain, tested functions in [`app/qc.py`](app/qc.py). The API and the dashboard only
+call them. They are checked against hand-worked answers, degenerate inputs (constant data, too few points,
+no failures) and the simulator's answer key, in [`tests/`](tests/).
 
-> ### 📘🤖 New here? Read the [step-by-step start tutorial](docs/start.md) first
-> Ten minutes, for the whole team: set up your agent, **plan with `/superagent` on your
-> strongest model**, then **switch to a cheaper model** that builds and checks each task with
-> helper agents. **[→ docs/start.md](docs/start.md)**
+**1. Control charts, one per reading per drone.** Three readings are charted:
+`temp_rise_c = motor_temp_max_c − ambient_temp_c` (motor wear), `vibration_rms` (propeller damage) and
+`sag_rate_v_per_min = (voltage_start_v − voltage_end_v) / flight_min` (battery wear).
 
+- **Baseline:** each drone's first 50 flights set its limits, which never move. During those flights each
+  reading is checked against the fleet's normal range from acceptance flights (rule 1 only).
+- **I chart:** center x̄, limits x̄ ± 3σ̂, with σ̂ = MR̄ / 1.128 (MR̄ = average moving range).
+- **All 8 Nelson / Western Electric rules** (one point beyond 3σ, 9 on one side, 6 trending, 14 alternating,
+  2 of 3 beyond 2σ, 4 of 5 beyond 1σ, 15 within 1σ, 8 beyond 1σ on both sides).
+- **EWMA** for slow wear: z_t = λx_t + (1 − λ)z_{t−1}, λ = 0.2, limits μ₀ ± 3σ̂·√(λ/(2−λ)·(1−(1−λ)^{2t})).
+- **Restart after a repair:** after any logged action the EWMA and the rules start again; the limits stay.
 
-### 💡 The Challenge
+**2. Drone status.** *Do not fly*: the latest reading is beyond 3σ, or the EWMA is beyond its limit now.
+*Warning*: an open signal (not yet acted on) in the last 10 flights. *Can fly*: no open signal.
 
-Your team tackles one real-world quality control and reliability problem.
+**3. Weibull life per part type.** Two-parameter Weibull fitted by maximum likelihood with right-censoring
+(parts still flying or removed for another reason count as "lasted at least this long"), with 95%
+intervals. R(t) = exp(−(t/η)^β). The replace-at age is **B_p** = η(−ln(1 − p))^{1/β}, the age by which p% of
+parts fail; the default is B10. A Kaplan-Meier curve from the same data checks the fit.
 
-- 🧩 Prompts are released **at kickoff** — each tied to a dataset you design and
-  build yourself
-- 📊 **The statistics are the graded core.** Statistical process control,
-  process capability, reliability modeling, failure analysis. The app is the
-  delivery vehicle for the analysis, not the point
-- 🧱 Ship a a dashboard / web app (React or Shiny), plus **one** of: an R package or Python library AND/OR a public REST API
-  (FastAPI or plumber).
-- 🚀 Deploy it live to the course **Posit Connect** server
-- 🔢 Every project is scored 0-100 by the event staff.
-  [Read the criteria](docs/criteria.md)
+**4. Parts health and countdown.** Each installed part's life left = 100 − % of its B_p used (0 to 100); the
+drone's bar is the average over its 10 parts. Flights left = (B_p − age) ÷ the drone's mean flight length
+(batteries: charges left × 2, since the drone alternates two packs).
 
----
+**5. Cost of the policy.** The age-replacement model (Barlow & Proschan): cost per unit of use =
+(c_p R(t) + c_f F(t)) / ∫₀ᵗ R(u) du, where c_p is a planned replacement and c_f a failure in flight. It is
+compared with the simulated runs, where the control charts warn before a failure.
 
-### 🤖 Build with AI — bring your own agent
+## Test data
 
-AI-assisted development is **expected and encouraged**. Use whatever you already
-have. The skill being tested is steering a capable assistant toward
-statistically correct work — which is exactly the skill this course is about.
+Two invented fleets from the same seeded simulator ([`data/simulate.py`](data/simulate.py)), each 10 drones
+× 300 flights (Jul 1 – Sep 29, 2026). The codebook, with every column and how the data were generated, is
+[`data/README.md`](data/README.md).
 
-- [🧠 AI coding agents](docs/agents.md) — the popular ones, and how to pick
-- [🎙️ Tools](docs/tools.md) — Wispr Flow (talk to your agent) and Open Design
-- [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) — what the event is, the
-  repo map, the deploy target, the four-script contract
-- [`.claude/skills/superagent/`](.claude/skills/superagent/SKILL.md) — the one
-  skill you need: type `/superagent` and it routes to every other skill and
-  template for you. They all live in [`.claude/skills/`](.claude/skills/) if you
-  want to read them
+| Folder | Name | Seed | Planted problems | At B10: parts replaced (caught worn by a chart) | Failed in flight |
+|---|---|---|---|---|---|
+| [`data/fleet/`](data/fleet/) | Fleet A (main demo) | 5300 | 17 | 99 (15) | 0 |
+| [`data/fleet_b/`](data/fleet_b/) | Fleet B | 7100 | 11 | 119 (15) | 0 |
 
-Two rules: everything you ship is **public and reproducible**, and you must be
-able to **explain every number your tool prints**.
+Each part wears out at its own random Weibull life and pushes one reading up near the end. On top of that,
+special causes (prop strikes, hard landings, bad battery cells, loose connectors and mounts) are planted at
+random. The answer key (`answer_key.csv`) lists every one, and the tests check the tool catches all of them.
 
----
+## API
 
-### ⁉️ Frequently Asked Questions
+The dashboard reads everything from a REST API ([`app/api.py`](app/api.py), FastAPI). Interactive docs are at
+<http://127.0.0.1:8000/docs>. Every dashboard route takes `?dataset=fleet|fleet_b` and `?retire=` (the B_p
+setting: 1, 2, 5, 10, 15, 20 or 30).
 
-- **Who can participate?** Cornell students who are (a) in the Systems
-  Engineering MEng/MS program, OR (b) enrolled in SYSEN 5300 / MAE 5390, OR
-  (c) enrolled in SYSEN 5900. Teams of **2 to 5**.
+| Route | Returns |
+|---|---|
+| `GET /api/fleet` | every drone's status and reason, parts health, every installed part's countdown, the timeline |
+| `GET /api/drones/{id}` | one drone: its three control charts (one row per flight, with limits, EWMA and signals), parts, timeline |
+| `GET /api/reliability` | Weibull fit per part type with 95% intervals, replace-at ages, R(t) and Kaplan-Meier curves |
+| `GET /api/cost` | cost per flight of each policy, from the cost model and from the simulated runs |
+| `GET /api/runs`, `GET /api/guide` | the slider's runs; the answer key and example rows for the welcome page |
+| `POST /api/spc/imr` | I-MR limits for your own readings: `{"values": [...], "n_baseline": 50}` |
+| `POST /api/spc/monitor` | I chart with all 8 rules + EWMA for your own readings |
+| `POST /api/weibull` | Weibull fit for your own part lives: `{"life": [...], "status": [1, 0, ...]}` |
 
-- **On-campus or virtual?** On-campus students do the 24-hour event in Upson
-  Hall 116 (required unless excused). Distance-learning students, and anyone
-  who can't attend in person, do the 7-day Virtual DL Challenge.
-  [Dates above](#-when--where).
+Bad input gets a 422 with a plain message instead of a misleading number. The functions behind each route
+are listed in [`app/README.md`](app/README.md).
 
-- **What are the deadlines?** On-campus: submissions due Sat Oct 17, 1 PM ET
-  sharp; showcase Sat Oct 17, 2-3 PM (must attend). DL: submissions due
-  Fri Oct 23, 3 PM ET.
+## Repository
 
-- **What do we win?** On-campus winners: dinner for the team at the Statler
-  Dining Room. DL winners: bragging rights — infamy for all time.
+| Path | What is in it |
+|---|---|
+| `app/` | `qc.py` (statistics), `api.py` (API, also serves the dashboard), `static/` (built dashboard), deploy scripts |
+| `web/` | the React dashboard source ([`web/README.md`](web/README.md)) |
+| `data/` | the two test fleets, the simulator and the codebook |
+| `tests/` | pytest: known answers, degenerate cases, the answer key, API matches `qc.py` |
+| `demo/` | the walkthrough of both fleets |
+| `docs/` | [how it works](docs/how-it-works.md), [plan](docs/plan.md), [build plan](docs/build-plan.md); the event pages ([rubric](docs/criteria.md), [schedule](docs/schedule.md)) |
+| `SPEC.md`, `CONTRACT.yaml` | what the tool is, and the team's task ledger |
 
-- **Do I need Six Sigma experience?** No. Trainings are provided during the
-  event, and many of the analyses can be learned in a few minutes. The
-  [course textbook](https://timothyfraser.com/sigma/) is open to everyone.
+## Deploy
 
-- **Do I have to be a coding wizard?** No. Some prior experience in R or Python
-  is enough, and AI assistants close a lot of the gap. A winning project is a
-  smart, correct solution to a quality-control problem — not fancy code.
+Posit Connect runs `app/` as one FastAPI app (entrypoint `api:app`), which serves the API and the dashboard.
+`app/manifestme.sh` writes `manifest.json`; `app/deployme.sh` publishes with `CONNECT_SERVER` and
+`CONNECT_API_KEY` in a gitignored `app/.env`. No key is stored in this repo.
 
-- **What if I can't find team members?** Register on
-  [Devpost](https://six-sigma-hackathon.devpost.com/) anyway; we will match
-  you with a team.
+## Credits
 
-- **Do I have to be there the whole 24 hours?** A successful team works most of
-  it. Step out, sleep, stagger breaks — just keep someone on the team present.
-
-- **Can a teammate join the on-campus event remotely?** No. Anyone who can't
-  attend in person does the Virtual DL Challenge instead.
-
-- **What do we submit?** On Devpost: a link to your public GitHub repository
-  and a demo of a working prototype, deployed live to Posit Connect. At least
-  one team member needs a working (non-Cornell) GitHub account.
-
-- **What software do I need?** Install R or Python and at least one coding
-  interface (RStudio, VSCode, Cursor, Positron, ...) **before** the event
-  starts. If you plan to use an AI assistant, set it up beforehand too.
-
-- **What language should I use?** R, Python, or both. Code must be fully
-  reproducible and public.
-
-- **How are products evaluated?** Scored 0-100 by event staff on
-  [the criteria](docs/criteria.md): tool implementation (50), tool design
-  (25), documentation (25).
-
----
-
-### 👥 How to Join
-
-[Register on Devpost](https://six-sigma-hackathon.devpost.com/) — registration
-is required. Form a team of 2 to 5, or register solo and we'll match you.
-
----
-
-### 📚 Sign Up to Mentor
-
-Faculty, postdocs, PhD students, and developers are welcome as mentors.
-[Details here](docs/mentors.md).
-
----
-
-![](docs/images/banner_icons.png)
+Built with Python (pandas, NumPy, SciPy, lifelines, FastAPI) and React (Vite). Starter code, skills and
+deploy scripts from the course's hackathon template; the age-replacement cost model follows Barlow &
+Proschan, *Mathematical Theory of Reliability* (1965). All data are simulated.

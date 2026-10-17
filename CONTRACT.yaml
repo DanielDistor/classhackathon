@@ -112,16 +112,16 @@ tasks:
   - id: H-05
     title: Demonstration of the tool on every test dataset
     points: "10 - Tool Design: a clear demonstration of the tool, using test datasets"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: in_progress
+    owner: "Claude + Daniel"
+    started_at: "2026-10-17 00:15"
     owns: ["demo/", "app/frontend/"]
     definition_of_done: >
       demo/README.md walks through each data/ CSV with the exact command or
       URL to run, the numbers or chart the tool shows, and a one-line "how to
       read this"; a teammate who did not write it follows it and gets the same
       numbers.
-    result: ""
+    result: "demo/README.md walks Fleet A and Fleet B through all three tabs, the slider and one drone each, with every number checked against the running API. Left: a teammate who did not write it follows it and confirms the numbers."
 
   - id: H-06
     title: Deploy to the course Posit Connect server
@@ -146,9 +146,9 @@ tasks:
   - id: H-07
     title: README and function documentation
     points: "10 - Tool Documentation: excellent, easy-to-follow documentation"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: in_progress
+    owner: "Claude + Daniel"
+    started_at: "2026-10-17 00:15"
     owns: ["README.md", "app/README.md"]
     notes: >
       Replace the hackathon README.md with your tool's README; the event
@@ -158,7 +158,7 @@ tasks:
       how each function or endpoint works, how to run it in one command, the
       live URL, and links demo/README.md. A teammate who did not write the
       code follows it from a fresh clone and it works.
-    result: ""
+    result: "README.md replaced with the tool's README (problem, user, inputs, every statistic with its formula, datasets, API routes, one-command run, repo map, deploy). Left: the live URL (after H-06) and a fresh-clone run by a teammate."
 
   - id: H-08
     title: Reproducible public repo, submitted on Devpost
