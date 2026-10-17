@@ -443,3 +443,24 @@ tasks:
       pytest and vitest pass; the tab renders with live data for both fleets;
       the headline numbers equal the API's model and run costs.
     result: "Cost & savings tab beside the two dashboard tabs: headline cheapest no-charts choice vs charts at the slider setting (Fleet A at B10: $26.26 vs $4.08 per drone-flight, saves $66,528 over 3,000 flights; Fleet B $31.72 vs $5.46, $78,769), estimated prices (planned prop 80 / motor 350 / battery 380, failure 8000), relabelled chart, folded table per setting. Headline numbers equal the API (rendered for both fleets). pytest 134 passed, vitest 6 passed."
+
+  - id: H-21
+    title: "Dashboard polish: calmer status marks, more breathing room"
+    points: "Tool Design (25): the fleet screen reads cleanly at a glance"
+    status: done
+    owner: "Duc + Claude"
+    started_at: "2026-10-17 00:10"
+    owns: ["web/src/components/FleetTab.jsx", "web/src/components/DroneModal.jsx", "web/src/styles.css", "app/static/", "app/manifest.json"]
+    notes: >
+      Asked by Duc on 2026-10-17, reviewing the live dashboard. Removed the
+      redundant green Can fly marks (the fleet summary chip, the drone-card
+      pills for healthy drones, the pop-up pill) so only Warning and Do not fly
+      call attention. Removed the repeated "No open signal in the last 10
+      flights" line on healthy drone cards and in the pop-up. Renamed the
+      "Parts health" label to just "Health" (card, pop-up, legend). Widened the
+      spacing between sections: panels and the summary 22px, hangar grid 18px,
+      drone cards 10px gaps, slightly roomier cards.
+    definition_of_done: >
+      npm run build and vitest pass; pytest passes; the fleet tab and a drone
+      pop-up render with the new spacing and wording on both datasets.
+    result: "Summary strip shows warning / do-not-fly / parts due only; green Can fly pills and the no-open-signal lines are hidden for healthy drones (cards and pop-up); Parts health renamed to Health; section spacing widened (panels 22px, hangar 18px, cards 10px). npm run build ok (assets index-D8mpcuU0.js + index-BzDyOSte.css), vitest 6 passed, pytest 134 passed; manifest regenerated; the local app serves the new build."

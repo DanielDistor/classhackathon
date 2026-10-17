@@ -8,7 +8,7 @@ function Summary({ d }) {
   const a = d.activity
   return (
     <div className="fleet-summary">
-      {['go', 'watch', 'ground'].map((s) => (
+      {['watch', 'ground'].map((s) => (
         <span key={s} className={`sum-item ${s}`}>
           <span className="sym">{STATUS_SYMBOL[s]}</span>
           <b>{d.status.filter((r) => r.status === s).length}</b> {STATUS_WORD[s].toLowerCase()}
@@ -67,16 +67,16 @@ function DroneCard({ r, parts, warnFlights, onOpen }) {
   return (
     <button className={`drone-card ${STATUS_CLASS[r.status]}`} onClick={() => onOpen(r.drone_id)}
             aria-label={`${r.drone_id}: ${STATUS_WORD[r.status]}. Open its details`}>
-      <div className="dc-top"><span className="dc-id">{r.drone_id}</span><Pill status={r.status} /></div>
+      <div className="dc-top"><span className="dc-id">{r.drone_id}</span>{r.status !== 'go' && <Pill status={r.status} />}</div>
       <DroneIcon status={r.status} />
       <div className="dc-health-wrap">
-        <div className="dc-health-label"><span>Parts health</span><b>{pct}%</b></div>
+        <div className="dc-health-label"><span>Health</span><b>{pct}%</b></div>
         <HealthBar status={r.status} pct={pct} />
       </div>
       {!next ? <div className="dc-part-alert ok">No parts history loaded</div>
         : nDue ? <div className="dc-part-alert soon">🔧 {plural(nDue, 'part')} due within {warnFlights} flights</div>
           : <div className="dc-part-alert ok">✓ Next: {next.component_type} {next.position} {flightsPhrase(next.flights_left)}</div>}
-      <div className="dc-why">{cardText(r.reason)}</div>
+      {r.status !== 'go' && <div className="dc-why">{cardText(r.reason)}</div>}
       <div className="dc-open">Timeline, parts &amp; charts ›</div>
     </button>
   )
@@ -99,8 +99,8 @@ export default function FleetTab({ d, onOpen }) {
         ))}
       </div>
       <p className="rule-note">
-        <b>Can fly</b>: no open signal · <b>Warning</b>: a signal not yet acted on · <b>Do not fly</b>: beyond the limits
-        now · <b>Parts health</b>: average replace-at life left of the drone's 10 parts (100% = all new)
+        <b>Warning</b>: a signal not yet acted on · <b>Do not fly</b>: beyond the limits now · <b>Health</b>: average
+        replace-at life left of the drone's 10 parts (100% = all new)
       </p>
       <Panel title="Fleet maintenance timeline">
         <Timeline events={d.timeline} rows={d.drones} rowKey="drone_id" nFlights={d.n_flights} />

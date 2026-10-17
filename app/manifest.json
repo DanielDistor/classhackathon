@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "locale": "en_US.UTF-8",
+  "locale": "English_United States.1252",
   "metadata": {
     "appmode": "python-fastapi",
     "entrypoint": "api:app"
   },
   "python": {
-    "version": "3.12.0",
+    "version": "3.12.10",
     "package_manager": {
       "name": "pip",
-      "version": "26.2.1",
+      "version": "25.0.1",
       "package_file": "requirements.txt"
     }
   },
@@ -20,280 +20,289 @@
   },
   "files": {
     "requirements.txt": {
-      "checksum": "e363b435f9dad3002c7efa1129dc32bb"
+      "checksum": "80cc9573f4e10bdf71f053647ed0467c"
     },
     ".python-version": {
-      "checksum": "61939823fbcc7e8de3b61ab105331baf"
+      "checksum": "c3052f53ccf07991da5591cab5ee1274"
     },
     "README.md": {
-      "checksum": "28de13dc8140a1fad3010d1bd35f230e"
+      "checksum": "53e51b9ce4f96f14033837d199345cd0"
     },
     "api.py": {
       "checksum": "fc9957f86706da9ec5a21eeed45ca8fc"
     },
     "data/fleet/answer_key.csv": {
-      "checksum": "be1678d874785221947a8fd9ad616284"
+      "checksum": "7687458e8fda711a9aa12bb139a2454e"
     },
     "data/fleet/components.csv": {
-      "checksum": "94568baf7d1f0aae67196efc6751dcc8"
+      "checksum": "aea2a941040c3e7f9a0ac0fd867e314b"
     },
     "data/fleet/fleet_reference.csv": {
-      "checksum": "d91240ce5236594e6c225cdaed7067e8"
+      "checksum": "3cfd8fbec791c090985921b612e3519c"
     },
     "data/fleet/flights.csv": {
-      "checksum": "fbe5ffdf089859ea3f93945cd1effdc5"
+      "checksum": "90ee0114a394a7a3988a3ad4d049c74a"
     },
     "data/fleet/maintenance.csv": {
-      "checksum": "4097dfeaad9d3ac3e30120f4e0871d2a"
+      "checksum": "2d7dc19a7b24c226276fa3e2302ec445"
     },
     "data/fleet/replace_at.csv": {
-      "checksum": "9e071ad607b0943ba3998ac7a0227d51"
+      "checksum": "db5a395b95bada554cbedca306ad9cd2"
     },
     "data/fleet/runs/p01/answer_key.csv": {
-      "checksum": "59b1937598d722cabeecc79647383594"
+      "checksum": "4a60a57fdcce20ce07b9dfda46ed2ca0"
     },
     "data/fleet/runs/p01/components.csv": {
-      "checksum": "2e862314557bb46b3bb580f3705c6457"
+      "checksum": "120367d1d774adadbfade209c777c43d"
     },
     "data/fleet/runs/p01/flights.csv": {
-      "checksum": "b8836144cc933c95eb15ec28dc8e5045"
+      "checksum": "ca1a11f3d9181dd000364cf0ae20ab7b"
     },
     "data/fleet/runs/p01/maintenance.csv": {
-      "checksum": "1b38a7f2fffca7214700af2e615f2233"
+      "checksum": "2f227a07110426cbf27adf49f02b0771"
     },
     "data/fleet/runs/p01/replace_at.csv": {
-      "checksum": "8de2a9e97f4c95e973e9e19f7a660cda"
+      "checksum": "9e273d5dc76fd7bbcf78d7f099276804"
     },
     "data/fleet/runs/p02/answer_key.csv": {
-      "checksum": "a83c3b4623568af4e800ef960696e866"
+      "checksum": "afc021b3e892e7f6cef4317dfa1385b6"
     },
     "data/fleet/runs/p02/components.csv": {
-      "checksum": "3717e72be1fcf6d94a18f79b2a4ca803"
+      "checksum": "6fd756b9d4038b029c4d8fca2289c1f4"
     },
     "data/fleet/runs/p02/flights.csv": {
-      "checksum": "73cd3ad5d2d8c57b706d08be5452ea2a"
+      "checksum": "302738bb5b8ebd3011780542b1840b04"
     },
     "data/fleet/runs/p02/maintenance.csv": {
-      "checksum": "4eb54c416e2d54ed7f207c5023fe5c2d"
+      "checksum": "48d36d9ecdcdde5442b17316b6af13dc"
     },
     "data/fleet/runs/p02/replace_at.csv": {
-      "checksum": "49011a86e9cdebc8f75cf90697c11b56"
+      "checksum": "fcfbec5bffee33b7c50df2dafa065da4"
     },
     "data/fleet/runs/p05/answer_key.csv": {
-      "checksum": "34d2143d22649b0f9fdc910cf126b8e3"
+      "checksum": "3dc1cee967798776947e7ba09de8e8a0"
     },
     "data/fleet/runs/p05/components.csv": {
-      "checksum": "821ec444b7f99e6f41f32ff8dd2193a3"
+      "checksum": "d05187f6ff9f9da922b068828c11404b"
     },
     "data/fleet/runs/p05/flights.csv": {
-      "checksum": "07928f7fe03b72a557c5fd98d9f57a2c"
+      "checksum": "57c729fc376bd978b078dfbb882982b5"
     },
     "data/fleet/runs/p05/maintenance.csv": {
-      "checksum": "baff22c9228b2e6499f2e9285df8bb09"
+      "checksum": "87333f9d9343cef57150e01ca6842c2e"
     },
     "data/fleet/runs/p05/replace_at.csv": {
-      "checksum": "e60a3a8815dde5b30ae094d01f9d8758"
+      "checksum": "1a76490fa31a3b74f4b219b20ee32fa5"
     },
     "data/fleet/runs/p10/answer_key.csv": {
-      "checksum": "be1678d874785221947a8fd9ad616284"
+      "checksum": "7687458e8fda711a9aa12bb139a2454e"
     },
     "data/fleet/runs/p10/components.csv": {
-      "checksum": "94568baf7d1f0aae67196efc6751dcc8"
+      "checksum": "aea2a941040c3e7f9a0ac0fd867e314b"
     },
     "data/fleet/runs/p10/flights.csv": {
-      "checksum": "fbe5ffdf089859ea3f93945cd1effdc5"
+      "checksum": "90ee0114a394a7a3988a3ad4d049c74a"
     },
     "data/fleet/runs/p10/maintenance.csv": {
-      "checksum": "4097dfeaad9d3ac3e30120f4e0871d2a"
+      "checksum": "2d7dc19a7b24c226276fa3e2302ec445"
     },
     "data/fleet/runs/p10/replace_at.csv": {
-      "checksum": "9e071ad607b0943ba3998ac7a0227d51"
+      "checksum": "db5a395b95bada554cbedca306ad9cd2"
     },
     "data/fleet/runs/p15/answer_key.csv": {
-      "checksum": "ca7387863d05255a97c71e4df2d777b2"
+      "checksum": "e518b2213b6a90a2e9894d3ed2c14da9"
     },
     "data/fleet/runs/p15/components.csv": {
-      "checksum": "9612eb83e822067ab77233108c942715"
+      "checksum": "3f801b0120cbcfd3c68a50fd8fcd8bde"
     },
     "data/fleet/runs/p15/flights.csv": {
-      "checksum": "a5123d98f017e9a95bfc728f620fce73"
+      "checksum": "f0015a5810c7c954a05a9b93292a1b45"
     },
     "data/fleet/runs/p15/maintenance.csv": {
-      "checksum": "d26a32c4e8d62bc7ad9b2c59ec42f815"
+      "checksum": "a2aa3467d6a8ebd9f786e6132b61204c"
     },
     "data/fleet/runs/p15/replace_at.csv": {
-      "checksum": "3c9d70e33d552d1dfb466384500ee500"
+      "checksum": "5b3f3a707f32c6a184c6242d7c3369d6"
     },
     "data/fleet/runs/p20/answer_key.csv": {
-      "checksum": "bf3a85aae28a17f187ccb0a6adb8926a"
+      "checksum": "fc7016b4b6a3da11ef10b361bae9d975"
     },
     "data/fleet/runs/p20/components.csv": {
-      "checksum": "fcb1986e53809b9ea3b1967f001b5ee3"
+      "checksum": "c1f06fe260a21ec9e66d879d61d6c789"
     },
     "data/fleet/runs/p20/flights.csv": {
-      "checksum": "324e5ae5627ce170cf754293fe846e0f"
+      "checksum": "c35f0000759fb17c2c9c7509e8ba6076"
     },
     "data/fleet/runs/p20/maintenance.csv": {
-      "checksum": "3942ed2f94daa689fab8650579fc982d"
+      "checksum": "97fed79ef86a0276a58774a694dd13ce"
     },
     "data/fleet/runs/p20/replace_at.csv": {
-      "checksum": "c3afac08c5cea03f01565a51c145e8ed"
+      "checksum": "0513b671db734003a5ddba2b2af50460"
     },
     "data/fleet/runs/p30/answer_key.csv": {
-      "checksum": "be1678d874785221947a8fd9ad616284"
+      "checksum": "7687458e8fda711a9aa12bb139a2454e"
     },
     "data/fleet/runs/p30/components.csv": {
-      "checksum": "37146e141c07c62d868bdbe5f1f095f3"
+      "checksum": "3b8e7029520585db6654667df0ed6d3a"
     },
     "data/fleet/runs/p30/flights.csv": {
-      "checksum": "56ade1671af5168d0ab9386cc3f156b7"
+      "checksum": "75fa97b02c4ae22d9ace5d086f1e0bb2"
     },
     "data/fleet/runs/p30/maintenance.csv": {
-      "checksum": "fbd45358b488c26afbbb18d176cb429e"
+      "checksum": "541badd8872b5fd70e30235bc8ea5e6e"
     },
     "data/fleet/runs/p30/replace_at.csv": {
-      "checksum": "91099e4116358dc724db99cfb85deec9"
+      "checksum": "98ab6dd79e7e92de3c56cdbbdd0f4955"
     },
     "data/fleet/runs/summary.csv": {
-      "checksum": "50d3cc1420338d5c5a3f42bdee07658f"
+      "checksum": "432c1b12e7885ed8ef621c6e79081404"
     },
     "data/fleet_b/answer_key.csv": {
-      "checksum": "eabb493819943420ab7bed2f711c00d4"
+      "checksum": "212d52b0dead792b342f105707b38c1a"
     },
     "data/fleet_b/components.csv": {
-      "checksum": "7c4781a308d34b4cb502e4584be79bfa"
+      "checksum": "b195c81cf7b6b21085c0bb34c6b9b6d3"
     },
     "data/fleet_b/fleet_reference.csv": {
-      "checksum": "83d76b1958e3efc2a5a9bd7e8c9c797d"
+      "checksum": "364f8a2ecdd24e880287c285ac0fecbb"
     },
     "data/fleet_b/flights.csv": {
-      "checksum": "b1c155f474991240f5bc388caf17bfe2"
+      "checksum": "9aba2f882a7969b052cc4808183e7be2"
     },
     "data/fleet_b/maintenance.csv": {
-      "checksum": "23d6a964b496882436ce629f8248fb48"
+      "checksum": "88d973450a94c769de98fd5b83718ced"
     },
     "data/fleet_b/replace_at.csv": {
-      "checksum": "20ce2867dcd8024a55332db5ea127409"
+      "checksum": "1c6c5b4f7e059337a135d5916f0b6d45"
     },
     "data/fleet_b/runs/p01/answer_key.csv": {
-      "checksum": "bd2c427aab95e84e1408371aa4eef1db"
+      "checksum": "1d78f53f74b3b4edc1eb550444293965"
     },
     "data/fleet_b/runs/p01/components.csv": {
-      "checksum": "5ab7fd106e31be11dbb6986b2012fe70"
+      "checksum": "d00be4610d4da79fe98bfdada00b0bee"
     },
     "data/fleet_b/runs/p01/flights.csv": {
-      "checksum": "ea50133be4e5f3ca4439aa0dbbc647b3"
+      "checksum": "f8ae44522a2e08f0580fda348197dd58"
     },
     "data/fleet_b/runs/p01/maintenance.csv": {
-      "checksum": "66cb9b2577e0a9ebaad61ceef4354128"
+      "checksum": "280ef7c3b7fbedaa59003c873592e9bf"
     },
     "data/fleet_b/runs/p01/replace_at.csv": {
-      "checksum": "16e0fdfbc799a1bb5cabe634ce33fa51"
+      "checksum": "31c02bfb31187f148ac67576e99d6f6f"
     },
     "data/fleet_b/runs/p02/answer_key.csv": {
-      "checksum": "3a97d2d27b2e37d1b109d7e488e6f035"
+      "checksum": "30077e22c56df1ccfa5432a580c35775"
     },
     "data/fleet_b/runs/p02/components.csv": {
-      "checksum": "6b6043f10a737bea5882dcf37c16f768"
+      "checksum": "6c8619bd8518aaef3f6f5aeec80e29b6"
     },
     "data/fleet_b/runs/p02/flights.csv": {
-      "checksum": "e5b66007c0be347a9f26b206d3c3b65f"
+      "checksum": "17653feb58917a0b624668d1cf36d56d"
     },
     "data/fleet_b/runs/p02/maintenance.csv": {
-      "checksum": "cc02f3d86e292628fa90d2eb21792a63"
+      "checksum": "02060041b8f8729209769051cb1cea76"
     },
     "data/fleet_b/runs/p02/replace_at.csv": {
-      "checksum": "6d9e8d406245310392e6927778749d1e"
+      "checksum": "d4b527d1ff0f16727adf52ce056b8ad4"
     },
     "data/fleet_b/runs/p05/answer_key.csv": {
-      "checksum": "dbdf93a829f15642f718b697e6130d70"
+      "checksum": "77564bd263bf64faf90a461aa039d52c"
     },
     "data/fleet_b/runs/p05/components.csv": {
-      "checksum": "a2d5ce5d03b4da5bd549d24c43ff5e3f"
+      "checksum": "72c74b002fb632370903b736b87fc178"
     },
     "data/fleet_b/runs/p05/flights.csv": {
-      "checksum": "b066c4dbe0f5e05bc8afb34861cf2cbb"
+      "checksum": "3d507a4ba7d39e58c8f4cd517f8421b6"
     },
     "data/fleet_b/runs/p05/maintenance.csv": {
-      "checksum": "bb1133b5fdf78088c212c3771fa1ba81"
+      "checksum": "a49ab789864befe8b79eef9333b4acb6"
     },
     "data/fleet_b/runs/p05/replace_at.csv": {
-      "checksum": "bc3fa5e903bae6544ca690cdf0f5f990"
+      "checksum": "73e61568793730e3a987b971ec02691d"
     },
     "data/fleet_b/runs/p10/answer_key.csv": {
-      "checksum": "eabb493819943420ab7bed2f711c00d4"
+      "checksum": "212d52b0dead792b342f105707b38c1a"
     },
     "data/fleet_b/runs/p10/components.csv": {
-      "checksum": "7c4781a308d34b4cb502e4584be79bfa"
+      "checksum": "b195c81cf7b6b21085c0bb34c6b9b6d3"
     },
     "data/fleet_b/runs/p10/flights.csv": {
-      "checksum": "b1c155f474991240f5bc388caf17bfe2"
+      "checksum": "9aba2f882a7969b052cc4808183e7be2"
     },
     "data/fleet_b/runs/p10/maintenance.csv": {
-      "checksum": "23d6a964b496882436ce629f8248fb48"
+      "checksum": "88d973450a94c769de98fd5b83718ced"
     },
     "data/fleet_b/runs/p10/replace_at.csv": {
-      "checksum": "20ce2867dcd8024a55332db5ea127409"
+      "checksum": "1c6c5b4f7e059337a135d5916f0b6d45"
     },
     "data/fleet_b/runs/p15/answer_key.csv": {
-      "checksum": "69c4b412ab3071c8cff51ffc133c8075"
+      "checksum": "f9ba633278399bb2df4f73b3cc3a4694"
     },
     "data/fleet_b/runs/p15/components.csv": {
-      "checksum": "8ac06df310615ac2c6377079d76a79ed"
+      "checksum": "9ff02dd5d6d2c89b660dad09a6f7428e"
     },
     "data/fleet_b/runs/p15/flights.csv": {
-      "checksum": "7ba0daa3146576bdb0503d57aa1e162c"
+      "checksum": "7a3737921e2dbe7b98ad2731eb3900ed"
     },
     "data/fleet_b/runs/p15/maintenance.csv": {
-      "checksum": "cbd4f187e2963a41d5c66ae7ba6ba027"
+      "checksum": "f4cb4e9a6acf7ab7cdc49c541cdcaa58"
     },
     "data/fleet_b/runs/p15/replace_at.csv": {
-      "checksum": "903918e6653645161884425d2552178f"
+      "checksum": "8e1207dfebe50a982f90c4a75947039a"
     },
     "data/fleet_b/runs/p20/answer_key.csv": {
-      "checksum": "d96e2a6a464a76fe2b7cb150e0d3aeaf"
+      "checksum": "c91b804434792fcde3aae0c2878b9869"
     },
     "data/fleet_b/runs/p20/components.csv": {
-      "checksum": "1ace787e1e0d304617d234cf62e8bf19"
+      "checksum": "9123f2e00a49f258603dd60a368c7404"
     },
     "data/fleet_b/runs/p20/flights.csv": {
-      "checksum": "82b6268127d2b311ff0af4150725d1d0"
+      "checksum": "1bbff37227b3568442f56b8c2e3f8e82"
     },
     "data/fleet_b/runs/p20/maintenance.csv": {
-      "checksum": "3b33fab19814abe21233e5b1bb16876c"
+      "checksum": "0793d4c99b1d97da0ddc820556625bc5"
     },
     "data/fleet_b/runs/p20/replace_at.csv": {
-      "checksum": "1e1caaf11d0160b6d67eb0a547a34e4f"
+      "checksum": "26c762d2dfa7b1e7cbb3799ba8504000"
     },
     "data/fleet_b/runs/p30/answer_key.csv": {
-      "checksum": "4c3868a4dba6bd9de4e7be56b4728068"
+      "checksum": "aa5b24b64adcccc54744628349e80071"
     },
     "data/fleet_b/runs/p30/components.csv": {
-      "checksum": "3447d5f9aaac3876b136125781c3ca64"
+      "checksum": "2eb93d6da485dd6289a82dd01610ef92"
     },
     "data/fleet_b/runs/p30/flights.csv": {
-      "checksum": "344cbedef386497e0e5bfb60f1a2b54d"
+      "checksum": "c3b284f5609c7ba2784a476ecad00b5c"
     },
     "data/fleet_b/runs/p30/maintenance.csv": {
-      "checksum": "639da8eb9e74a84651e9a39a9ed192e9"
+      "checksum": "6cfcf95eb7814c33d58b9493e841839f"
     },
     "data/fleet_b/runs/p30/replace_at.csv": {
-      "checksum": "bb90bb52a1db606c2b6f5dc8d03ebd5a"
+      "checksum": "6b5973f9b42a028999b5c2fe45a1e0d3"
     },
     "data/fleet_b/runs/summary.csv": {
-      "checksum": "5cb425985b8ba97d231e6210c5a8fff7"
+      "checksum": "b345e4a04a8936194561cd9d20e5abf3"
+    },
+    "manifestme.sh": {
+      "checksum": "2905a058b59a0edd48834666ef84723d"
     },
     "qc.py": {
       "checksum": "6bc2484cea70f85eacd9cb28bbfd26fa"
     },
-    "static/assets/index-D5-feHTV.js": {
-      "checksum": "5d1bbed4e55c171c24f1a62b5aaec1f0"
+    "static/assets/index-BzDyOSte.css": {
+      "checksum": "68cbf20c21a0bb67af368a17fb995d0a"
     },
-    "static/assets/index-SnUD_31S.css": {
-      "checksum": "e117ca683f5d3bc2101a44f6ab110eb9"
+    "static/assets/index-D8mpcuU0.js": {
+      "checksum": "eda2f9c8161d09e05b814334b479f2de"
     },
     "static/index.html": {
-      "checksum": "68fdeea7ad99e08dd73a892d8830ef5c"
+      "checksum": "acb2368d2c511c8aadfe6113d7c15cf0"
+    },
+    "sync_data.sh": {
+      "checksum": "4d66a804d7c41f22b5df1f0497cbe6fb"
+    },
+    "testme.sh": {
+      "checksum": "262fbfa015abc3318f6b8adb40d6c632"
     }
   }
 }

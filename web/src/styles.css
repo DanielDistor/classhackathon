@@ -418,7 +418,7 @@ table.fleet td.why {
 .banner {
        border-radius: var(--radius);
        padding: 14px 18px;
-       margin-bottom: 16px;
+       margin-bottom: 22px;
        display: flex;
        gap: 14px;
        align-items: baseline;
@@ -457,7 +457,7 @@ table.fleet td.why {
        border: 1px solid var(--line);
        border-radius: var(--radius);
        padding: 16px 18px;
-       margin-bottom: 16px;
+       margin-bottom: 22px;
 }
 
 .panel h4 {
@@ -936,7 +936,7 @@ table.example tbody tr:nth-child(odd) td {
        border: 1px solid var(--line);
        border-radius: var(--radius);
        padding: 14px 18px 2px;
-       margin-bottom: 16px;
+       margin-bottom: 22px;
 }
 
 @media (max-width: 860px) {
@@ -1505,7 +1505,7 @@ details.more summary {
        flex-wrap: wrap;
        align-items: center;
        gap: 10px 22px;
-       margin-bottom: 14px;
+       margin-bottom: 22px;
        background: var(--card);
        border: 1px solid var(--line);
        border-radius: var(--radius);
@@ -1556,7 +1556,8 @@ details.more summary {
 .hangar {
        display: grid;
        grid-template-columns: repeat(5, minmax(0, 1fr));
-       gap: 14px;
+       gap: 18px;
+       margin-bottom: 18px;
 }
 
 @media (max-width: 1100px) {
@@ -1577,12 +1578,12 @@ details.more summary {
        cursor: pointer;
        display: flex;
        flex-direction: column;
-       gap: 8px;
+       gap: 10px;
        background: var(--card);
        border: 1.5px solid var(--line);
        border-top-width: 6px;
        border-radius: 14px;
-       padding: 12px 14px 12px;
+       padding: 14px 16px 14px;
        transition: transform .12s, box-shadow .12s, border-color .12s;
 }
 
@@ -2029,8 +2030,8 @@ details.stats-details[open]>summary {
 .dc-health-wrap {
        display: flex;
        flex-direction: column;
-       gap: 4px;
-       margin-top: 2px;
+       gap: 6px;
+       margin-top: 6px;
 }
 
 .dc-health-label {

@@ -14,11 +14,11 @@ function Banner({ d }) {
     <div className={`banner ${STATUS_CLASS[d.status]}`}>
       <div className="banner-head">
         <h3>{d.drone_id}</h3>
-        <Pill status={d.status} />
-        <span className="banner-driver">Parts health: {pct}% (average life left of its 10 parts; most worn: {d.worst_part}, {Math.round(d.worst_left)}% left)</span>
+        {d.status !== 'go' && <Pill status={d.status} />}
+        <span className="banner-driver">Health: {pct}% (average life left of its 10 parts; most worn: {d.worst_part}, {Math.round(d.worst_left)}% left)</span>
       </div>
       <HealthBar status={d.status} pct={pct} big />
-      <p>{cap(d.reason)}.</p>
+      {d.status !== 'go' && <p>{cap(d.reason)}.</p>}
     </div>
   )
 }
