@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-17 13:20"
+updated: "2026-10-17 13:39"
 
 tasks:
   - id: H-01
@@ -553,3 +553,18 @@ tasks:
       now; the test count is the current one (141 pytest, 6 vitest); the code map
       lists the current files.
     result: "how-it-works section 9 now covers the top controls (upload box, fleet dropdown, slider and trade-off bars), every tab incl. Combined, the one-chart dropdown, the Weibull part dropdown, the redesigned Guide page and the About footer; section 11 says 141 pytest + 6 vitest (both fleets, B1/B10/B30); section 13 lists the current files. build-plan status and checkboxes match the ledger (deployed; next Stage 7). README, app/README, demo/README, data/README and SPEC checked: already current."
+
+  - id: H-27
+    title: Fleet tab summary - drop the warning count
+    points: "protects Tool Design: a calmer summary line"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-17 13:39"
+    owns: ["web/src/components/FleetTab.jsx", "app/static/", "app/manifest.json", "docs/how-it-works.md"]
+    notes: >
+      Asked by Div on 2026-10-17: remove the yellow "! 0 warning" item from the Fleet
+      health summary. A drone with a warning still shows it on its own card.
+    definition_of_done: >
+      The summary renders only the do-not-fly count and the parts-due count; npm run
+      build and vitest pass.
+    result: "Summary items now: do not fly, parts due within 10 flights (rendered with live data); vitest 6 passed; how-it-works summary line updated."

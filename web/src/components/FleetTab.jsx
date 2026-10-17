@@ -8,7 +8,7 @@ function Summary({ d }) {
   const a = d.activity
   return (
     <div className="fleet-summary">
-      {['watch', 'ground'].map((s) => (
+      {['ground'].map((s) => (
         <span key={s} className={`sum-item ${s}`}>
           <span className="sym">{STATUS_SYMBOL[s]}</span>
           <b>{d.status.filter((r) => r.status === s).length}</b> {STATUS_WORD[s].toLowerCase()}

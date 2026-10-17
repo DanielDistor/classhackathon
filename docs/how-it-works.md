@@ -296,8 +296,8 @@ app on Posit Connect (link in the [README](../README.md)).
 
 ### The **Fleet health & replacements** tab (opens first)
 
-1. **Summary line.** How many drones *can fly*, have a *warning*, or should *not fly*; how many parts are
-   due within 10 flights; and what happened over the 300 flights (parts warned and replaced, failures,
+1. **Summary line.** How many drones should *not fly* and how many parts are due within 10 flights (a
+   drone with a warning shows it on its own card); and what happened over the 300 flights (parts warned and replaced, failures,
    special causes fixed).
 2. **Due soon** (a dropdown; its header gives the counts): as of each drone's latest flight, the parts that
    reach their replace-at age within the next 10 flights ("have the part ready") or 30 flights ("coming up"),
