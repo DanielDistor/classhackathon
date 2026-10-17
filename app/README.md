@@ -16,14 +16,12 @@ This folder is the one app Posit Connect runs:
 ## Run it
 
 ```bash
-cd app
-python3 -m pip install -r requirements.txt   # Python 3.12
-./testme.sh                                  # copies the test data in, then serves http://127.0.0.1:8000
+./run.sh      # from the repo folder (or ./testme.sh from app/), then open http://127.0.0.1:8000
 ```
 
-`static/` (the React build) is committed, so this works without Node.js. After editing `../web/src/`,
-rebuild it with `cd ../web && npm run build` (Node.js 20+), or work live with `npm run dev`
-there (see [`../web/README.md`](../web/README.md)).
+It installs any missing Python packages, copies the test data in, rebuilds the React app if anything in
+`../web/` changed (when Node.js is installed; otherwise it uses the committed build in `static/`), and
+starts the server.
 
 ## Files
 

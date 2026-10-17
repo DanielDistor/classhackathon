@@ -24,6 +24,10 @@ id(s) in its heading, following [`docs/plan.md`](docs/plan.md). H-01 is `blocked
 When the stage passes, tick its boxes, move **← next** to the following stage, update the Status line,
 and show the diff before committing.
 
+**Running the app:** `./run.sh` from the repo folder, then http://127.0.0.1:8000. The dashboard is React
+(`web/src/`) on a FastAPI API (`app/api.py`) over the statistics (`app/qc.py`). After any change in `web/`,
+run `cd web && npm run build` and commit the rebuilt `app/static/` with it (Posit Connect serves that build).
+
 ## Start here, every session
 
 1. **Read [`SPEC.md`](SPEC.md) and [`CONTRACT.yaml`](CONTRACT.yaml) before anything else.** SPEC says

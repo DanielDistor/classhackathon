@@ -25,6 +25,16 @@ Data comes before charts, statistics before the app, and the first deploy happen
 
 **Status:** Stage 0 ✅ (waiting on everyone reading SPEC section 4) · Stage 1 ✅ · Stage 2 ✅ · Stage 3: app ✅, deploy waiting on the key · Stage 4 ✅ · **next: Stage 5** (and the deploy as soon as the key arrives)
 
+### See the dashboard
+
+```bash
+git pull
+./run.sh          # then open http://127.0.0.1:8000  (Ctrl+C to stop)
+```
+
+That's all. It installs anything missing and rebuilds the React app if someone changed it. If you
+edit the dashboard (`web/src/`), just run `./run.sh` again and commit everything git shows as changed.
+
 ### How to run a stage yourself
 
 **1. One-time setup** (Python 3.12):
@@ -32,7 +42,7 @@ Data comes before charts, statistics before the app, and the first deploy happen
 ```bash
 git clone https://github.com/DanielDistor/classhackathon.git   # or: git pull, if you already have it
 cd classhackathon
-python3 -m pip install -r app/requirements.txt pytest httpx   # and Node.js 20+ for web/
+python3 -m pip install -r app/requirements.txt pytest httpx
 python3 data/simulate.py      # optional: rebuilds the test data (identical output every time)
 ```
 

@@ -7,25 +7,12 @@ the FastAPI app in [`../app/api.py`](../app/api.py), which calls the tested func
 
 ## Run it
 
-You need Node.js 20 or newer.
+From the repo folder: `./run.sh`, then open http://127.0.0.1:8000. After you edit anything here, run
+`./run.sh` again: it notices the change and rebuilds. Commit everything git shows as changed (the build
+lands in `app/static/`, which Posit Connect serves). Needs Node.js 20+ only if you edit this folder.
 
-```bash
-cd web
-npm ci             # install the exact versions in package-lock.json
-npm run dev        # http://localhost:5173, live reload; /api calls go to the API on port 8000
-```
-
-Start the API first in another terminal (`cd app && ./testme.sh`). `npm run dev` proxies `/api` to it.
-
-## Build and test
-
-```bash
-npm run build      # writes ../app/static/, which the API serves at http://127.0.0.1:8000/
-npm test           # number formatting and chart-scale tests
-```
-
-Commit `../app/static/` after building, then re-run `../app/manifestme.sh`: Posit Connect serves the
-build from there. Never commit `node_modules/`.
+Optional, for live reload while editing: `npm run dev` here (http://localhost:5173), with `./run.sh`
+running in another terminal for the API. `npm test` runs the formatting and chart-scale tests.
 
 ## Files
 

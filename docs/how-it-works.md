@@ -272,7 +272,7 @@ warning. The tool turns failures into warnings; it cannot promise there will nev
 
 ## 9. What the website shows, page by page
 
-Start it locally with `./app/testme.sh` (or `uvicorn api:app --port 8000` from `app/`) and open
+Start it locally with `./run.sh` from the repo folder and open
 <http://127.0.0.1:8000>.
 
 ### The dashboard opens on the **Fleet health & replacements** tab
