@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 21:31"
+updated: "2026-10-16 21:55"
 
 tasks:
   - id: H-01
@@ -254,3 +254,45 @@ tasks:
       scripted Shiny session renders every output with no error and no
       "Replace now" part.
     result: "Replace at the warning: 97 planned replacements each warned on the flight it was replaced after (84 at the replace-at age, 13 found worn by a chart), 2 in-flight failures, 17 special causes; timeline shows only R/F/S; 171 false alarms logged as no_fault and kept off the timeline; dashboard schedules with replace_at.csv so no part is overdue (refit shown beside it). pytest 82 passed; scripted Shiny session renders all 13 outputs, no error, no Replace-now part."
+
+  - id: H-12
+    title: Fleet-wide check for each drone's first 50 flights (warn before a part fails, even in the baseline)
+    points: "protects Statistical Validity (25) and Tool Design (25): no blind spot while a drone's own baseline is being collected"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-16 21:45"
+    owns: ["data/simulate.py", "data/README.md", "data/fleet/", "app/data/fleet/", "app/qc.py", "app/app.py", "app/charts.py", "app/intro.py", "tests/", "docs/plan.md"]
+    notes: >
+      Agreed with Div on 2026-10-16. Both in-flight failures happened in a
+      drone's first 50 flights, when its own chart is not checking yet. For
+      those flights each reading is now compared with the fleet's normal range
+      from acceptance flights (20 per drone, all-new parts, before the log;
+      data/fleet/fleet_reference.csv), rule 1 only: beyond 3 sd of the fleet.
+      Rule 1 alone because the fleet range includes the differences between
+      drones, so pattern rules and the EWMA flag drones that are just
+      different (prototype: 9 signals in flights 1-50 with rule 1, 38 with
+      rule 1 + EWMA, 56 with all rules; all three catch both failing props).
+      The simulated technician acts on it exactly as on any other signal.
+    definition_of_done: >
+      python data/simulate.py runs; python -m pytest tests -q passes
+      (known answer for the fleet check, the tool still signals on exactly the
+      flights the technician acted on, now including flights 1-50); the
+      simulator prints how many parts failed in flight; a scripted Shiny
+      session renders every output with no error.
+    result: "Fleet check (rule 1 vs fleet_reference.csv) on each drone's first 50 flights caught 3 wearing props (D-05 flight 17, D-09 39, D-06 43); simulate.py prints parts failed in flight: 0 (was 2); no false alarm in flights 1-50, false alarms overall 171 -> 139. pytest 84 passed incl. the fleet-check known answer and tool = technician on 30/30 charts with the fleet check; scripted Shiny session renders all 13 outputs, no error."
+
+  - id: H-13
+    title: Plain-language guide to how the tool works, start to end
+    points: "15 - Documentation: a newcomer can follow what the tool does and why"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-16 21:53"
+    owns: ["docs/how-it-works.md"]
+    notes: >
+      Requested by Div on 2026-10-16: one text file explaining the whole logic
+      of the website in chronological order, readable by someone new to it.
+    definition_of_done: >
+      docs/how-it-works.md exists; every number in it matches data/fleet and
+      the app (checked by script); it covers the data, every check, every
+      action, every page of the dashboard, and a worked example of one drone.
+    result: "docs/how-it-works.md written: 14 sections in chronological order (data, setup, logging, checks, actions, failures, every page, D-05 worked example, run totals, limits, code map, glossary); a script checked all 17 quoted numbers against data/fleet and the app: 17 PASS."

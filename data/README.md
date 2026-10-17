@@ -54,12 +54,21 @@ After every flight a simulated technician runs the tool's own statistics (`app/q
 
 | Trigger | Action | `maintenance.csv` reason |
 |---|---|---|
-| A part fails in flight (the drone returns home: `inflight_event = return_home`) | Replace before the next flight | `failed in flight` |
+| A part fails in flight (the drone returns home: `inflight_event = return_home`) | Replace before the next flight. **None in this run** | `failed in flight` |
+| During a drone's first 50 flights (its baseline): a reading is more than 3 sd from the **fleet's normal range** (`fleet_reference.csv`) | Same as a chart signal below | reason ends `(fleet rule 1)` |
 | A chart signals (EWMA, or any of the 8 rules on the I chart, after the 50-flight baseline) | A special cause found is fixed before the next flight. A part found inside its P-F interval is **warned and replaced before the next flight**. Nothing found = a false alarm: logged as `no_fault`, nothing is changed | `special cause: …`, `worn: found after a chart signal`, `chart signal, nothing found: a false alarm` |
 | A part reaches its B10 | **Warned and replaced before the next flight** | `reached replace-at age (B10)` |
 
 A warning always means "replace before the next flight", so every planned replacement is warned on the
 flight it is replaced after.
+
+**The fleet check closes the baseline blind spot.** A drone's own chart can only start once its first 50
+flights have set its limits. Before that, each reading is compared with the fleet's normal range: the mean
+and standard deviation of 200 acceptance flights (20 per drone, all-new parts, flown before the log). Only
+rule 1 is used, because that range includes the differences between drones, and pattern rules or the EWMA
+would flag drones that are simply a little different. In this run it caught three wearing propellers
+(D-05 at flight 17, D-09 at 39, D-06 at 43) that would otherwise have failed in flight, and raised no false
+alarm. Without it, two props failed in flight during the baseline.
 
 After every logged action on a chart (replacement of a part that drives it, repair, or false alarm), its
 EWMA restarts at the center line and its run rules start counting afresh. The control limits are kept,
@@ -109,11 +118,11 @@ Two censoring choices, both standard and both checked:
 - **A part damaged by a special cause is censored.** External damage is a competing risk, not wear-out.
 
 Fitted to this file (lifelines, right-censored maximum likelihood, 95% intervals): motor β 2.62 [1.66,
-3.58], η 508 [392, 623]; propeller β 1.91 [1.67, 2.16], η 154 [139, 169]; battery β 3.57 [2.64, 4.50],
+3.58], η 508 [392, 623]; propeller β 1.91 [1.66, 2.15], η 154 [139, 169]; battery β 3.57 [2.64, 4.50],
 η 356 [317, 396]. Every true value is inside its Bonferroni-adjusted interval (the test); the battery η is
 just outside its plain 95% interval, which happens about once in 20 by construction.
 
-### `maintenance.csv`: one row per technician action (287 rows)
+### `maintenance.csv`: one row per technician action (255 rows)
 
 | Column | Meaning |
 |---|---|
@@ -131,6 +140,11 @@ it came from, `n` and `n_failed`, and `fitted_on` (the parts history before 2026
 schedules replacements with these, so no part shows as overdue. Refitting on all of `components.csv` gives
 lower motor and battery ages (215 h and 190 cycles, closer to the true 203 h and 189 cycles); the dashboard
 shows that refit next to the schedule.
+
+### `fleet_reference.csv`: the fleet's normal range (3 rows)
+
+One row per reading: `chart`, `center`, `sigma`, `n` (200 acceptance flights) and `source`. Used only for each
+drone's first 50 flights, rule 1 only (see above).
 
 ### `answer_key.csv`: the injected special causes (17 rows)
 
@@ -156,10 +170,10 @@ For checking the tool's numbers. A real fleet would not come with these.
 
 - **False alarms are the price of using all 8 rules.** For a stable process, rules 1–8 together trip
   roughly once every 50–90 points, against once in 370 for rule 1 alone, and the EWMA adds a little more.
-  Limits estimated from a 50-flight baseline add a little more. In this run 171 chart signals (2.3% of chart
-  points after the baseline) were false alarms; with a 30-flight baseline it was 2.8%.
-- **A failure inside the baseline.** D-05's propeller 1 failed on flight 25, so its wear ramp sits inside
-  D-05's baseline: baseline vibration averages 3.23 m/s² against 3.02 afterwards. The center line is too
-  high, later readings run below it, and D-05 collects 43 of the 171 false alarms. A real Phase I would
-  drop the flights just before a logged failure; we kept it as the visible cost of a contaminated baseline.
+  Limits estimated from a 50-flight baseline add a little more. In this run 139 chart signals (1.9% of the
+  7,500 readings after the baselines) were false alarms, none during the fleet check.
+- **Some baselines are unlucky.** D-05 collects 29 of the 139 false alarms, mostly on motor temperature:
+  by chance its first 50 temperature readings were steadier than its later ones, so those limits sit a little
+  tight. D-05's first 17 flights also carry the wear of the propeller the fleet check caught, which is
+  inside its vibration baseline. We kept the seed rather than re-pick it.
 - `life_value` prints with one decimal for motors and props; battery cycles are whole numbers.

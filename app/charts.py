@@ -37,7 +37,8 @@ def _frame(ax, title: str, unit: str, n_baseline: int) -> None:
     ax.set_axisbelow(True)
     if n_baseline:
         ax.axvspan(0.5, n_baseline + 0.5, color=GRID, alpha=0.5, lw=0)
-        ax.text(0.01, 0.97, f"baseline: first {n_baseline} flights", transform=ax.transAxes,
+        ax.text(0.01, 0.97, f"baseline: first {n_baseline} flights, checked against the fleet range",
+                transform=ax.transAxes,
                 va="top", color=INK_2, fontsize=8.5)
     ax.set_title(title, loc="left", color=INK, fontsize=11, fontweight="bold")
     ax.set_ylabel(unit)
@@ -57,8 +58,11 @@ def monitor_axes(ax, chart: pd.DataFrame, title: str, unit: str, resets: list[in
         ax.plot(x, y, color=INK_2, lw=1.2, ls="--")
         ax.text(1.005, y.iloc[-1], name, va="center", color=INK_2, fontsize=8.5,
                 transform=ax.get_yaxis_transform())
+    if chart["fleet_ucl"].notna().any():          # the drone's first flights: checked against the fleet
+        for col in ("fleet_ucl", "fleet_lcl"):
+            ax.plot(x, chart[col], color=MUTED, lw=1.3, ls="-.")
     ax.plot(x, chart["z"], color=EWMA, lw=2)
-    r1 = chart["rule_1"].to_numpy()
+    r1 = (chart["rule_1"] | chart["signal_fleet"]).to_numpy()
     other = (chart["rules_triggered"] != "").to_numpy() & ~r1
     ew = chart["signal_ewma"].to_numpy()
     if other.any():
@@ -75,8 +79,9 @@ def monitor_axes(ax, chart: pd.DataFrame, title: str, unit: str, resets: list[in
 MONITOR_LEGEND = [
     plt.Line2D([], [], color=SERIES, lw=1, marker="o", ms=3, label="each flight"),
     plt.Line2D([], [], color=INK_2, lw=1.2, ls="--", label="control limits (±3σ, from the baseline)"),
+    plt.Line2D([], [], color=MUTED, lw=1.3, ls="-.", label="fleet range (first 50 flights, rule 1 only)"),
     plt.Line2D([], [], color=EWMA, lw=2, label="EWMA (smoothed trend)"),
-    plt.Line2D([], [], ls="", marker="X", color=CRITICAL, ms=8, label="rule 1: beyond 3σ"),
+    plt.Line2D([], [], ls="", marker="X", color=CRITICAL, ms=8, label="rule 1: beyond 3σ (or the fleet range)"),
     plt.Line2D([], [], ls="", marker="D", color=WARNING, ms=6, label="rules 2–8: a pattern"),
     plt.Line2D([], [], ls="", marker="o", mfc="none", mec=EWMA, mew=1.6, ms=8, label="EWMA beyond its limit"),
 ]

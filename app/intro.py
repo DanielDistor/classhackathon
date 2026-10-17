@@ -84,8 +84,10 @@ CAUSE_CLASS = {"prop strike": "bad", "hard landing": "bad", "bad battery cell": 
 
 
 TERMS = [
-    ("Baseline", "Each drone's first 50 logged flights. The drone is assumed healthy then, and "
-                 "its own normal variation sets the limits for every later flight. The limits never move."),
+    ("Baseline", "Each drone's first 50 logged flights: its own normal variation sets the limits for "
+                 "every later flight, and the limits never move. While they are being collected, each "
+                 "reading is checked against the fleet's normal range from acceptance flights, so a wearing "
+                 "part is caught from the very first flight."),
     ("Control limits (UCL / LCL)", "The upper and lower lines on a chart: baseline mean ± 3 sigma. "
                                    "A healthy drone stays between them about 99.7% of the time."),
     ("Sigma (σ)", "The typical flight-to-flight spread, estimated from the average jump between "
@@ -260,8 +262,11 @@ def fleet_card() -> ui.Tag:
                        "scripted on a named drone."),
             ui.tags.dt("What the technician did"),
             ui.tags.dd(f"{n_sched} parts warned at their replace-at age and {n_worn} warned early because a chart "
-                       f"showed them wearing, each replaced before the next flight; {n_fail} failed in flight "
-                       "and were replaced before the next flight. No drone ever stopped flying."),
+                       "showed them wearing (including in each drone's first 50 flights, checked against the "
+                       "fleet's normal range), each replaced before the next flight. "
+                       + (f"{n_fail} failed in flight and were replaced before the next flight. " if n_fail else
+                          "No part failed in flight. ")
+                       + "No drone ever stopped flying."),
             ui.tags.dt("What the tool should show"),
             ui.tags.dd("Every special cause above is signalled, on the flight listed. Run on these files, the "
                        "tool signals on exactly the flights where the technician acted - checked for all 30 "

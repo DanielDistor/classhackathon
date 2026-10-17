@@ -143,7 +143,10 @@ def drone_detail_body() -> ui.Tag:
         ui.div(
             ui.h4("How to read these charts"),
             ui.div(ui.markdown(
-                f"The shaded band is the drone's first {qc.N_BASELINE} flights, its **baseline**. The dashed "
+                f"The shaded band is the drone's first {qc.N_BASELINE} flights, its **baseline**. While it is "
+                "being collected, each reading is checked against the **fleet's normal range** (dash-dot, from "
+                "every drone's acceptance flights; rule 1 only, because drones differ a little from each other), "
+                "so a wearing part is caught even in a new drone. The dashed "
                 "**control limits** are the baseline mean ± 3σ, where σ̂ = average moving range ÷ 1.128; "
                 "they never move. The orange **EWMA** weights recent flights most (λ = 0.2) to catch slow "
                 "wear; its dotted limits are narrower because it averages.\n\n"
@@ -306,8 +309,15 @@ def server(input, output, session):
         return qc.check_replace_at(pd.read_csv(FLEET / "replace_at.csv"))
 
     @reactive.calc
+    def reference() -> dict | None:
+        """The fleet's normal range per reading (data/fleet/fleet_reference.csv); None for uploads."""
+        if input.up_flights():
+            return None
+        return qc.fleet_reference(pd.read_csv(FLEET / "fleet_reference.csv"))
+
+    @reactive.calc
     def status() -> pd.DataFrame:
-        st = qc.fleet_status(flights(), maintenance())
+        st = qc.fleet_status(flights(), maintenance(), fleet=reference())
         st["_order"] = st["status"].map(STATUS_ORDER)
         return st.sort_values(["_order", "health", "drone_id"]).drop(columns="_order").reset_index(drop=True)
 
@@ -450,7 +460,8 @@ def server(input, output, session):
             for col, title, catches, unit, dec in DRONE_CHARTS:
                 s = qc.drone_series(f, drone, col)
                 resets = qc.reset_flights(m, drone, col)
-                out.append((qc.monitor_chart(s["value"], s["flight_no"], resets), resets,
+                fleet = (reference() or {}).get(col)
+                out.append((qc.monitor_chart(s["value"], s["flight_no"], resets, fleet=fleet), resets,
                             title, catches, unit, dec))
         except ValueError as err:
             raise SafeException(f"No charts for {drone}: {err}") from None
@@ -524,16 +535,16 @@ def server(input, output, session):
         rows = []
         for ch, resets, title, catches, unit, dec in data:
             last = ch.iloc[-1]
-            live = ch[~ch["baseline"]]
-            n_sig = int(live["signal"].sum())
-            n_r1 = int(live["rule_1"].sum())
-            n_ew = int(live["signal_ewma"].sum())
+            n_sig = int(ch["signal"].sum())
+            n_r1 = int((ch["rule_1"] & ~ch["baseline"]).sum())
+            n_ew = int(ch["signal_ewma"].sum())
+            n_fl = int(ch["signal_fleet"].sum())
             rows.append(
                 f"<tr><td>{escape(title)}<div class='muted-cell'>catches {escape(catches)}</div></td>"
                 f'<td class="num">{last["center"]:.{dec}f} {unit}</td>'
                 f'<td class="num">{last["lcl"]:.{dec}f} to {last["ucl"]:.{dec}f}</td>'
                 f'<td class="num">{last["value"]:.{dec}f}</td>'
-                f'<td class="num">{n_sig} ({n_r1} rule 1, {n_ew} EWMA)</td>'
+                f'<td class="num">{n_sig} ({n_fl} fleet check, {n_r1} rule 1, {n_ew} EWMA)</td>'
                 f'<td class="num">{len([r for r in resets if r > qc.N_BASELINE])}</td></tr>')
         table = ('<table class="numbers"><thead><tr><th>Reading</th><th>Baseline mean</th>'
                  "<th>3σ control limits</th><th>Latest</th><th>Flights that signalled</th>"

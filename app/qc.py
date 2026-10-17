@@ -321,6 +321,8 @@ MONITORED = (
 PART_CHART = {"motor": "temp_rise_c", "propeller": "vibration_rms", "battery": "sag_rate_v_per_min"}
 #: How many of a drone's latest readings count as "recent" for a watch.
 RECENT_FLIGHTS = 10
+#: What a fleet-check signal is called (a drone's first flights, before its own baseline exists).
+FLEET_SIGNAL = "fleet rule 1"
 #: Heads-up window: parts within this many flights of their replace-at age are listed as due
 #: soon, so the part is in stock. The warning itself fires at the replace-at age (replace now).
 WARN_FLIGHTS = 10
@@ -346,7 +348,8 @@ def reset_flights(maintenance: pd.DataFrame | None, drone_id: str, column: str) 
 
 def monitor_chart(values: Iterable[float], flight_no: Iterable[int], resets: Iterable[int] = (),
                   n_baseline: int = N_BASELINE, min_baseline: int = MIN_BASELINE,
-                  lam: float = 0.2, L: float = 3.0) -> pd.DataFrame:
+                  lam: float = 0.2, L: float = 3.0,
+                  fleet: tuple[float, float] | None = None) -> pd.DataFrame:
     """I chart (all 8 rules) and EWMA on one drone's reading, restarting after each repair.
 
     values, flight_no
@@ -360,11 +363,20 @@ def monitor_chart(values: Iterable[float], flight_no: Iterable[int], resets: Ite
     baseline are split into segments: one starts after the baseline and after every
     reset flight. In each segment the EWMA starts again at the center line (z_0 = mu0)
     and the run rules look only at that segment's own points, so a run never spans a
-    repair. Baseline rows carry no signals.
+    repair.
+
+    fleet
+        (center, sigma) of the fleet's normal range (fleet_reference.csv). While the
+        drone's own baseline is being collected, each baseline reading is checked
+        against it, rule 1 only: a reading more than 3 sigma from the fleet center
+        signals (signal_fleet). Rule 1 alone because the fleet's sigma includes the
+        differences between drones, so pattern rules would flag drones that are
+        simply different. Without it, baseline rows carry no signals.
 
     Columns: t, flight_no, value, center, lcl, ucl, sigma, baseline, segment (0 for the
     baseline, then 1, 2, ...), z, ewma_lcl, ewma_ucl, signal_ewma, rule_1 .. rule_8,
-    rules_triggered, signal (EWMA or any rule) and what (e.g. "EWMA; rule 1, 5").
+    rules_triggered, fleet_lcl, fleet_ucl, signal_fleet, signal (EWMA, any rule, or the
+    fleet check) and what (e.g. "EWMA; rule 1, 5" or "fleet rule 1").
     """
     xs = _clean(values, minimum=2)
     fn = np.asarray(list(flight_no), dtype=int)
@@ -396,10 +408,21 @@ def monitor_chart(values: Iterable[float], flight_no: Iterable[int], resets: Ite
             out.loc[idx, f"rule_{k}"] = rules[f"rule_{k}"].to_numpy()
         out.loc[idx, "rules_triggered"] = rules["rules_triggered"].to_numpy()
     out["signal_ewma"] = out["signal_ewma"].astype(bool)
+    if fleet is not None:
+        f_center, f_sigma = fleet
+        if not (math.isfinite(f_center) and math.isfinite(f_sigma) and f_sigma > 0):
+            raise ValueError(f"the fleet reference needs a finite center and a positive sigma, got {fleet}")
+        out["fleet_lcl"] = np.where(out["baseline"], f_center - 3 * f_sigma, np.nan)
+        out["fleet_ucl"] = np.where(out["baseline"], f_center + 3 * f_sigma, np.nan)
+        out["signal_fleet"] = out["baseline"] & ((out["value"] - f_center).abs() > 3 * f_sigma)
+    else:
+        out["fleet_lcl"] = out["fleet_ucl"] = np.nan
+        out["signal_fleet"] = False
     rule_any = out["rules_triggered"] != ""
-    out["signal"] = out["signal_ewma"] | rule_any
-    out["what"] = [("EWMA" if e else "") + ("; " if e and r else "") + (f"rule {r}" if r else "")
-                   for e, r in zip(out["signal_ewma"], out["rules_triggered"])]
+    out["signal"] = out["signal_ewma"] | rule_any | out["signal_fleet"]
+    out["what"] = [FLEET_SIGNAL if fl else
+                   ("EWMA" if e else "") + ("; " if e and r else "") + (f"rule {r}" if r else "")
+                   for fl, e, r in zip(out["signal_fleet"], out["signal_ewma"], out["rules_triggered"])]
     return out
 
 
@@ -418,7 +441,8 @@ def chart_margin(value: float, center: float, lcl: float, ucl: float) -> float:
 
 def fleet_status(flights: pd.DataFrame, maintenance: pd.DataFrame | None = None,
                  recent: int = RECENT_FLIGHTS, n_baseline: int = N_BASELINE,
-                 min_baseline: int = MIN_BASELINE) -> pd.DataFrame:
+                 min_baseline: int = MIN_BASELINE,
+                 fleet: dict[str, tuple[float, float]] | None = None) -> pd.DataFrame:
     """Decide go / watch / ground for every drone from its open (not yet acted on) signals.
 
     For each reading in MONITORED it runs monitor_chart(), restarting after every
@@ -426,7 +450,8 @@ def fleet_status(flights: pd.DataFrame, maintenance: pd.DataFrame | None = None,
     if it came after the latest action on that chart. Then:
 
       ground  the latest reading is open and outside its I-chart 3-sigma limits
-              (rule 1), or the EWMA is outside its limits now: inspect before flying
+              (rule 1) or, during the baseline, outside the fleet's normal range
+              (`fleet`, see monitor_chart), or the EWMA is outside its limits now
       watch   no ground reason, but an open signal (EWMA or any of the 8 rules)
               within the last `recent` readings
       go      no open signal in the last `recent` readings
@@ -448,16 +473,20 @@ def fleet_status(flights: pd.DataFrame, maintenance: pd.DataFrame | None = None,
             for col, name, unit in MONITORED:
                 s = drone_series(f, drone, col)
                 resets = reset_flights(maintenance, drone, col)
-                ch = monitor_chart(s["value"], s["flight_no"], resets, n_baseline, min_baseline)
+                ch = monitor_chart(s["value"], s["flight_no"], resets, n_baseline, min_baseline,
+                                   fleet=(fleet or {}).get(col))
                 r = ch.iloc[-1]
                 if r.baseline:
                     margins[name] = chart_margin(r.value, r.center, r.lcl, r.ucl)
                 else:
                     margins[name] = chart_margin(r.z, r.center, r.ewma_lcl, r.ewma_ucl)
                 last_action = max(resets) if resets else 0
-                open_ = ch[~ch["baseline"] & (ch["flight_no"] > last_action)]
+                open_ = ch[(~ch["baseline"] | ch["signal_fleet"]) & (ch["flight_no"] > last_action)]
                 latest_open = len(open_) and open_.index[-1] == ch.index[-1]
-                if latest_open and r.rule_1:
+                if latest_open and r.signal_fleet:
+                    ground.append(f"{name} {r.value:.2f} {unit} on flight {r.flight_no} is outside the fleet's "
+                                  f"normal range ({r.fleet_lcl:.2f} to {r.fleet_ucl:.2f})")
+                elif latest_open and r.rule_1:
                     ground.append(f"{name} {r.value:.2f} {unit} on flight {r.flight_no} is outside "
                                   f"its normal range ({r.lcl:.2f} to {r.ucl:.2f})")
                 elif latest_open and r.signal_ewma:
@@ -504,6 +533,22 @@ MARKERS = {"R": "warned and replaced before the next flight (reached its replace
 CHART_NAME = {col: name for col, name, _ in MONITORED}
 #: Columns a replace-at policy needs (data/fleet/replace_at.csv).
 REQUIRED_POLICY_COLUMNS = ("component_type", "unit", "b10")
+#: Columns a fleet reference needs (data/fleet/fleet_reference.csv).
+REQUIRED_REFERENCE_COLUMNS = ("chart", "center", "sigma")
+
+
+def fleet_reference(reference: pd.DataFrame) -> dict[str, tuple[float, float]]:
+    """Read a fleet reference table into {chart column: (center, sigma)}, refusing bad rows."""
+    missing = [c for c in REQUIRED_REFERENCE_COLUMNS if c not in reference.columns]
+    if missing:
+        raise ValueError(f"the fleet reference file is missing column(s): {', '.join(missing)}")
+    out = {}
+    for r in reference.itertuples():
+        center, sigma = float(r.center), float(r.sigma)
+        if not (math.isfinite(center) and math.isfinite(sigma) and sigma > 0):
+            raise ValueError(f"fleet reference for {r.chart} needs a finite center and a positive sigma")
+        out[r.chart] = (center, sigma)
+    return out
 
 
 def check_maintenance(maintenance: pd.DataFrame) -> pd.DataFrame:

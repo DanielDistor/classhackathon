@@ -1,0 +1,4 @@
+chart,center,sigma,n,source
+temp_rise_c,18.2845,1.606,200,"20 acceptance flights per drone, all-new parts"
+vibration_rms,3.0677,0.3011,200,"20 acceptance flights per drone, all-new parts"
+sag_rate_v_per_min,0.1695,0.0149,200,"20 acceptance flights per drone, all-new parts"

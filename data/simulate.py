@@ -12,6 +12,10 @@ It writes one folder, data/fleet/, holding the active fleet's records:
     answer_key.csv    the injected special causes (the tool never reads this;
                       it is how the tests check that every one was caught)
     replace_at.csv    the shop's replace-at ages (B10 fitted on the history)
+    fleet_reference.csv
+                      the fleet's normal range per reading, from acceptance
+                      flights (each drone's first 50 log flights are checked
+                      against it, rule 1 only, while its own baseline builds)
 
 Every number is invented. See data/README.md, the codebook.
 
@@ -109,6 +113,8 @@ FAILURE_MODES = {
 }
 #: Baseline (Phase I) length in flights: the tool's own default.
 BASELINE = qc.N_BASELINE
+#: Acceptance flights per drone (all-new parts, before the log): the fleet reference.
+ACCEPTANCE_FLIGHTS = 20
 #: Special causes start after the baseline, with a margin, so the baseline limits stay clean.
 FIRST_EVENT_FLIGHT = BASELINE + 10
 TYPE_KEY = {"motor": 10, "propeller": 20, "battery": 40}
@@ -288,14 +294,45 @@ def flight_base(d: int) -> pd.DataFrame:
     voltage_start = rng.normal(25.15, 0.04, n).round(2)
     return pd.DataFrame({"k": np.arange(1, n + 1), "datetime": dt, "flight_min": flight_min,
                          "ambient_temp_c": ambient, "temp_rise": temp_rise, "vib_level": vib_level,
-                         "vib_noise": vib_noise, "sag_rate": sag_rate, "voltage_start_v": voltage_start})
+                         "vib_noise": vib_noise, "sag_rate": sag_rate, "voltage_start_v": voltage_start,
+                         "drone_level": drone_level})
+
+
+def acceptance_readings(d: int) -> dict[str, np.ndarray]:
+    """ACCEPTANCE_FLIGHTS test flights of drone index d with all-new parts (no wear, no
+    special cause), same airframe as in the log: the readings behind the fleet reference."""
+    base = flight_base(d)
+    rng = rng_for(70, d)
+    m = ACCEPTANCE_FLIGHTS
+    fm = np.clip(rng.normal(MEAN_FLIGHT_MIN, 4.0, m), 8, 35)
+    payload = rng.uniform(0.5, 2.5, m)
+    return {
+        "temp_rise_c": (base["drone_level"].iloc[0] + 1.2 * (payload - 1.5) + 0.1 * (fm - MEAN_FLIGHT_MIN)
+                        + rng.normal(0, 1.2, m)).round(1),
+        "vibration_rms": (base["vib_level"].iloc[0] + rng.normal(0, 0.25, m)).round(2),
+        "sag_rate_v_per_min": (0.17 + 0.02 * (payload - 1.5) + rng.normal(0, 0.008, m)).round(4),
+    }
+
+
+def fleet_reference() -> pd.DataFrame:
+    """The fleet's normal range per reading: mean and standard deviation of every drone's
+    acceptance flights pooled (so it includes the differences between drones)."""
+    pooled = {c: [] for c in CHART_TYPE}
+    for d in range(N_DRONES):
+        for c, v in acceptance_readings(d).items():
+            pooled[c] += list(v)
+    return pd.DataFrame([dict(chart=c, center=round(float(np.mean(v)), 4), sigma=round(float(np.std(v, ddof=1)), 4),
+                              n=len(v), source=f"{ACCEPTANCE_FLIGHTS} acceptance flights per drone, all-new parts")
+                         for c, v in pooled.items()])
 
 
 class Chart:
-    """The tool's view of one reading on one drone: baseline limits, EWMA and the 8 rules."""
+    """The tool's view of one reading on one drone: the fleet check during the baseline,
+    then baseline limits, EWMA and the 8 rules."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, fleet: tuple[float, float]):
         self.name = name
+        self.fleet = fleet                 # (center, sigma) of the fleet reference
         self.values: list[float] = []      # every reading, for the baseline
         self.since_reset: list[float] = []
         self.lim: qc.ImrLimits | None = None
@@ -306,7 +343,8 @@ class Chart:
         if self.lim is None:
             if len(self.values) == BASELINE:
                 self.lim = qc.imr_limits(self.values, n_baseline=BASELINE)
-            return ""
+            center, sigma = self.fleet
+            return qc.FLEET_SIGNAL if abs(x - center) > 3 * sigma else ""
         self.since_reset.append(x)
         hits = []
         ew = qc.ewma_chart(self.since_reset, mu0=self.lim.center, sigma=self.lim.sigma_hat)
@@ -328,13 +366,13 @@ def flights_to_b10(p: Part, b10: float) -> float:
 
 
 def simulate_log(d: int, current: dict[tuple[str, int], Part], streams: dict, b10: dict[str, float],
-                 events: list[dict]) -> tuple[pd.DataFrame, list[dict], list[dict]]:
+                 events: list[dict], fleet: dict[str, tuple[float, float]]) -> tuple[pd.DataFrame, list[dict], list[dict]]:
     drone = f"D-{d + 1:02d}"
     base = flight_base(d)
     times = list(base["datetime"])
     mine = [e for e in events if e["d"] == d]
     event_rng = {e["event_id"]: rng_for(51, e["rule"], d, e["start"]) for e in mine}
-    charts = {c: Chart(c) for c in CHART_TYPE}
+    charts = {c: Chart(c, fleet[c]) for c in CHART_TYPE}
     comps, maint = [], []
     motor_temps, vibs, v_ends, inflight = [], [], [], []
 
@@ -480,6 +518,8 @@ def build_fleet() -> dict[str, pd.DataFrame]:
         {"b10": 1, "beta": 3, "eta": 1}).assign(fitted_on=f"parts history before {LOG_START.date()}")
 
     events = place_special_causes()
+    ref = fleet_reference()
+    fleet = {r.chart: (r.center, r.sigma) for r in ref.itertuples()}
     flights, comps, maint = [], [], []
     for d in range(N_DRONES):
         drone = f"D-{d + 1:02d}"
@@ -489,7 +529,7 @@ def build_fleet() -> dict[str, pd.DataFrame]:
             if p.age >= b10[p.ctype]:
                 launch.append(comp_row(drone, p, LOG_START, 0, "replaced_scheduled"))
                 current[key] = new_part(drone, p.ctype, p.pos, p.gen + 1, LOG_START, streams[d][key])
-        f, c, m = simulate_log(d, current, streams[d], b10, events)
+        f, c, m = simulate_log(d, current, streams[d], b10, events, fleet)
         flights.append(f)
         comps += history[d] + launch + c
         maint += m
@@ -510,13 +550,14 @@ def build_fleet() -> dict[str, pd.DataFrame]:
     for col in ("position", "detected_after_flight", "fixed_after_flight"):
         key[col] = key[col].astype("Int64")
     return {"flights": flights.reset_index(drop=True), "components": components,
-            "maintenance": maintenance, "answer_key": key, "replace_at": policy, "b10": pd.Series(b10)}
+            "maintenance": maintenance, "answer_key": key, "replace_at": policy, "fleet_reference": ref,
+            "b10": pd.Series(b10)}
 
 
 def main() -> None:
     tables = build_fleet()
     OUT_DIR.mkdir(exist_ok=True)
-    for name in ("flights", "components", "maintenance", "answer_key", "replace_at"):
+    for name in ("flights", "components", "maintenance", "answer_key", "replace_at", "fleet_reference"):
         tables[name].to_csv(OUT_DIR / f"{name}.csv", index=False, lineterminator="\n")
     f, c, m, k = (tables[n] for n in ("flights", "components", "maintenance", "answer_key"))
     print(f"fleet: flights={len(f)}  components={len(c)} (failed {int(c['status'].sum())})  "
@@ -527,6 +568,7 @@ def main() -> None:
     print("replacement reasons:", m.loc[m["action"] == "replace", "reason"].str.split(" \\(").str[0]
           .str.replace(r"special cause: .*", "special cause", regex=True).value_counts().to_dict())
     print(f"special causes detected: {int(k['detected_after_flight'].notna().sum())} of {len(k)}")
+    print(f"parts failed in flight: {int((f['inflight_event'] == 'return_home').sum())}")
 
 
 if __name__ == "__main__":

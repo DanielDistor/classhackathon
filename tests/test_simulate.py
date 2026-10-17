@@ -31,7 +31,7 @@ def built():
 
 def test_csvs_on_disk_match_a_fresh_build(built):
     # Same seed, same output: the committed CSVs are exactly what simulate.py makes.
-    for name in ("flights", "components", "maintenance", "answer_key", "replace_at"):
+    for name in ("flights", "components", "maintenance", "answer_key", "replace_at", "fleet_reference"):
         on_disk = pd.read_csv(FLEET / f"{name}.csv")
         fresh = pd.read_csv(pd.io.common.StringIO(built[name].to_csv(index=False)))
         pd.testing.assert_frame_equal(on_disk, fresh, check_dtype=False)
