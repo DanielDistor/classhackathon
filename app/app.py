@@ -34,6 +34,8 @@ STATUS_WORD = {"ground": "Do not fly", "watch": "Warning", "go": "Can fly", "not
 PART_NAME = {"motor": "Motor", "propeller": "Propeller", "battery": "Battery"}
 #: Parts within this many flights of their replace-at age are listed as "coming up".
 UPCOMING_FLIGHTS = 30
+#: Control charts show this many latest flights unless "show all" is on.
+CHART_WINDOW = 100
 
 # (column, chart title, what it catches, units, decimals): the three readings behind the status
 DRONE_CHARTS = [
@@ -107,7 +109,8 @@ controls = ui.div(
                           button_label="Choose file"),
             class_="upload-row"),
         ui.p("Same columns as the test data (see data/README.md in the repo). Without a maintenance log "
-             "the charts never restart, so every past signal stays open.", class_="ctl-sub"),
+             "the charts never restart, so every past signal stays open; without a replace-at policy the "
+             "replace-at ages are fitted on the parts history you load.", class_="ctl-sub"),
         class_="upload-box"),
     class_="controls",
 )
@@ -119,10 +122,10 @@ def drone_detail_body() -> ui.Tag:
         ui.output_ui("drone_banner"),
         ui.div(
             ui.h4("Maintenance timeline"),
-            ui.p("One row per part slot. W = warning (near its replace-at age, or found worn), R = replaced, "
-                 "F = failed in flight, S = special cause found and fixed, | = chart signalled but nothing "
-                 "was found. The amber bar is the warning time before each replacement.", class_="rule-note"),
-            ui.output_plot("drone_timeline", height="560px"),
+            ui.p("One row per part slot. R = warned and replaced before the next flight (the part reached its "
+                 "replace-at age, or a chart showed it worn). F = failed in flight, replaced before the next "
+                 "flight. S = special cause found from a chart signal and fixed.", class_="rule-note"),
+            ui.output_plot("drone_timeline", height="500px"),
             class_="panel",
         ),
         ui.div(
@@ -133,7 +136,8 @@ def drone_detail_body() -> ui.Tag:
         ui.div(
             ui.h4("Control charts"),
             ui.output_ui("drone_numbers"),
-            ui.output_plot("drone_charts", height="1050px"),
+            ui.input_switch("show_all", "Show all flights (default: the latest 100)", False),
+            ui.output_plot("drone_charts", height="1000px"),
             class_="panel",
         ),
         ui.div(
@@ -150,7 +154,8 @@ def drone_detail_body() -> ui.Tag:
                 "After it the EWMA starts again at the center line and the rules count afresh, so a run "
                 "never spans a repair.\n"
                 "* Using all 8 rules catches more problems and raises more false alarms: about 2% of "
-                "readings, which shows up as \"no fault found\" inspections (|) on the timeline.\n"
+                "readings signal with nothing wrong. They show here but need no action, so they are not on "
+                "the timeline.\n"
                 "* **Temperature rise** = hottest motor after landing − air temperature."),
                 class_="read-me"),
             class_="panel"),
@@ -178,10 +183,9 @@ dashboard = ui.div(
                     ui.output_ui("fleet_cards"),
                     ui.div(
                         ui.h4("Fleet maintenance timeline"),
-                        ui.p("Every drone on one row, flight number across: W = warning, R = replaced, "
-                             "F = failed in flight, S = special cause fixed, faint | = inspected, nothing found. "
-                             "No drone stops flying: every part is replaced, on time or right after it fails.",
-                             class_="rule-note"),
+                        ui.p("Every drone on one row, flight number across. R = warned and replaced before the "
+                             "next flight, F = failed in flight and replaced, S = special cause found and fixed. "
+                             "No drone stops flying.", class_="rule-note"),
                         ui.output_plot("fleet_timeline", height="440px"),
                         class_="panel"),
                     class_="pt-3"),
@@ -190,9 +194,11 @@ dashboard = ui.div(
                 "Weibull reliability & replace-at ages",
                 ui.div(
                     ui.p("Weibull survival models R(t) = exp(−(t/η)^β) fitted by maximum likelihood with "
-                         "right-censoring across the fleet's parts history. Each part is replaced at B10, the "
-                         "age by which 10% of parts fail (R(B10) = 90%), and warned "
-                         f"{qc.WARN_FLIGHTS} flights before.", class_="section-note"),
+                         "right-censoring. Each part is replaced at B10, the age by which 10% of parts fail "
+                         "(R(B10) = 90%): the warning fires when a part reaches it, and the part is replaced "
+                         "before the next flight. The schedule uses the shop's replace-at ages, fitted on the "
+                         "parts history before the log; the refit on all data is shown next to them.",
+                         class_="section-note"),
                     ui.output_ui("rel_cards"),
                     ui.div(
                         ui.h4("Weibull reliability curves R(t) vs. Kaplan-Meier survival from the data"),
@@ -293,6 +299,13 @@ def server(input, output, session):
         return _read(input.up_parts(), FLEET / "components.csv", qc.check_components, "parts history")
 
     @reactive.calc
+    def policy() -> pd.DataFrame | None:
+        """The shop's replace-at ages (data/fleet/replace_at.csv); None for uploaded data."""
+        if input.up_flights():
+            return None
+        return qc.check_replace_at(pd.read_csv(FLEET / "replace_at.csv"))
+
+    @reactive.calc
     def status() -> pd.DataFrame:
         st = qc.fleet_status(flights(), maintenance())
         st["_order"] = st["status"].map(STATUS_ORDER)
@@ -309,7 +322,8 @@ def server(input, output, session):
         if c is None or by_type().empty:
             return pd.DataFrame(columns=["drone_id", "component_id", "component_type", "position", "age", "b10",
                                          "unit", "pct_used", "flights_left", "days_left", "overdue", "due"])
-        return qc.replacement_plan(c, flights_raw(), by_type())
+        schedule = policy() if policy() is not None else by_type()
+        return qc.replacement_plan(c, flights_raw(), schedule)
 
     @reactive.calc
     def timeline() -> pd.DataFrame:
@@ -337,10 +351,12 @@ def server(input, output, session):
         parts.append(f'<span class="sum-item parts-alert"><span class="sym">🔧</span>'
                      f'<b>{n_due}</b> part{"s" if n_due != 1 else ""} due within {qc.WARN_FLIGHTS} flights</span>')
         counts = tl["marker"].value_counts()
-        activity = (f'Over flights 1–{n_flights()}: <b>{int(counts.get("R", 0))}</b> parts replaced on time, '
+        r = tl[tl["marker"] == "R"]
+        n_chart = int(r["trigger"].str.startswith("chart").sum())
+        activity = (f'Over flights 1–{n_flights()}: <b>{len(r)}</b> parts warned and replaced '
+                    f'({len(r) - n_chart} at their replace-at age, {n_chart} found worn by a chart), '
                     f'<b>{int(counts.get("F", 0))}</b> failed in flight, '
-                    f'<b>{int(counts.get("S", 0))}</b> special causes found and fixed, '
-                    f'<b>{int(counts.get("N", 0))}</b> inspections found nothing (false alarms).') if len(tl) else ""
+                    f'<b>{int(counts.get("S", 0))}</b> special causes found and fixed.') if len(tl) else ""
         return ui.HTML(f'<div class="fleet-summary">{"".join(parts)}'
                        f'<span class="sum-hint">{activity}</span></div>')
 
@@ -356,8 +372,8 @@ def server(input, output, session):
         rows = []
         for r in up.itertuples():
             cls = "over" if r.overdue else "soon" if r.due else "ok"
-            badge = ("ground", "Replace now") if r.overdue else ("watch", "Warning: replace") if r.due \
-                else ("go", "Coming up")
+            badge = ("ground", "Replace before next flight") if r.overdue else ("watch", "Have the part ready") \
+                if r.due else ("go", "Coming up")
             rows.append(
                 f'<tr><td><b>{escape(r.drone_id)}</b></td>'
                 f'<td>{PART_NAME[r.component_type]} {r.position} <code class="part-code">{escape(r.component_id)}</code></td>'
@@ -365,14 +381,11 @@ def server(input, output, session):
                 f'<td class="pcell {cls}"><div class="pbar"><div style="width:{min(r.pct_used, 100):.0f}%"></div></div></td>'
                 f'<td class="num">{flights_phrase(r.flights_left)}</td>'
                 f'<td><span class="pill {badge[0]}">{badge[1]}</span></td></tr>')
-        n_over = int(up["overdue"].sum())
-        over_note = (f' <b>{n_over}</b> of them are already past it ("Replace now"). The replace-at age is '
-                     "refitted on all the parts data every time, so as failures accumulate the estimate moves; "
-                     "a lower estimate puts parts that were on schedule past it." if n_over else "")
         return ui.HTML(
-            f'<p class="due-summary"><b>{int(up["due"].sum())}</b> part(s) within {qc.WARN_FLIGHTS} flights of '
-            f'their replace-at age (warning) and <b>{int((~up["due"]).sum())}</b> more within '
-            f'{UPCOMING_FLIGHTS}.{over_note}</p>'
+            f'<p class="due-summary">As of each drone\'s latest flight: <b>{int(up["due"].sum())}</b> part(s) '
+            f'reach their replace-at age within {qc.WARN_FLIGHTS} flights and <b>{int((~up["due"]).sum())}</b> '
+            f'more within {UPCOMING_FLIGHTS}. Each is warned when it gets there and replaced before the next '
+            'flight; this list is the heads-up so the part is in stock.</p>'
             '<div class="scroll-x"><table class="numbers"><thead><tr><th>Drone</th><th>Part</th>'
             '<th>Used / replace at</th><th>Life used</th><th>Replace</th><th></th></tr></thead>'
             f'<tbody>{"".join(rows)}</tbody></table></div>')
@@ -484,9 +497,9 @@ def server(input, output, session):
         for r in mine.sort_values("flights_left").itertuples():
             cls = "over" if r.overdue else "soon" if r.due else "ok"
             if r.overdue:
-                badge = '<span class="pill ground">Replace now</span>'
+                badge = '<span class="pill ground">Replace before next flight</span>'
             elif r.due:
-                badge = f'<span class="pill watch">Warning: replace {flights_phrase(r.flights_left)}</span>'
+                badge = f'<span class="pill watch">Due {flights_phrase(r.flights_left)}</span>'
             else:
                 badge = f'<span class="pill go">OK, {round(r.flights_left)} flights left</span>'
             rows.append(
@@ -499,9 +512,9 @@ def server(input, output, session):
             '<div class="scroll-x"><table class="numbers"><thead><tr>'
             "<th>Installed part</th><th>Used / replace at (B10)</th><th>Life used</th><th>Action</th>"
             f"</tr></thead><tbody>{''.join(rows)}</tbody></table></div>"
-            f"<p class='rule-note'>Flights left = (B10 − age) ÷ the drone's average flight length; a battery "
-            f"is charged every second flight. A part is warned {qc.WARN_FLIGHTS} flights before B10 and "
-            "replaced at it; a chart signal can bring the replacement forward if the part is found worn.</p>")
+            "<p class='rule-note'>Flights left = (B10 − age) ÷ the drone's average flight length; a battery "
+            "is charged every second flight. A part is warned when it reaches B10, or earlier if a chart shows "
+            "it worn, and is replaced before the next flight.</p>")
 
     @render.ui
     def drone_numbers():
@@ -534,13 +547,14 @@ def server(input, output, session):
             return None
         panels = [(ch, f"{title}: catches {catches}", unit, resets)
                   for ch, resets, title, catches, unit, _ in data]
-        return charts.drone_monitor_figure(panels)
+        return charts.drone_monitor_figure(panels, last=None if input.show_all() else CHART_WINDOW)
 
     # ---------- Weibull tab ----------
     @render.ui
     def rel_cards():
         if by_type().empty:
             return ui.p("No parts history loaded.", class_="rule-note")
+        shop = policy().set_index("component_type")["b10"] if policy() is not None else None
         cards = []
         for r in by_type().itertuples():
             name = charts.PART_TITLE.get(r.component_type, r.component_type)
@@ -551,10 +565,13 @@ def server(input, output, session):
             cards.append(ui.div(
                 ui.h3(name),
                 ui.div(ui.span("Replace at B10 =", class_="rc-label"),
-                       ui.span(f"{r.b10:,.0f}", class_="rc-value"),
+                       ui.span(f"{(shop[r.component_type] if shop is not None else r.b10):,.0f}", class_="rc-value"),
                        ui.span(r.unit, class_="rc-unit"), class_="rc-main"),
-                ui.p(f"≈ {flights_equiv(r.component_type, r.b10):,.0f} drone flights · "
-                     f"Weibull β = {r.beta:.2f}, η = {r.eta:.0f} {r.unit}",
+                ui.p(f"≈ {flights_equiv(r.component_type, shop[r.component_type] if shop is not None else r.b10):,.0f}"
+                     " drone flights"
+                     + (f" · the shop's schedule, fitted before the log. Refit on all data now: B10 = "
+                        f"{r.b10:,.0f}, β = {r.beta:.2f}, η = {r.eta:.0f}" if shop is not None else
+                        f" · Weibull β = {r.beta:.2f}, η = {r.eta:.0f} {r.unit}"),
                      class_="rc-sub"),
                 class_="info-card rel-card"))
         return ui.div(*cards, class_="grid-3 mb-3")
@@ -626,7 +643,7 @@ def server(input, output, session):
             due = mine[mine["due"]]
             if len(due):
                 parts = ", ".join(f"{r.component_type} {r.position}" for r in due.itertuples())
-                action = f'<b class="over-t">Warning ({len(due)} due within {qc.WARN_FLIGHTS} flights):</b> {parts}'
+                action = f'<b class="over-t">Due within {qc.WARN_FLIGHTS} flights ({len(due)}):</b> {parts}'
             else:
                 r = mine.sort_values("flights_left").iloc[0]
                 action = f"Next: {r.component_type} {r.position} {flights_phrase(r.flights_left)}"

@@ -47,17 +47,21 @@ assignable cause, both random:
 Before the flight log starts, the startup ran every part until it broke. The shop fits a Weibull to that
 history and adopts each type's **B10** (the age by which 10% have failed) as its replace-at age. In this
 run: motor 240.3 h, propeller 47.9 h, battery 197.2 cycles (true values 203.3, 43.0 and 188.9). At the
-log start, anything already past its B10 is replaced.
+log start, anything already past its B10 is replaced. These replace-at ages are written to
+`replace_at.csv`, and the dashboard schedules with them.
 
 After every flight a simulated technician runs the tool's own statistics (`app/qc.py`) and acts:
 
 | Trigger | Action | `maintenance.csv` reason |
 |---|---|---|
 | A part fails in flight (the drone returns home: `inflight_event = return_home`) | Replace before the next flight | `failed in flight` |
-| A chart signals (EWMA, or any of the 8 rules on the I chart, after the 50-flight baseline) | Inspect. A special cause found is fixed. A part found inside its P-F interval is **warned** (an `inspect` row `worn: … found, replacement booked`) and replaced 1–3 flights later. Nothing found = a false alarm | `special cause: …`, `worn: found at inspection after a chart signal`, `no fault found` |
-| A part comes within 10 flights of its B10 | **Warn**, then replace when it reaches B10 | `reached replace-at age (B10)` |
+| A chart signals (EWMA, or any of the 8 rules on the I chart, after the 50-flight baseline) | A special cause found is fixed before the next flight. A part found inside its P-F interval is **warned and replaced before the next flight**. Nothing found = a false alarm: logged as `no_fault`, nothing is changed | `special cause: …`, `worn: found after a chart signal`, `chart signal, nothing found: a false alarm` |
+| A part reaches its B10 | **Warned and replaced before the next flight** | `reached replace-at age (B10)` |
 
-After every logged action on a chart (replacement of a part that drives it, repair, or inspection), its
+A warning always means "replace before the next flight", so every planned replacement is warned on the
+flight it is replaced after.
+
+After every logged action on a chart (replacement of a part that drives it, repair, or false alarm), its
 EWMA restarts at the center line and its run rules start counting afresh. The control limits are kept,
 because a new part puts the drone back on its baseline. **No drone ever stops flying.** The tool does the
 same from the CSVs (`qc.monitor_chart`, reading the resets from `maintenance.csv`), and the tests check
@@ -83,7 +87,7 @@ that it signals on exactly the flights where the simulated technician acted: all
 Derived by the tool, never typed in: `temp_rise_c = motor_temp_max_c − ambient_temp_c` and
 `sag_rate_v_per_min = (voltage_start_v − voltage_end_v) / flight_min`.
 
-### `components.csv`: one row per part life (430 rows), the Weibull input
+### `components.csv`: one row per part life (431 rows), the Weibull input
 
 | Column | Meaning |
 |---|---|
@@ -105,20 +109,28 @@ Two censoring choices, both standard and both checked:
 - **A part damaged by a special cause is censored.** External damage is a competing risk, not wear-out.
 
 Fitted to this file (lifelines, right-censored maximum likelihood, 95% intervals): motor β 2.62 [1.66,
-3.59], η 507 [392, 623]; propeller β 1.92 [1.67, 2.16], η 154 [139, 169]; battery β 3.57 [2.64, 4.50],
+3.58], η 508 [392, 623]; propeller β 1.91 [1.67, 2.16], η 154 [139, 169]; battery β 3.57 [2.64, 4.50],
 η 356 [317, 396]. Every true value is inside its Bonferroni-adjusted interval (the test); the battery η is
 just outside its plain 95% interval, which happens about once in 20 by construction.
 
-### `maintenance.csv`: one row per technician action (301 rows)
+### `maintenance.csv`: one row per technician action (287 rows)
 
 | Column | Meaning |
 |---|---|
 | `drone_id`, `flight_id`, `datetime` | The action happened after this flight, before the next |
-| `action` | `replace`, `repair` (no part changed) or `inspect` (a chart signalled: a worn part found and booked, or no fault found) |
+| `action` | `replace`, `repair` (no part changed) or `no_fault` (a chart signalled and nothing was wrong: a false alarm; the chart restarts, nothing else changes) |
 | `chart` | The reading the action concerns (`temp_rise_c`, `vibration_rms`, `sag_rate_v_per_min`): the chart that restarts after it |
-| `component_type`, `position`, `removed_id`, `installed_id` | The part concerned; `removed_id`/`installed_id` only on replacements (blank for repairs and no-fault inspections) |
-| `warned_after_flight` | Flight after which the tool first warned about this part (blank if it failed or was damaged without a warning) |
+| `component_type`, `position`, `removed_id`, `installed_id` | The part swapped (blank for repairs and false alarms) |
+| `warned_after_flight` | The flight the part was warned after: the same flight it was replaced after (blank if it failed or was damaged without a warning) |
 | `reason` | Why, from the trigger table above. Chart-driven reasons end with what fired, e.g. `(EWMA; rule 1)` |
+
+### `replace_at.csv`: the shop's replace-at ages (3 rows)
+
+One row per part type: `component_type`, `unit`, `b10` (the replace-at age), the Weibull `beta` and `eta`
+it came from, `n` and `n_failed`, and `fitted_on` (the parts history before 2026-07-01). The dashboard
+schedules replacements with these, so no part shows as overdue. Refitting on all of `components.csv` gives
+lower motor and battery ages (215 h and 190 cycles, closer to the true 203 h and 189 cycles); the dashboard
+shows that refit next to the schedule.
 
 ### `answer_key.csv`: the injected special causes (17 rows)
 
@@ -144,10 +156,10 @@ For checking the tool's numbers. A real fleet would not come with these.
 
 - **False alarms are the price of using all 8 rules.** For a stable process, rules 1–8 together trip
   roughly once every 50–90 points, against once in 370 for rule 1 alone, and the EWMA adds a little more.
-  Limits estimated from a 50-flight baseline add a little more. In this run 170 inspections (2.3% of chart
-  points after the baseline) found nothing; with a 30-flight baseline it was 2.8%.
+  Limits estimated from a 50-flight baseline add a little more. In this run 171 chart signals (2.3% of chart
+  points after the baseline) were false alarms; with a 30-flight baseline it was 2.8%.
 - **A failure inside the baseline.** D-05's propeller 1 failed on flight 25, so its wear ramp sits inside
   D-05's baseline: baseline vibration averages 3.23 m/s² against 3.02 afterwards. The center line is too
-  high, later readings run below it, and D-05 collects 42 of the 170 false alarms. A real Phase I would
+  high, later readings run below it, and D-05 collects 43 of the 171 false alarms. A real Phase I would
   drop the flights just before a logged failure; we kept it as the visible cost of a contaminated baseline.
 - `life_value` prints with one decimal for motors and props; battery cycles are whole numbers.

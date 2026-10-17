@@ -321,7 +321,8 @@ MONITORED = (
 PART_CHART = {"motor": "temp_rise_c", "propeller": "vibration_rms", "battery": "sag_rate_v_per_min"}
 #: How many of a drone's latest readings count as "recent" for a watch.
 RECENT_FLIGHTS = 10
-#: Warn this many flights before a part reaches its replace-at age (B10).
+#: Heads-up window: parts within this many flights of their replace-at age are listed as due
+#: soon, so the part is in stock. The warning itself fires at the replace-at age (replace now).
 WARN_FLIGHTS = 10
 
 
@@ -334,7 +335,8 @@ def reset_flights(maintenance: pd.DataFrame | None, drone_id: str, column: str) 
     """Flights after which the technician acted on this drone's `column` chart, in order.
 
     Any logged replacement of a part that drives the reading, any repair, and any
-    inspection of that chart counts. With no maintenance log there are no resets.
+    false alarm checked on that chart (no_fault) counts. With no maintenance log
+    there are no resets.
     """
     if maintenance is None or maintenance.empty:
         return []
@@ -493,13 +495,15 @@ def _run_start(signal: pd.Series, flight_no: pd.Series) -> int:
 #: Columns the timeline needs in a maintenance log (data/README.md).
 REQUIRED_MAINTENANCE_COLUMNS = ("drone_id", "flight_id", "action", "chart", "component_type",
                                 "position", "warned_after_flight", "reason")
-#: What each timeline marker means.
-MARKERS = {"W": "warning: part near its replace-at age, or found worn",
-           "R": "part replaced on schedule or because it was worn",
-           "F": "part failed in flight, replaced before the next flight",
-           "S": "special cause found and fixed (part replaced or repaired)",
-           "N": "chart signalled, inspected, no fault found"}
+MAINTENANCE_ACTIONS = ("replace", "repair", "no_fault")
+#: What each timeline marker means. False alarms (no_fault) are not events: the control
+#: chart marks the signal and restarts, nothing is replaced.
+MARKERS = {"R": "warned and replaced before the next flight (reached its replace-at age, or a chart showed it worn)",
+           "F": "failed in flight, replaced before the next flight",
+           "S": "special cause found from a chart signal and fixed (part replaced or repaired)"}
 CHART_NAME = {col: name for col, name, _ in MONITORED}
+#: Columns a replace-at policy needs (data/fleet/replace_at.csv).
+REQUIRED_POLICY_COLUMNS = ("component_type", "unit", "b10")
 
 
 def check_maintenance(maintenance: pd.DataFrame) -> pd.DataFrame:
@@ -508,41 +512,49 @@ def check_maintenance(maintenance: pd.DataFrame) -> pd.DataFrame:
     if missing:
         raise ValueError(f"the maintenance file is missing column(s): {', '.join(missing)} "
                          "(see data/README.md for the expected columns)")
-    bad = set(maintenance["action"]) - {"replace", "repair", "inspect"}
+    bad = set(maintenance["action"]) - set(MAINTENANCE_ACTIONS)
     if bad:
-        raise ValueError(f"action must be replace, repair or inspect, got {sorted(bad)}")
+        raise ValueError(f"action must be one of {', '.join(MAINTENANCE_ACTIONS)}, got {sorted(bad)}")
     return maintenance
 
 
-def maintenance_timeline(maintenance: pd.DataFrame) -> pd.DataFrame:
-    """Every W / R / F / S / N marker for the timeline, one row each (see MARKERS).
+def check_replace_at(policy: pd.DataFrame) -> pd.DataFrame:
+    """Refuse a replace-at policy without a positive B10 for each part type."""
+    missing = [c for c in REQUIRED_POLICY_COLUMNS if c not in policy.columns]
+    if missing:
+        raise ValueError(f"the replace-at file is missing column(s): {', '.join(missing)}")
+    if not (pd.to_numeric(policy["b10"], errors="coerce") > 0).all():
+        raise ValueError("every replace-at age (b10) must be a positive number")
+    return policy
 
-    lane is the part slot ("propeller 2") for part actions, or the chart's plain name
-    for repairs and no-fault inspections. A W comes from a worn part found at
-    inspection, or from warned_after_flight on a replacement (the age warning).
-    Returns drone_id, lane, flight_no, marker, detail; in flight order.
+
+def maintenance_timeline(maintenance: pd.DataFrame) -> pd.DataFrame:
+    """Every R / F / S marker for the timeline, one row each (see MARKERS).
+
+    lane is the part slot ("propeller 2") for part actions, or "repairs" for a special
+    cause fixed without a new part. trigger says what led to it: "replace-at age",
+    "chart: <what fired>", "failed in flight" or the special cause. False alarms
+    (no_fault) are left out. Returns drone_id, lane, flight_no, marker, trigger; in
+    flight order.
     """
     m = check_maintenance(maintenance)
     fno = flight_numbers(m["flight_id"])
     rows = []
     for r, k in zip(m.itertuples(), fno):
+        if r.action == "no_fault":
+            continue
         part = isinstance(r.component_type, str) and r.component_type != ""
-        lane = f"{r.component_type} {int(r.position)}" if part else CHART_NAME.get(r.chart, r.chart)
-        if r.action == "replace":
-            if pd.notna(r.warned_after_flight):
-                rows.append((r.drone_id, lane, int(r.warned_after_flight), "W", "warned"))
-            marker = ("F" if r.reason == "failed in flight"
-                      else "S" if r.reason.startswith("special cause") else "R")
-            rows.append((r.drone_id, lane, int(k), marker, r.reason))
-        elif r.action == "repair":
-            rows.append((r.drone_id, lane, int(k), "S", r.reason))
+        lane = f"{r.component_type} {int(r.position)}" if part else "repairs"
+        if r.action == "repair" or r.reason.startswith("special cause"):
+            marker, trigger = "S", r.reason.removeprefix("special cause: ")
+        elif r.reason == "failed in flight":
+            marker, trigger = "F", "failed in flight"
         elif r.reason.startswith("worn"):
-            rows.append((r.drone_id, lane, int(k), "W", r.reason))
+            marker, trigger = "R", "chart: " + r.reason.split("(", 1)[-1].rstrip(")")
         else:
-            rows.append((r.drone_id, lane, int(k), "N", r.reason))
-    out = pd.DataFrame(rows, columns=["drone_id", "lane", "flight_no", "marker", "detail"])
-    # the same warning can come from the inspection row and from the replacement row
-    out = out.drop_duplicates(subset=["drone_id", "lane", "flight_no", "marker"])
+            marker, trigger = "R", "replace-at age"
+        rows.append((r.drone_id, lane, int(k), marker, trigger))
+    out = pd.DataFrame(rows, columns=["drone_id", "lane", "flight_no", "marker", "trigger"])
     return out.sort_values(["drone_id", "flight_no", "lane"], kind="stable").reset_index(drop=True)
 
 

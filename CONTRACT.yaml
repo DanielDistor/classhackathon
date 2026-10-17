@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 21:08"
+updated: "2026-10-16 21:31"
 
 tasks:
   - id: H-01
@@ -228,3 +228,29 @@ tasks:
       99.2% each, because six intervals are checked at once); python -m pytest
       tests -q still passes.
     result: "One active fleet, 10 drones x 300 flights, no scripted drone: simulate.py prints flights=3000 components=431 maintenance=344, 17 of 17 random special causes detected (median 2 flights), 2 in-flight failures each replaced before the next flight; two runs byte-identical; test_simulate 13 passed; full suite 75 passed. Weibull fit recovers every true beta/eta inside Bonferroni 95% intervals (battery eta 356 [317, 396] just misses its plain 95% interval). False alarms 2.8% of chart points with a 30-flight baseline (2.2% at 50, an H-03 decision)"
+
+  - id: H-11
+    title: Simplify the replacement loop - replace at the warning, only W/R/F/S, one replace-at age
+    points: "protects Tool Design (25): a timeline a technician reads at a glance; Statistical Validity (25): one consistent replace-at age"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-16 21:25"
+    owns: ["data/simulate.py", "data/README.md", "data/fleet/", "app/data/fleet/", "app/qc.py", "app/app.py", "app/charts.py", "app/intro.py", "tests/", "docs/plan.md"]
+    notes: >
+      Agreed with Div on 2026-10-16 after reviewing the H-04 app. A warning
+      means replace before the next flight: the age warning fires at B10 and
+      a chart-found worn part is replaced at once (no 10-flight lead, no 1-3
+      flight wait). The timeline shows only R (warned and replaced, one
+      marker), F and S. False alarms are not shown as events: the chart still
+      marks the signal and restarts; maintenance.csv logs them as no_fault.
+      The dashboard schedules with the shop's replace-at ages (B10 fitted on
+      the pre-log history, data/fleet/replace_at.csv) and shows the refit on
+      all data separately. Control charts default to the last 100 flights.
+    definition_of_done: >
+      python data/simulate.py runs; python -m pytest tests -q passes (every
+      planned replacement is warned on the same flight, no part in service is
+      past the shop's replace-at age, the tool still signals on exactly the
+      flights the technician acted on, the timeline has only R/F/S); a
+      scripted Shiny session renders every output with no error and no
+      "Replace now" part.
+    result: "Replace at the warning: 97 planned replacements each warned on the flight it was replaced after (84 at the replace-at age, 13 found worn by a chart), 2 in-flight failures, 17 special causes; timeline shows only R/F/S; 171 false alarms logged as no_fault and kept off the timeline; dashboard schedules with replace_at.csv so no part is overdue (refit shown beside it). pytest 82 passed; scripted Shiny session renders all 13 outputs, no error, no Replace-now part."

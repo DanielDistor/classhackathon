@@ -11,6 +11,7 @@ It writes one folder, data/fleet/, holding the active fleet's records:
     maintenance.csv   one row per replacement, repair or no-fault inspection
     answer_key.csv    the injected special causes (the tool never reads this;
                       it is how the tests check that every one was caught)
+    replace_at.csv    the shop's replace-at ages (B10 fitted on the history)
 
 Every number is invented. See data/README.md, the codebook.
 
@@ -29,10 +30,11 @@ How the fleet is simulated
        shape (SPECIAL_CAUSES), each at a random drone and flight.
 3. A simulated technician runs the tool's own statistics (app/qc.py) after
    every flight and acts:
-     - a chart signals (EWMA, or any of the 8 rules on the I chart): inspect;
-       fix any special cause found; a part found in its P-F interval is
-       warned and replaced 1-3 flights later; otherwise "no fault found";
-     - a part within WARN_FLIGHTS of its B10 is warned, and replaced at B10;
+     - a chart signals (EWMA, or any of the 8 rules on the I chart): fix any
+       special cause found; a part found in its P-F interval is warned and
+       replaced before the next flight; nothing found = a false alarm, logged
+       as no_fault (the chart restarts, nothing else happens);
+     - a part that reaches its B10 is warned and replaced before the next flight;
      - a part that fails in flight is replaced before the next flight.
    No drone ever stops flying.
 
@@ -77,10 +79,6 @@ CHART_TYPE = {spec["chart"]: ctype for ctype, spec in PARTS.items()}
 CHART_SD = {"temp_rise_c": 1.45, "vibration_rms": 0.25, "sag_rate_v_per_min": 0.014}
 #: Wear drift at the moment of failure, in chart standard deviations (linear ramp over the P-F interval).
 DRIFT_AT_FAILURE = 4.0
-#: Warn this many flights before a part reaches its B10 replace-at age: the tool's own setting.
-WARN_FLIGHTS = qc.WARN_FLIGHTS
-#: Flights between a wear warning found at inspection and the replacement (part comes from stock).
-REPLACE_DELAY = (1, 3)
 P_REMOVED_EARLY = 0.08          # history only: chance a part was pulled before it failed (censored)
 EVENT_SPACING = 40              # no two causes on the same drone and chart within this many flights
 
@@ -154,8 +152,7 @@ class Part:
     install: pd.Timestamp
     age: float               # usage so far (hours or cycles)
     life: float              # its true Weibull life (unknown to the technician)
-    warned: int | None = None        # flight after which it was warned
-    replace_at: int | None = None    # flight after which a wear replacement is booked
+    warned: int | None = None        # flight after which it was warned (and replaced)
 
 
 def new_part(drone: str, ctype: str, pos: int, gen: int, install: pd.Timestamp,
@@ -337,7 +334,6 @@ def simulate_log(d: int, current: dict[tuple[str, int], Part], streams: dict, b1
     times = list(base["datetime"])
     mine = [e for e in events if e["d"] == d]
     event_rng = {e["event_id"]: rng_for(51, e["rule"], d, e["start"]) for e in mine}
-    delay_rng = rng_for(60, d)
     charts = {c: Chart(c) for c in CHART_TYPE}
     comps, maint = [], []
     motor_temps, vibs, v_ends, inflight = [], [], [], []
@@ -434,30 +430,23 @@ def simulate_log(d: int, current: dict[tuple[str, int], Part], streams: dict, b1
                 else:
                     e["end"], e["fix"] = k, "repaired"
                     log(k, "repair", None, None, f"special cause: {sc['cause']} ({what})", chart=c)
-            for (t2, pos), p in current.items():
-                if t2 == ctype and p.life - p.age < PARTS[ctype]["pf"]:
-                    found = True                       # worn: warn and book it (once)
-                    p.warned = p.warned or k
-                    booked = "already booked" if p.replace_at is not None else "replacement booked"
-                    if p.replace_at is None:
-                        p.replace_at = k + int(delay_rng.integers(REPLACE_DELAY[0], REPLACE_DELAY[1] + 1))
-                    log(k, "inspect", p, None, f"worn: {p.cid} found, {booked} ({what})", p.warned)
+            for key in [key for key in current if key[0] == ctype]:
+                p = current[key]
+                if p.life - p.age < PARTS[ctype]["pf"]:
+                    # Worn: warned and replaced before the next flight. It was about to fail, so it is
+                    # logged as a potential failure (status 1): counting it as censored would bias the
+                    # Weibull fit (informative censoring).
+                    found = True
+                    p.warned = k
+                    replace(k, p, 1, "worn_potential_failure", f"worn: found after a chart signal ({what})")
             if not found:
-                log(k, "inspect", None, None, f"no fault found ({what})", chart=c)
+                log(k, "no_fault", None, None, f"chart signal, nothing found: a false alarm ({what})", chart=c)
             charts[c].reset()
         for key in list(current):
             p = current[key]
-            if p.replace_at is not None and p.replace_at <= k:
-                # A part found inside its P-F interval was about to fail: a potential failure,
-                # logged as a failure (status 1) so the Weibull fit is not biased by informative censoring.
-                replace(k, p, 1, "worn_potential_failure", "worn: found at inspection after a chart signal")
-        for key in list(current):
-            p = current[key]
-            left = flights_to_b10(p, b10[p.ctype])
-            if left <= 0:
-                replace(k, p, 0, "replaced_scheduled", "reached replace-at age (B10)")
-            elif left <= WARN_FLIGHTS and p.warned is None:
+            if flights_to_b10(p, b10[p.ctype]) <= 0:
                 p.warned = k
+                replace(k, p, 0, "replaced_scheduled", "reached replace-at age (B10)")
 
     end = None
     for p in current.values():
@@ -485,8 +474,10 @@ def build_fleet() -> dict[str, pd.DataFrame]:
         rows, current, st = simulate_history(d)
         history[d], start_parts[d], streams[d] = rows, current, st
         hist_rows += rows + [comp_row(f"D-{d + 1:02d}", p, None, 0, "in_service") for p in current.values()]
-    fits = qc.fit_by_type(pd.DataFrame(hist_rows)).set_index("component_type")
-    b10 = fits["b10"].to_dict()
+    fits = qc.fit_by_type(pd.DataFrame(hist_rows))
+    b10 = fits.set_index("component_type")["b10"].to_dict()
+    policy = fits[["component_type", "unit", "b10", "beta", "eta", "n", "n_failed"]].round(
+        {"b10": 1, "beta": 3, "eta": 1}).assign(fitted_on=f"parts history before {LOG_START.date()}")
 
     events = place_special_causes()
     flights, comps, maint = [], [], []
@@ -519,13 +510,13 @@ def build_fleet() -> dict[str, pd.DataFrame]:
     for col in ("position", "detected_after_flight", "fixed_after_flight"):
         key[col] = key[col].astype("Int64")
     return {"flights": flights.reset_index(drop=True), "components": components,
-            "maintenance": maintenance, "answer_key": key, "b10": pd.Series(b10)}
+            "maintenance": maintenance, "answer_key": key, "replace_at": policy, "b10": pd.Series(b10)}
 
 
 def main() -> None:
     tables = build_fleet()
     OUT_DIR.mkdir(exist_ok=True)
-    for name in ("flights", "components", "maintenance", "answer_key"):
+    for name in ("flights", "components", "maintenance", "answer_key", "replace_at"):
         tables[name].to_csv(OUT_DIR / f"{name}.csv", index=False, lineterminator="\n")
     f, c, m, k = (tables[n] for n in ("flights", "components", "maintenance", "answer_key"))
     print(f"fleet: flights={len(f)}  components={len(c)} (failed {int(c['status'].sum())})  "

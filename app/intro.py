@@ -112,15 +112,17 @@ TERMS = [
                                     "history. B10 = the age by which 10% have failed - the replace-at "
                                     "age. Censored = parts still in use or removed for another reason, "
                                     "counted in the fit as 'lasted at least this long'."),
-    ("W / R / F / S on the timeline", "W: warning (near the replace-at age, or found worn). R: replaced. "
-                                      "F: failed in flight, replaced before the next one. S: special cause "
-                                      "found and fixed."),
+    ("R / F / S on the timeline", "R: warned and replaced before the next flight (the part reached its "
+                                  "replace-at age, or a chart showed it worn). F: failed in flight, replaced "
+                                  "before the next one. S: special cause found from a chart signal and fixed."),
+    ("False alarm", "A chart signal with nothing wrong. With all 8 rules about 2% of readings do this. "
+                    "They show on the control charts but need no action, so they are not on the timeline."),
 ]
 
 WHAT_YOU_GET = [
     ("Fleet status at a glance", "All 10 drones on one screen: can fly, warning or do not fly, each "
                                  "with the reason, plus every part due for replacement soon."),
-    ("Replacement timeline", "Every warning, replacement, in-flight failure and special cause, flight by "
+    ("Replacement timeline", "Every warned replacement, in-flight failure and special cause, flight by "
                              "flight, for the whole fleet and for each part slot of each drone."),
     ("Charts for any drone", "Click a drone card for its control charts - motor temperature, vibration, "
                              "battery voltage - with all 8 rules, an EWMA, and a restart at each repair."),
@@ -131,8 +133,9 @@ STEPS = [
                              "and numbers from the flight log. Log every part you replace."),
     ("2", "Compare to the drone's own normal", "The first 50 flights set each drone's baseline; every "
                                                "later flight is checked against it with 8 rules and an EWMA."),
-    ("3", "Replace before it fails", "Each part is warned 10 flights before its replace-at age, or as soon "
-                                     "as a chart shows it wearing. Swap it and the drone keeps flying."),
+    ("3", "Replace before it fails", "A part is warned when it reaches its replace-at age, or as soon as a "
+                                     "chart shows it wearing, and swapped before the next flight. The drone "
+                                     "keeps flying."),
 ]
 
 
@@ -244,7 +247,6 @@ def fleet_card() -> ui.Tag:
     n_sched = int((reasons == "reached replace-at age (B10)").sum())
     n_worn = int(reasons.str.startswith("worn").sum())
     n_fail = int((reasons == "failed in flight").sum())
-    n_none = int((m["action"] == "inspect").sum() - m["reason"].str.startswith("worn").sum())
     return ui.div(
         ui.div(ui.span("Test fleet", class_="tag"), ui.code("data/fleet/"), class_="card-head"),
         ui.h3(f"10 drones, {len(f):,} flights, Jul–Sep 2026"),
@@ -257,10 +259,9 @@ def fleet_card() -> ui.Tag:
                        "sag). On top of that, the special causes above strike random drones. Nothing is "
                        "scripted on a named drone."),
             ui.tags.dt("What the technician did"),
-            ui.tags.dd(f"{n_sched} parts replaced at their replace-at age after a warning, {n_worn} replaced "
-                       f"early because a chart showed them wearing, {n_fail} failed in flight and were replaced "
-                       f"before the next flight, and {n_none} inspections found nothing (the false alarms that "
-                       "come with using all 8 rules). No drone ever stopped flying."),
+            ui.tags.dd(f"{n_sched} parts warned at their replace-at age and {n_worn} warned early because a chart "
+                       f"showed them wearing, each replaced before the next flight; {n_fail} failed in flight "
+                       "and were replaced before the next flight. No drone ever stopped flying."),
             ui.tags.dt("What the tool should show"),
             ui.tags.dd("Every special cause above is signalled, on the flight listed. Run on these files, the "
                        "tool signals on exactly the flights where the technician acted - checked for all 30 "

@@ -31,7 +31,7 @@ def built():
 
 def test_csvs_on_disk_match_a_fresh_build(built):
     # Same seed, same output: the committed CSVs are exactly what simulate.py makes.
-    for name in ("flights", "components", "maintenance", "answer_key"):
+    for name in ("flights", "components", "maintenance", "answer_key", "replace_at"):
         on_disk = pd.read_csv(FLEET / f"{name}.csv")
         fresh = pd.read_csv(pd.io.common.StringIO(built[name].to_csv(index=False)))
         pd.testing.assert_frame_equal(on_disk, fresh, check_dtype=False)
@@ -88,12 +88,25 @@ def test_every_in_flight_failure_is_replaced_before_the_next_flight(built):
     assert failed == replaced
 
 
-def test_planned_replacements_were_warned_first(built):
+def test_a_warned_part_is_replaced_before_the_next_flight(built):
+    # A warning (replace-at age reached, or a chart showed the part worn) means replace now.
     m = built["maintenance"]
     flight_no = m["flight_id"].str.rsplit("-", n=1).str[-1].astype(int)
-    planned = m["reason"].isin(["reached replace-at age (B10)", "worn: found at inspection after a chart signal"])
-    assert m.loc[planned, "warned_after_flight"].notna().all()
-    assert (m.loc[planned, "warned_after_flight"] < flight_no[planned]).all()
+    planned = (m["reason"] == "reached replace-at age (B10)") | m["reason"].str.startswith("worn")
+    assert planned.sum() > 50
+    assert (m.loc[planned, "warned_after_flight"] == flight_no[planned]).all()
+
+
+def test_false_alarms_change_nothing(built):
+    m = built["maintenance"]
+    fa = m[m["action"] == "no_fault"]
+    assert len(fa) > 0
+    assert (fa["removed_id"].fillna("") == "").all() and (fa["installed_id"].fillna("") == "").all()
+
+
+def test_replace_at_policy_is_the_schedule(built):
+    policy = built["replace_at"].set_index("component_type")["b10"]
+    assert policy.to_dict() == pytest.approx(built["b10"].to_dict(), abs=0.05)
 
 
 def test_no_part_in_service_is_past_its_replace_at_age(built):

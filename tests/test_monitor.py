@@ -97,7 +97,8 @@ def fleet():
 
 def test_tool_signals_on_exactly_the_flights_the_technician_acted_on(fleet):
     f, m, _ = fleet
-    acted = m[m["action"].isin(["inspect", "repair"]) | m["reason"].str.startswith("special cause")]
+    # chart-driven actions: false alarms checked, repairs, special-cause and worn-part replacements
+    acted = m[m["action"].isin(["no_fault", "repair"]) | m["reason"].str.startswith(("special cause", "worn"))]
     for drone in sorted(f["drone_id"].unique()):
         for col, _, _ in MONITORED:
             s = drone_series(f, drone, col)
@@ -135,11 +136,11 @@ def test_timeline_markers(fleet):
     fs = tl[tl["marker"] == "F"]
     assert sorted(zip(failed["drone_id"], flight_numbers(failed["flight_id"]))) == \
         sorted(zip(fs["drone_id"], fs["flight_no"]))
-    # every planned replacement (R) has an earlier W in the same lane
-    for r in tl[tl["marker"] == "R"].itertuples():
-        w = tl[(tl["drone_id"] == r.drone_id) & (tl["lane"] == r.lane) & (tl["marker"] == "W")
-               & (tl["flight_no"] < r.flight_no)]
-        assert len(w), r
+    # every R is a warned replacement: its trigger is the replace-at age or a chart signal
+    rs = tl[tl["marker"] == "R"]
+    assert (rs["trigger"].eq("replace-at age") | rs["trigger"].str.startswith("chart: ")).all()
+    # false alarms are not timeline events
+    assert len(tl) == (m["action"] != "no_fault").sum()
     # every special cause in the answer key is an S on the flight it was fixed
     s = set(zip(tl.loc[tl["marker"] == "S", "drone_id"], tl.loc[tl["marker"] == "S", "flight_no"]))
     assert {(e.drone_id, e.fixed_after_flight) for e in key.itertuples()} <= s
@@ -154,3 +155,12 @@ def test_check_maintenance_refuses_bad_logs(fleet):
     bad.loc[0, "action"] = "polish"
     with pytest.raises(ValueError, match="action"):
         check_maintenance(bad)
+
+
+def test_no_part_in_service_is_past_the_shops_replace_at_age():
+    from app.qc import check_replace_at, replacement_plan
+    policy = check_replace_at(pd.read_csv(FLEET / "replace_at.csv"))
+    plan = replacement_plan(pd.read_csv(FLEET / "components.csv"), pd.read_csv(FLEET / "flights.csv"), policy)
+    assert not plan["overdue"].any()
+    with pytest.raises(ValueError, match="positive"):
+        check_replace_at(policy.assign(b10=0))

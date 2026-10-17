@@ -48,17 +48,16 @@ def monitor_axes(ax, chart: pd.DataFrame, title: str, unit: str, resets: list[in
     the restarts after each logged action, and every signal."""
     x = chart["flight_no"]
     _frame(ax, title, unit, int(chart["baseline"].sum()))
+    live = x[~chart["baseline"]]
     for r in resets:
-        if r >= x[~chart["baseline"]].min() - 1:
+        if len(live) and r >= live.min() - 1:
             ax.axvline(r + 0.5, color=GRID, lw=1.1, zorder=0)
-    ax.plot(x, chart["value"], color=SERIES, lw=1, marker="o", ms=2.2, alpha=0.85)
+    ax.plot(x, chart["value"], color=SERIES, lw=0.8, marker="o", ms=2, alpha=0.45)
     for y, name in ((chart["ucl"], "UCL"), (chart["lcl"], "LCL")):
         ax.plot(x, y, color=INK_2, lw=1.2, ls="--")
         ax.text(1.005, y.iloc[-1], name, va="center", color=INK_2, fontsize=8.5,
                 transform=ax.get_yaxis_transform())
     ax.plot(x, chart["z"], color=EWMA, lw=2)
-    ax.plot(x, chart["ewma_ucl"], color=EWMA, lw=0.9, ls=":")
-    ax.plot(x, chart["ewma_lcl"], color=EWMA, lw=0.9, ls=":")
     r1 = chart["rule_1"].to_numpy()
     other = (chart["rules_triggered"] != "").to_numpy() & ~r1
     ew = chart["signal_ewma"].to_numpy()
@@ -76,18 +75,24 @@ def monitor_axes(ax, chart: pd.DataFrame, title: str, unit: str, resets: list[in
 MONITOR_LEGEND = [
     plt.Line2D([], [], color=SERIES, lw=1, marker="o", ms=3, label="each flight"),
     plt.Line2D([], [], color=INK_2, lw=1.2, ls="--", label="control limits (±3σ, from the baseline)"),
-    plt.Line2D([], [], color=EWMA, lw=2, label="EWMA (and its limits, dotted)"),
+    plt.Line2D([], [], color=EWMA, lw=2, label="EWMA (smoothed trend)"),
     plt.Line2D([], [], ls="", marker="X", color=CRITICAL, ms=8, label="rule 1: beyond 3σ"),
     plt.Line2D([], [], ls="", marker="D", color=WARNING, ms=6, label="rules 2–8: a pattern"),
     plt.Line2D([], [], ls="", marker="o", mfc="none", mec=EWMA, mew=1.6, ms=8, label="EWMA beyond its limit"),
 ]
 
 
-def drone_monitor_figure(panels: list[tuple[pd.DataFrame, str, str, list[int]]]) -> plt.Figure:
+def drone_monitor_figure(panels: list[tuple[pd.DataFrame, str, str, list[int]]],
+                         last: int | None = None) -> plt.Figure:
     """Stack one monitor chart per reading for one drone, sharing the flight axis.
 
     panels: (chart from qc.monitor_chart, title, unit, reset flights).
+    last:   draw only the latest `last` flights (the statistics are computed on all of them).
     """
+    if last:
+        cut = max(int(ch["flight_no"].max()) for ch, *_ in panels) - last
+        panels = [(ch[ch["flight_no"] > cut].reset_index(drop=True), t, u, [r for r in rs if r > cut])
+                  for ch, t, u, rs in panels]
     fig, axes = plt.subplots(len(panels), 1, figsize=(11, 3.3 * len(panels)),
                              facecolor=SURFACE, sharex=True)
     for ax, (chart, title, unit, resets) in zip(np.atleast_1d(axes), panels):
@@ -98,19 +103,17 @@ def drone_monitor_figure(panels: list[tuple[pd.DataFrame, str, str, list[int]]])
     return fig
 
 
-# ---------------------------------------------------------------- maintenance timeline (W / R / F / S / N)
+# ---------------------------------------------------------------- maintenance timeline (R / F / S)
 
 #: marker -> (label, colour, matplotlib shape, size). Shape and letter carry the meaning too,
 #: so no marker relies on colour alone.
 MARKER_STYLE = {
-    "W": ("warning", WARNING, "^", 60),
-    "R": ("replaced", SERIES, "o", 52),
-    "F": ("failed in flight", CRITICAL, "X", 70),
-    "S": ("special cause fixed", VIOLET, "D", 50),
-    "N": ("inspected, no fault", MUTED, "|", 50),
+    "R": ("warned → replaced before the next flight", SERIES, "o", 52),
+    "F": ("failed in flight → replaced", CRITICAL, "X", 70),
+    "S": ("special cause → fixed", VIOLET, "D", 50),
 }
-LANES = ([f"motor {i}" for i in range(1, 5)] + [f"propeller {i}" for i in range(1, 5)]
-         + [f"battery {i}" for i in range(1, 3)] + ["motor temperature rise", "vibration", "voltage sag"])
+PART_LANES = ([f"motor {i}" for i in range(1, 5)] + [f"propeller {i}" for i in range(1, 5)]
+              + [f"battery {i}" for i in range(1, 3)])
 
 
 def _timeline_axes(ax, rows: list[str], n_flights: int) -> None:
@@ -127,57 +130,46 @@ def _timeline_axes(ax, rows: list[str], n_flights: int) -> None:
     ax.set_xlabel("flight number")
 
 
-def _legend(ax, markers) -> None:
-    handles = [plt.Line2D([], [], ls="", marker=MARKER_STYLE[m][2], color=MARKER_STYLE[m][1],
-                          markersize=7, label=f"{m} = {MARKER_STYLE[m][0]}") for m in markers]
-    ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0, -0.16 if len(ax.get_yticks()) < 12 else -0.08),
-              ncol=len(handles), frameon=False, fontsize=8.5)
+def _legend(fig) -> None:
+    handles = [plt.Line2D([], [], ls="", marker=shape, color=col, markersize=7, label=f"{m} = {label}")
+               for m, (label, col, shape, _) in MARKER_STYLE.items()]
+    fig.legend(handles=handles, loc="lower center", ncol=len(handles), frameon=False, fontsize=8.5)
 
 
 def drone_timeline_figure(tl: pd.DataFrame, n_flights: int, n_baseline: int) -> plt.Figure:
-    """One lane per part slot (and per chart for repairs and no-fault inspections), flights
-    on the x axis. An amber bar joins each warning to the replacement it led to."""
-    rows = [lane for lane in LANES if lane in set(tl["lane"])] or LANES[:10]
-    rows = [lane for lane in LANES[:10]] + [lane for lane in LANES[10:] if lane in rows]
-    fig, ax = plt.subplots(figsize=(11, 0.36 * len(rows) + 1.3), facecolor=SURFACE)
+    """One row per part slot (plus "repairs" for special causes fixed without a new part),
+    flights on the x axis, a letter over every event."""
+    rows = PART_LANES + (["repairs"] if (tl["lane"] == "repairs").any() else [])
+    fig, ax = plt.subplots(figsize=(11, 0.36 * len(rows) + 1.5), facecolor=SURFACE)
     _timeline_axes(ax, rows, n_flights)
     ax.axvspan(0, n_baseline + 0.5, color=GRID, alpha=0.4, lw=0)
+    ax.text(n_baseline / 2, -0.45, "baseline", ha="center", va="bottom", fontsize=8, color=INK_2)
     y = {lane: i for i, lane in enumerate(rows)}
-    for lane, g in tl.groupby("lane"):
-        ws = g.loc[g["marker"] == "W", "flight_no"].sort_values().tolist()
-        for r in g.loc[g["marker"].isin(["R", "F", "S"]), "flight_no"]:
-            before = [w for w in ws if w <= r]
-            if before:
-                ax.plot([before[-1], r], [y[lane]] * 2, color=WARNING, lw=3, alpha=0.35, solid_capstyle="round")
-                ws = [w for w in ws if w > r]
     for m, g in tl.groupby("marker"):
         label, col, shape, size = MARKER_STYLE[m]
         ax.scatter(g["flight_no"], g["lane"].map(y), marker=shape, s=size, color=col,
-                   edgecolor=SURFACE if shape not in "|" else None, linewidth=0.8 if shape != "|" else 1.6, zorder=3)
-        if m in "RFS":
-            for r in g.itertuples():
-                ax.text(r.flight_no, y[r.lane] - 0.32, m, ha="center", va="bottom", fontsize=7, color=INK_2)
-    _legend(ax, [m for m in MARKER_STYLE if m in set(tl["marker"])])
-    fig.tight_layout()
+                   edgecolor=SURFACE, linewidth=0.8, zorder=3)
+        for r in g.itertuples():
+            ax.text(r.flight_no, y[r.lane] - 0.3, m, ha="center", va="bottom", fontsize=7, color=INK_2)
+    fig.tight_layout(rect=(0, 0.6 / fig.get_figheight(), 1, 1))
+    _legend(fig)
     return fig
 
 
 def fleet_timeline_figure(tl: pd.DataFrame, drones: list[str], n_flights: int) -> plt.Figure:
-    """Every drone on one row: when parts were warned, replaced, failed, or a special cause fixed."""
-    fig, ax = plt.subplots(figsize=(12, 0.42 * len(drones) + 1.2), facecolor=SURFACE)
+    """Every drone on one row: each warned replacement, in-flight failure and special cause."""
+    fig, ax = plt.subplots(figsize=(12, 0.42 * len(drones) + 1.4), facecolor=SURFACE)
     _timeline_axes(ax, drones, n_flights)
     y = {d: i for i, d in enumerate(drones)}
-    for m in ["N", "W", "R", "S", "F"]:
+    for m in ["R", "S", "F"]:
         g = tl[(tl["marker"] == m) & tl["drone_id"].isin(y)]
         if g.empty:
             continue
         label, col, shape, size = MARKER_STYLE[m]
-        offset = {"N": 0.28, "W": -0.18, "R": 0.0, "S": 0.0, "F": 0.0}[m]
-        ax.scatter(g["flight_no"], g["drone_id"].map(y) + offset, marker=shape, s=size * 0.8, color=col,
-                   alpha=0.45 if m == "N" else 1, edgecolor=SURFACE if shape != "|" else None,
-                   linewidth=0.7 if shape != "|" else 1.2, zorder=3 if m != "F" else 4)
-    _legend(ax, [m for m in MARKER_STYLE if m in set(tl["marker"])])
-    fig.tight_layout()
+        ax.scatter(g["flight_no"], g["drone_id"].map(y), marker=shape, s=size * 0.85, color=col,
+                   edgecolor=SURFACE, linewidth=0.7, zorder=3 if m == "R" else 4)
+    fig.tight_layout(rect=(0, 0.6 / fig.get_figheight(), 1, 1))
+    _legend(fig)
     return fig
 
 
