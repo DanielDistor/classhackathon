@@ -13,7 +13,7 @@ Done: H-02 (data). H-01: SPEC filled; only the team readback of SPEC section 4 i
    - Data tests: `problem_fleet` D-07 EWMA on temp_rise_c first signals at flight 74; I chart on D-03 vibration flags flight 80 only.
    - Degenerate: constant data (MR̄ = 0) raises ValueError; fewer than 20 baseline points raises; NaN is refused.
 2. **H-03b: fleet status** (~30 min, same files). `fleet_status(flights, components, b10)`: **ground** = the latest flight is beyond an I limit, or the EWMA is beyond its limit now; **watch** = any signal in the last 10 flights; **go** = otherwise. (Parts past B10 are a separate list; see Decisions.) Each row has a one-line reason. Test: D-07 = ground at flight 95 in `problem_fleet`.
-3. **H-04: Shiny for Python app** (Stage 3, ~2 h). Files: `app/` except qc.py. Tabs: Fleet, Drone, Reliability (Reliability can be empty until step 5). The app only calls `qc.py`. Test: `testme.sh` starts it, and the numbers on one dataset match the H-03 tests.
+3. **H-04: dashboard** (Shiny first; rebuilt in React in H-14) (Stage 3, ~2 h). Files: `app/` except qc.py. Tabs: Fleet, Drone, Reliability (Reliability can be empty until step 5). The app only calls `qc.py`. Test: `testme.sh` starts it, and the numbers on one dataset match the H-03 tests.
 4. **H-06: deploy** (Stage 3, ~1 h). Files: `.github/workflows/`, `.github/scripts/`, `app/manifest.json`, `app/.python-version`. Load the `connect-publish` skill. Test: the public URL answers HTTP 200 logged out.
 5. **H-03c: Weibull** (Stage 4, ~2 h, same files as H-03). `weibull_fit(life, status)`: 2-parameter Weibull, maximum likelihood with right-censoring (`lifelines.WeibullFitter`; status 0 = censored). Returns β (shape), η (scale), 95% CIs, and B10 = η(-ln 0.9)^(1/β). `compare_lots(...)` = one fit per battery lot.
    - Known answer: B10 with η 100, β 2 = 32.459. A fit on 2,000 simulated lives (β 2.5, η 300, 30% censored) recovers β ± 0.15 and η ± 5%.
@@ -46,7 +46,7 @@ Done: H-02 (data). H-01: SPEC filled; only the team readback of SPEC section 4 i
 
 - Baseline = the first 30 flights per drone (team, 2026-10-16). D-06's healthy-fleet false alarm is kept and explained in the demo as the cost of a short baseline.
 - Data: one folder per dataset, two tables each (team, 2026-10-16).
-- Stack: Shiny for Python (team). Statistics only in `app/qc.py`; functions take pandas/numpy, return dicts or DataFrames, never plots.
+- Stack: React front end (`web/`) + FastAPI (`app/api.py`), switched from Shiny for Python on 2026-10-16 because the professor requires React (H-14). One Connect app serves both. The API only calls `qc.py`. Statistics only in `app/qc.py`; functions take pandas/numpy, return dicts or DataFrames, never plots.
 - Run rules: rule 1 only (a point beyond 3σ). EWMA λ = 0.2, L = 3.
 - No machine learning, no Cp/Cpk, p-chart only if time is left (SPEC section 9).
 

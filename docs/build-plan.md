@@ -1,6 +1,6 @@
 # Flight Control — Hackathon Build Plan
 
-We are building a **drone fleet reliability dashboard** in **Python + Shiny**, deployed to the
+We are building a **drone fleet reliability dashboard** in **Python (FastAPI + the statistics) + React**, deployed to the
 course Posit Connect server.
 
 **Deadline: Sat Oct 17, 1:00 PM ET sharp** (Devpost + Canvas). Showcase 2–3 PM, attendance required.
@@ -32,7 +32,7 @@ Data comes before charts, statistics before the app, and the first deploy happen
 ```bash
 git clone https://github.com/DanielDistor/classhackathon.git   # or: git pull, if you already have it
 cd classhackathon
-python3 -m pip install numpy pandas scipy lifelines pytest shiny
+python3 -m pip install -r app/requirements.txt pytest httpx   # and Node.js 20+ for web/
 python3 data/simulate.py      # optional: rebuilds the test data (identical output every time)
 ```
 
@@ -102,7 +102,7 @@ Tell the group chat which stage is finished.
   1. Put the two values in `app/.env` (gitignored, so check with `git status` that it doesn't show up):
      `CONNECT_SERVER=...` and `CONNECT_API_KEY=...`
   2. First deploy, from a laptop: `cd app && ./deployme.sh`, then open the URL it prints in a logged-out browser.
-  3. Auto-deploy on every push: add repo secrets `CONNECT_SERVER` and `CONNECT_API_KEY` (GitHub → Settings → Secrets and variables → Actions), then ask the agent: *"copy the Shiny-for-Python deploy workflow for H-06 with APP_DIR app"*.
+  3. Auto-deploy on every push: add repo secrets `CONNECT_SERVER` and `CONNECT_API_KEY` (GitHub → Settings → Secrets and variables → Actions), then ask the agent: *"copy the FastAPI deploy workflow for H-06 with APP_DIR app, entrypoint api:app"*.
   4. After **any** change to `app/` or `data/`: run `app/manifestme.sh` and commit `app/manifest.json`.
 - **Done when:** the public URL loads in a logged-out browser and the Fleet tab grounds D-07 on the motor-drift dataset.
 
@@ -137,7 +137,7 @@ Put your name next to a role.
 |---|---|---|---|
 | Data | `data/`, simulation script, codebook | H-02 | |
 | Stats (1–2 people) | `app/qc.py`, `tests/` | H-03 | |
-| App and deploy | `app/` (Shiny UI), `.github/workflows/` | H-04, H-06 | |
+| App and deploy | `web/` (React UI), `app/api.py` (API), `.github/workflows/` | H-04, H-06 | |
 | Docs and demo | `README.md`, `demo/`, Devpost page | H-05, H-07, H-08 | |
 
 ---

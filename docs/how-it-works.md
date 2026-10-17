@@ -272,7 +272,7 @@ warning. The tool turns failures into warnings; it cannot promise there will nev
 
 ## 9. What the website shows, page by page
 
-Start it locally with `./app/testme.sh` (or `shiny run app.py` from `app/`) and open
+Start it locally with `./app/testme.sh` (or `uvicorn api:app --port 8000` from `app/`) and open
 <http://127.0.0.1:8000>.
 
 ### The dashboard opens on the **Fleet health & replacements** tab
@@ -402,9 +402,8 @@ tool signals on exactly the flights where the simulated technician acted, for al
 |---|---|
 | [`data/simulate.py`](../data/simulate.py) | Makes the test fleet: part lifetimes, wear, special causes, and the simulated technician |
 | [`app/qc.py`](../app/qc.py) | **All the statistics**, as plain tested functions. `imr_limits` (limits), `spc_rules` (the 8 rules), `ewma_chart`, `monitor_chart` (everything for one reading of one drone, with the fleet check and the restarts), `fleet_status` (Can fly / Warning / Do not fly), `weibull_fit` and `fit_by_type` (part lives, B10), `km_curve` (Kaplan-Meier), `replacement_plan` (flights left per part), `maintenance_timeline` (R / F / S markers) |
-| [`app/app.py`](../app/app.py) | The website (Shiny for Python): loads the files, calls `qc.py`, shows the results. No statistics of its own |
-| [`app/charts.py`](../app/charts.py) | Draws the charts and timelines from what `qc.py` returns |
-| [`app/intro.py`](../app/intro.py) | The welcome / guide page |
+| [`app/api.py`](../app/api.py) | The REST API (FastAPI): loads the files, calls `qc.py`, returns the results as JSON under `/api/` (docs at `/docs`) and serves the website. No statistics of its own |
+| [`web/src/`](../web/src/) | The website (React): the dashboard, the drone pop-up, the Weibull tab and the guide page; charts and timelines drawn as SVG from what the API returns |
 | [`tests/`](../tests/) | The 84 tests |
 
 ---

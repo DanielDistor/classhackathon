@@ -59,8 +59,8 @@ Fixed for every team:
 - You can explain every number the tool prints. If you cannot, it is not done.
 
 ## 5. Delivery (rubric: working tool 25)
-- **Stack:** dashboard (Shiny for Python).
-- **Starting demo:** no Python Shiny folder exists in `demos/`, so `app/` is scaffolded to the layout `.claude/skills/connect-publish/workflows/deploy-shiny-py.yml` expects (`app.py`, pinned `requirements.txt`, `manifest.json`, `.python-version`). The four scripts (`testme`, `manifestme`, `deployme`, `README.md`) are adapted from `demos/fastapi/`, and `app/qc.py` follows the style of `demos/pypackage/src/demotool/qc.py`.
+- **Stack:** React dashboard (Vite, `web/`) on a FastAPI REST API (`app/api.py`) over the statistics in `app/qc.py`. Changed from Shiny for Python on 2026-10-16 because the professor requires React; the statistics did not change.
+- **Starting demo:** `web/` is copied from `demos/reactfront/` and `app/api.py` follows `demos/fastapi/` (the `fastapi-react-scaffold` skill). One Posit Connect app: `app/api.py` serves the JSON API under `/api/`, its docs at `/docs`, and the React build (`app/static/`) at `/`. The four scripts (`testme`, `manifestme`, `deployme`, `README.md`) live in `app/`, and `app/qc.py` follows the style of `demos/pypackage/src/demotool/qc.py`.
 
 Fixed for every team:
 - Start from **one** demo in `demos/`, copied to `app/`. Keep its four-script contract

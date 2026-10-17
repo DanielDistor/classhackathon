@@ -1,8 +1,17 @@
-# app/: Drone Fleet Reliability Monitor (Shiny for Python)
+# app/: Drone Fleet Health & Part Wear Monitor (FastAPI + React)
 
-A dashboard for the **fleet maintenance technician** at a drone delivery startup. Before each flight it
-shows whether every drone is **go**, **watch** or **ground** and why, and it shows how long motors,
-propellers and batteries last, so parts can be replaced before they fail in the air.
+A dashboard for the **fleet maintenance technician** at a drone delivery startup. It shows whether each of
+the 10 drones **can fly**, has a **warning** or must **not fly**, and why; which parts are due for
+replacement; and how long motors, propellers and batteries last, so parts are replaced before they fail
+in the air.
+
+This folder is the one app Posit Connect runs:
+
+| Path | What it serves |
+|---|---|
+| `/` | the **React dashboard** (built from [`../web/`](../web/) into `static/`) |
+| `/api/...` | the **REST API** the dashboard reads (JSON), below |
+| `/docs` | interactive API docs: try every route in the browser |
 
 ## Run it
 
@@ -12,42 +21,39 @@ python3 -m pip install -r requirements.txt   # Python 3.12
 ./testme.sh                                  # copies the test data in, then serves http://127.0.0.1:8000
 ```
 
-## How the app is laid out
-
-1. **Welcome page.** Covers how the tool works, the six things measured on each drone (with a labelled
-   picture), what's recorded before, during and after each flight, example rows from both data files, the
-   three test datasets, key terms, and the views. **Continue** opens the dashboard; the header link
-   goes back.
-2. **Which fleet?** Two cards at the top pick one of two invented test fleets (the same 10 drones):
-
-   | Card | Folder | What's planted |
-   |---|---|---|
-   | Fleet with problems (shown first) | `data/problem_fleet/` | D-07's motor wears out and it crashes on flight 95; D-03 has a prop strike on flight 80; batteries from supplier lot B wear out about 40% sooner |
-   | Healthy fleet | `data/healthy/` | Nothing (the comparison; a note explains its one or two chance warnings) |
-
-3. **Two views:**
-   - **Fleet status:** a count of drones that **Can fly**, have a **Warning**, or must **Not fly**, then all 10
-     drones as cards in two rows, each drawn in its status colour with a ✓ / ! / ✕ symbol and the reason.
-     **Click a card** to open that drone in a pop-up: its status, a table with each measurement's normal range,
-     latest value and first warning, and three control charts: motor temperature trend (EWMA, slow wear),
-     vibration (I chart, sudden damage) and battery voltage drop (I chart, a failing battery). These are the same
-     three charts that set the status.
-   - **Parts replacement:** one card per part type saying "replace every N flights" (its B10 age); a list of the
-     10 drones saying what to replace now or next, each expandable to its 10 parts with life used and days left;
-     the battery-batch finding in one sentence; and a collapsed **Statistics details** section with the Weibull
-     fits, reliability curves (Kaplan-Meier check) and the batch comparison chart.
+`static/` (the React build) is committed, so this works without Node.js. After editing `../web/src/`,
+rebuild it with `cd ../web && npm run build` (Node.js 20+), or work live with `npm run dev`
+there (see [`../web/README.md`](../web/README.md)).
 
 ## Files
 
 | File | Job |
 |---|---|
-| `qc.py` | **All the statistics.** Plain, tested functions (below). Tests: `tests/test_qc.py`, `tests/test_reliability.py` |
-| `charts.py` | Draws what `qc.py` computed (matplotlib). No statistics |
-| `app.py` | The Shiny app: reads the chosen dataset, calls `qc.py`, shows the result |
-| `intro.py` | The welcome page. Edit the wording here |
-| `styles.css` | The look of both pages |
+| `qc.py` | **All the statistics.** Plain, tested functions (below). Tests: `tests/test_qc.py`, `tests/test_monitor.py`, `tests/test_reliability.py` |
+| `api.py` | The FastAPI app: loads `data/fleet/`, calls `qc.py`, returns JSON, serves `static/`. No statistics of its own. Tests: `tests/test_api.py` (every route matches `qc.py` directly) |
+| `static/` | The built React app. Never edit by hand: it is overwritten by `npm run build` in `../web/` |
 | `data/` | A copy of the repo's `data/`, made by `sync_data.sh`, because Posit Connect only receives this folder. `tests/test_app.py` fails if the copy drifts |
 | `testme.sh` / `manifestme.sh` / `deployme.sh` | Run locally / write `manifest.json` for Posit Connect / publish |
+
+## API routes
+
+Dashboard routes (`GET`, computed once from `data/fleet/`):
+
+| Route | Returns |
+|---|---|
+| `/api/health` | `{"status": "ok"}` |
+| `/api/fleet` | every drone's `status` and `reason` (`qc.fleet_status`), every installed part's countdown (`qc.replacement_plan`), the R / F / S `timeline` (`qc.maintenance_timeline`) and the activity counts |
+| `/api/drones/{drone_id}` | one drone: status, parts, timeline, and its three restarting control charts (`qc.monitor_chart`), one row per flight with the limits, EWMA and every signal. 404 for an unknown drone |
+| `/api/reliability` | Weibull fit per part type (`qc.fit_by_type`), the shop's replace-at ages, R(t) and Kaplan-Meier curves (`qc.reliability`, `qc.km_curve`) |
+| `/api/guide` | the answer key's injected special causes, replacement counts and example rows for the guide page |
+
+Statistics on **your own numbers** (`POST`, JSON body; 422 with a plain message on bad input):
+
+| Route | Body | Returns |
+|---|---|---|
+| `/api/spc/imr` | `{"values": [...], "n_baseline": 50}` | I-MR limits (`qc.imr_limits`) |
+| `/api/spc/monitor` | `{"values": [...], "n_baseline": 50}` | I chart with all 8 rules + EWMA, one row per reading (`qc.monitor_chart`) |
+| `/api/weibull` | `{"life": [...], "status": [1, 0, ...]}` | β, η, 95% intervals, B10 (`qc.weibull_fit`) |
 
 ## Functions in `qc.py`
 
@@ -57,31 +63,36 @@ python3 -m pip install -r requirements.txt   # Python 3.12
 |---|---|---|
 | `add_derived(flights)` | flights table | a copy with `temp_rise_c = motor_temp_max_c − ambient_temp_c` and `sag_rate_v_per_min = (voltage_start_v − voltage_end_v) / flight_min` |
 | `drone_series(flights, drone_id, column)` | table, drone, column | that drone's readings in flight order, blanks dropped |
-| `imr_limits(x, n_baseline=30, min_baseline=20)` | numbers | `center`, `lcl`, `ucl`, `sigma_hat`, `mr_bar`, `mr_ucl`. Limits = baseline mean ± 3σ̂, σ̂ = MR̄ / 1.128, MR UCL = 3.267 × MR̄ |
-| `imr_chart(x, ...)` | numbers | one row per point: `value`, `mr`, limits, `baseline`, `signal_i`, `signal_mr` |
-| `ewma_chart(x, lam=0.2, L=3, ...)` | numbers | one row per point: `z`, `center`, `lcl`, `ucl`, `signal`. z_t = λx_t + (1−λ)z_(t−1); limits μ₀ ± Lσ·√(λ/(2−λ)·(1−(1−λ)^(2t))) |
-| `chart_margin(value, center, lcl, ucl)` | one point and its limits | room left before the nearest limit, from 1 (at center) to 0 (at or past a limit) |
-| `fleet_status(flights, recent=10)` | flights table | per drone: `status`, `reason`, `last_flight_no`, `n_flights` (plus `health` / `health_driver`: room left before the nearest limit; computed and tested, not shown) |
-| `check_flights(flights)` | flights table | the table if usable, otherwise a ValueError naming the problem |
+| `imr_limits(x, n_baseline=50, min_baseline=20)` | numbers | `center`, `lcl`, `ucl`, `sigma_hat`, `mr_bar`, `mr_ucl`. Limits = baseline mean ± 3σ̂, σ̂ = MR̄ / 1.128, MR UCL = 3.267 × MR̄ |
+| `spc_rules(x, center, sigma)` | numbers, limits | the 8 Nelson / Western Electric rules, one column each, plus `rules_triggered` |
+| `ewma_chart(x, lam=0.2, L=3, ...)` | numbers | `z`, limits, `signal`. z_t = λx_t + (1−λ)z_(t−1); limits μ₀ ± Lσ·√(λ/(2−λ)·(1−(1−λ)^(2t))) |
+| `monitor_chart(values, flight_no, resets, fleet=None)` | readings, flight numbers, repair flights | I chart (8 rules) + EWMA that restart after each logged repair; the baseline is checked against the fleet range (rule 1) |
+| `fleet_status(flights, maintenance, fleet=...)` | flights, maintenance log | per drone: `status`, `reason`, `health`, `health_driver` |
+| `maintenance_timeline(maintenance)` | maintenance log | every R / F / S marker with its trigger |
+| `check_flights`, `check_maintenance`, `check_replace_at`, `fleet_reference` | tables | the table if usable, otherwise a ValueError naming the problem |
 
-**Status rule** (from the three charts in `MONITORED`). *Do not fly* (`ground`): the latest flight was a crash, or the latest reading is outside an I-chart limit,
-or the EWMA is outside its limit now. *Warning* (`watch`): a signal within the last 10 readings. *Can fly* (`go`): everything in
-control. **Health** = `chart_margin` of the latest point on the drone's most-stretched chart (0 after a crash).
+**Status rule.** *Do not fly* (`ground`): the latest reading is an open signal beyond 3σ (or the fleet range
+during the baseline), or the EWMA is beyond its limit now. *Warning* (`watch`): an open signal within the last
+10 readings. *Can fly* (`go`): no open signal. A signal is open until the technician logs an action on that chart.
 
 **Reliability**
 
 | Function | Inputs | Returns |
 |---|---|---|
 | `weibull_fit(life, status)` | lives (> 0) and 1 = failed / 0 = censored | `beta`, `eta` with 95% limits, `b10`, `mean_life`, `n`, `n_failed`. Maximum likelihood with right-censoring |
-| `b_life(beta, eta, p=0.10)` | Weibull parameters | age by which a fraction p fail: η(−ln(1−p))^(1/β). B10 when p = 0.10 |
-| `reliability(t, beta, eta)` | ages | share still working: exp(−(t/η)^β) |
+| `b_life(beta, eta, p=0.10)` | Weibull parameters | η(−ln(1−p))^(1/β). B10 when p = 0.10 |
+| `reliability(t, beta, eta)` | ages | exp(−(t/η)^β) |
 | `km_curve(life, status)` | lives, status | Kaplan-Meier survival from the data (the model check) |
-| `fit_by_type(components)` | components table | one Weibull fit per part type, with its unit (flight hours or charge cycles) |
-| `compare_lots(components, "battery")` | components table | one fit per supplier lot. Lots whose η intervals don't overlap differ by more than chance |
-| `parts_past_b10(components, by_type)` | components, fits | parts still flying that are older than their type's B10, most overdue first |
-| `replacement_plan(components, flights, by_type)` | components, flights, fits | per part in service: `remaining` = B10 − age, `pct_used`, `flights_left` (hours ÷ the drone's mean flight length; batteries: charges × 2, since each drone alternates two batteries), `days_left` (÷ the drone's flights per day), `overdue` |
-| `check_components(components)` | components table | the table if usable, otherwise a ValueError |
+| `fit_by_type(components)` | parts history | one Weibull fit per part type, with its unit |
+| `compare_lots(components, "battery")` | parts history | one fit per supplier lot |
+| `replacement_plan(components, flights, by_type)` | parts, flights, replace-at ages | per installed part: `pct_used`, `flights_left`, `days_left`, `overdue`, `due` |
 
-Every function refuses bad input with a `ValueError` instead of returning a misleading number. Examples:
-constant data (limits undefined), fewer than 20 baseline points, blanks, fewer than 3 failures for a Weibull
-fit, and lives ≤ 0.
+Every function refuses bad input with a `ValueError` (the API turns it into a 422) instead of returning a
+misleading number: constant data, fewer than 20 baseline points, blanks, fewer than 3 failures for a
+Weibull fit, lives ≤ 0.
+
+## Deploy (Posit Connect)
+
+`manifestme.sh` writes `manifest.json` (`python-fastapi`, entrypoint `api:app`); commit it after any change to
+the code, the data or the React build. `deployme.sh` publishes from your machine with `CONNECT_SERVER` and
+`CONNECT_API_KEY` in a gitignored `app/.env`. Never put the key in a file that is committed.

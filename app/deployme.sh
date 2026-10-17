@@ -1,6 +1,6 @@
 #!/bin/bash
 # deployme.sh
-# Deploy the dashboard to the course Posit Connect server from your machine.
+# Deploy the API + React dashboard (one FastAPI app, api.py) to the course Posit Connect server from your machine.
 # Needs CONNECT_SERVER and CONNECT_API_KEY (handed out at the event) in a
 # gitignored app/.env file, or an rsconnect account you already added.
 
@@ -14,10 +14,10 @@ if [ -f ".env" ]; then
   source .env
 fi
 
-rsconnect deploy shiny \
+rsconnect deploy fastapi \
   ${CONNECT_SERVER:+--server "$CONNECT_SERVER"} \
   ${CONNECT_API_KEY:+--api-key "$CONNECT_API_KEY"} \
-  --entrypoint app:app \
+  --entrypoint api:app \
   --title "Drone Fleet Reliability Monitor" \
   --exclude '*.sh' --exclude '__pycache__' --exclude '.env' \
   .

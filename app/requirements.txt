@@ -1,6 +1,7 @@
+fastapi==0.115.12
 lifelines==0.30.3
 matplotlib==3.11.1
 numpy==2.5.2
 pandas==3.0.5
 scipy==1.18.1
-shiny==1.8.0
+uvicorn==0.34.0

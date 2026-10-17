@@ -296,3 +296,25 @@ tasks:
       the app (checked by script); it covers the data, every check, every
       action, every page of the dashboard, and a worked example of one drone.
     result: "docs/how-it-works.md written: 14 sections in chronological order (data, setup, logging, checks, actions, failures, every page, D-05 worked example, run totals, limits, code map, glossary); a script checked all 17 quoted numbers against data/fleet and the app: 17 PASS."
+
+  - id: H-14
+    title: Switch the dashboard from Shiny to React, with a FastAPI back end over qc.py
+    points: "25 - Working tool: the required React front end, plus a public REST API"
+    status: done
+    owner: "Claude + Daniel"
+    started_at: "2026-10-16 23:30"
+    owns: ["app/api.py", "app/static/", "app/requirements.txt", "app/testme.sh", "app/manifestme.sh",
+           "app/deployme.sh", "app/README.md", "app/app.py", "app/intro.py", "app/charts.py",
+           "app/styles.css", "app/manifest.json", "web/", "tests/test_api.py", "tests/test_app.py",
+           "SPEC.md", "docs/plan.md", "docs/build-plan.md", "docs/how-it-works.md"]
+    notes: >
+      Requested by Daniel on 2026-10-16: the professor requires React. The statistics
+      (app/qc.py) and the data do not change. app/api.py serves qc.py's results as JSON
+      under /api/ and serves the built React app (web/, built into app/static/) at /,
+      so Posit Connect runs one FastAPI app. The Shiny files are removed once the React
+      views match them.
+    definition_of_done: >
+      python3 -m pytest -q passes (including tests/test_api.py); cd web && npm run build
+      succeeds; app/testme.sh serves the React dashboard on http://127.0.0.1:8000 with
+      the fleet view, the drone pop-up, the Weibull tab and the guide, checked in a browser.
+    result: "React dashboard (web/, built into app/static/) on a FastAPI API (app/api.py, 5 GET + 3 POST routes over qc.py) replaces Shiny; 96 pytest pass (11 new in test_api.py check every route against qc.py, 422 on constant data and all-censored lives), 6 vitest pass, npm run build ok, manifest is python-fastapi api:app; fleet tab, drone pop-up, Weibull tab and guide checked in a browser at 1360 px and 390 px with no console errors."

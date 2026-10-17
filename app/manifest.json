@@ -2,8 +2,8 @@
   "version": 1,
   "locale": "en_US.UTF-8",
   "metadata": {
-    "appmode": "python-shiny",
-    "entrypoint": "app:app"
+    "appmode": "python-fastapi",
+    "entrypoint": "api:app"
   },
   "python": {
     "version": "3.12.0",
@@ -20,40 +20,46 @@
   },
   "files": {
     "requirements.txt": {
-      "checksum": "f449ff772fe05226f9b1309117e081dc"
+      "checksum": "797b5b90c99ba5300901652a09e5d979"
     },
     ".python-version": {
       "checksum": "61939823fbcc7e8de3b61ab105331baf"
     },
     "README.md": {
-      "checksum": "3a67115ff54eadd19bc6a7b3bb623850"
+      "checksum": "e7c6145a8e34d9052d32a1e638818ba9"
     },
-    "app.py": {
-      "checksum": "d86dda4b299c642e7d46924701d1ff0a"
+    "api.py": {
+      "checksum": "7c83bb1c2fc9f67f292c611b3e06a3b0"
     },
-    "charts.py": {
-      "checksum": "ff1e72c076482299a04d24428bd89e30"
+    "data/fleet/answer_key.csv": {
+      "checksum": "be1678d874785221947a8fd9ad616284"
     },
-    "data/healthy/components.csv": {
-      "checksum": "a5c6f2c953f94e97bbe2d41e0c793fcf"
+    "data/fleet/components.csv": {
+      "checksum": "94568baf7d1f0aae67196efc6751dcc8"
     },
-    "data/healthy/flights.csv": {
-      "checksum": "17bd85c38e062549e55162d7e97d2451"
+    "data/fleet/fleet_reference.csv": {
+      "checksum": "d91240ce5236594e6c225cdaed7067e8"
     },
-    "data/problem_fleet/components.csv": {
-      "checksum": "070a4bcdd29c5907f2f7f75fc76b3ca9"
+    "data/fleet/flights.csv": {
+      "checksum": "fbe5ffdf089859ea3f93945cd1effdc5"
     },
-    "data/problem_fleet/flights.csv": {
-      "checksum": "d2b9c6f282e179c3e32c84b564ed065b"
+    "data/fleet/maintenance.csv": {
+      "checksum": "4097dfeaad9d3ac3e30120f4e0871d2a"
     },
-    "intro.py": {
-      "checksum": "284488e73f0267f88442a4c5b42f2ff8"
+    "data/fleet/replace_at.csv": {
+      "checksum": "42cf35cdf04c169f85531ffcecae9d3c"
     },
     "qc.py": {
-      "checksum": "1eddc59c2f27b59b10f86354ef258976"
+      "checksum": "0f3d3a0f63696aa1d7546c264082685f"
     },
-    "styles.css": {
-      "checksum": "a331d938aeeac9253cd7c1fce2d487ff"
+    "static/assets/index--7yeOpPB.js": {
+      "checksum": "859cad2b267c41f207211cf4d72375a7"
+    },
+    "static/assets/index-Vsxjei-z.css": {
+      "checksum": "c8c01e08c5c7b722fcb46297ebf22438"
+    },
+    "static/index.html": {
+      "checksum": "df262786a87920afed528e0765024ccc"
     }
   }
 }
