@@ -297,7 +297,9 @@ def drone_series(flights: pd.DataFrame, drone_id: str, column: str) -> pd.DataFr
     d = flights[flights["drone_id"] == drone_id]
     if d.empty:
         raise ValueError(f"no flights for drone {drone_id!r}")
-    d = d.sort_values("datetime").dropna(subset=[column])
+    # flight order: take-off time, then the flight number (two flights can share a logged minute)
+    d = d.assign(_k=flight_numbers(d["flight_id"])).sort_values(["datetime", "_k"], kind="stable")
+    d = d.dropna(subset=[column])
     return pd.DataFrame({
         "flight_id": d["flight_id"].to_numpy(),
         "flight_no": d["flight_id"].str.rsplit("-", n=1).str[-1].astype(int).to_numpy(),
@@ -466,7 +468,8 @@ def fleet_status(flights: pd.DataFrame, maintenance: pd.DataFrame | None = None,
     f = flights if "temp_rise_c" in flights.columns else add_derived(flights)
     rows = []
     for drone in sorted(f["drone_id"].unique()):
-        d = f[f["drone_id"] == drone].sort_values("datetime")
+        d = f[f["drone_id"] == drone]
+        d = d.assign(_k=flight_numbers(d["flight_id"])).sort_values(["datetime", "_k"], kind="stable")
         last_no = int(flight_numbers(d["flight_id"]).iloc[-1])
         ground, watch, margins = [], [], {}
         try:
@@ -532,7 +535,7 @@ MARKERS = {"R": "warned and replaced before the next flight (reached its replace
            "S": "special cause found from a chart signal and fixed (part replaced or repaired)"}
 CHART_NAME = {col: name for col, name, _ in MONITORED}
 #: Columns a replace-at policy needs (data/fleet/replace_at.csv).
-REQUIRED_POLICY_COLUMNS = ("component_type", "unit", "b10")
+REQUIRED_POLICY_COLUMNS = ("component_type", "unit", "replace_at")
 #: Columns a fleet reference needs (data/fleet/fleet_reference.csv).
 REQUIRED_REFERENCE_COLUMNS = ("chart", "center", "sigma")
 
@@ -568,8 +571,8 @@ def check_replace_at(policy: pd.DataFrame) -> pd.DataFrame:
     missing = [c for c in REQUIRED_POLICY_COLUMNS if c not in policy.columns]
     if missing:
         raise ValueError(f"the replace-at file is missing column(s): {', '.join(missing)}")
-    if not (pd.to_numeric(policy["b10"], errors="coerce") > 0).all():
-        raise ValueError("every replace-at age (b10) must be a positive number")
+    if not (pd.to_numeric(policy["replace_at"], errors="coerce") > 0).all():
+        raise ValueError("every replace-at age (replace_at) must be a positive number")
     return policy
 
 
@@ -803,7 +806,10 @@ BATTERIES_PER_DRONE = 2
 
 
 def replacement_plan(components: pd.DataFrame, flights: pd.DataFrame, by_type: pd.DataFrame) -> pd.DataFrame:
-    """How long until each part still in service reaches its replace-at age (its type's B10).
+    """How long until each part still in service reaches its replace-at age.
+
+    The replace-at age is the policy's replace_at (B_p, e.g. B10) when by_type is a
+    replace-at policy, else the fit's B10. It is returned as both replace_at and b10.
 
     remaining  = B10 - age, in the part's own unit (flight hours or charge cycles)
     flights_left:
@@ -817,7 +823,9 @@ def replacement_plan(components: pd.DataFrame, flights: pd.DataFrame, by_type: p
     position (from the id), lot, age, b10, unit, remaining, pct_used, flights_left,
     days_left, overdue; most urgent first.
     """
-    b10 = by_type.dropna(subset=["b10"]).set_index("component_type")["b10"]
+    # a replace-at policy (replace_at.csv) gives replace_at = B_p; a plain fit (fit_by_type) gives B10
+    age_col = "replace_at" if "replace_at" in by_type.columns else "b10"
+    b10 = by_type.dropna(subset=[age_col]).set_index("component_type")[age_col]
     live = components[components["end_date"].isna()].copy()
     live = live[live["component_type"].isin(b10.index)]
     f = flights.copy()
@@ -829,6 +837,7 @@ def replacement_plan(components: pd.DataFrame, flights: pd.DataFrame, by_type: p
     pace["per_day"] = (pace["n"] - 1).clip(lower=1) / span_days
     live = live[live["drone_id"].isin(pace.index)]
     live["b10"] = live["component_type"].map(b10)
+    live["replace_at"] = live["b10"]
     live["age"] = live["life_value"]
     live["unit"] = live["component_type"].map(LIFE_UNIT)
     live["remaining"] = live["b10"] - live["age"]
@@ -841,7 +850,7 @@ def replacement_plan(components: pd.DataFrame, flights: pd.DataFrame, by_type: p
     live["overdue"] = live["remaining"] <= 0
     live["due"] = live["flights_left"] <= WARN_FLIGHTS
     live["position"] = live["component_id"].str.split("-").str[2].astype(int)
-    cols = ["drone_id", "component_id", "component_type", "position", "lot", "age", "b10", "unit",
+    cols = ["drone_id", "component_id", "component_type", "position", "lot", "age", "b10", "replace_at", "unit",
             "remaining", "pct_used", "flights_left", "days_left", "overdue", "due"]
     return live[cols].sort_values("days_left").reset_index(drop=True)
 

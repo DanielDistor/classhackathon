@@ -17,12 +17,21 @@ export const HealthBar = ({ status, pct, big }) => (
   </div>
 )
 
-export const Panel = ({ title, children, note }) => (
-  <div className="panel">
-    {title && <h4>{title}</h4>}
-    {note && <p className="rule-note">{note}</p>}
-    {children}
-  </div>
+/** A titled box. collapsed: a dropdown (closed until clicked), with `title` as its header. */
+export const Panel = ({ title, children, note, collapsed = false }) => (
+  collapsed ? (
+    <details className="panel fold-panel">
+      <summary><h4>{title}</h4></summary>
+      {note && <p className="rule-note">{note}</p>}
+      {children}
+    </details>
+  ) : (
+    <div className="panel">
+      {title && <h4>{title}</h4>}
+      {note && <p className="rule-note">{note}</p>}
+      {children}
+    </div>
+  )
 )
 
 export function Loading({ what }) {
@@ -33,4 +42,4 @@ export function Failed({ error }) {
   return <div className="panel error-box"><b>Couldn't load this view.</b> {error.message}</div>
 }
 
-export const Used = ({ p }) => <>{fmt(p.age)} / {fmt(p.b10)} {p.unit}</>
+export const Used = ({ p }) => <>{fmt(p.age)} / {fmt(p.replace_at ?? p.b10)} {p.unit}</>

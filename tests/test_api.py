@@ -117,3 +117,31 @@ def test_health_bar_is_the_average_part_life_left():
         assert row["parts_health"] == pytest.approx(sum(left) / len(left), abs=1e-4)
     drone = client.get("/api/drones/D-02").json()
     assert drone["worst_part"] == "motor 1"
+# ---------------------------------------------------------------- retirement what-if runs (H-16)
+
+def test_runs_lists_every_setting_with_its_summary():
+    r = client.get("/api/runs").json()
+    assert r["default"] == 10 and r["options"] == [1, 2, 5, 10, 15, 20, 30]
+    assert [s["retire_pct"] for s in r["summary"]] == r["options"]
+
+
+@pytest.mark.parametrize("pct", [1, 30])
+def test_fleet_view_serves_the_chosen_run(pct):
+    r = client.get(f"/api/fleet?retire={pct}").json()
+    policy = pd.read_csv(FLEET / "runs" / f"p{pct:02d}" / "replace_at.csv").set_index("component_type")
+    assert r["retire"] == pct
+    assert r["replace_at"] == pytest.approx(policy["replace_at"].to_dict())
+    plan = pd.DataFrame(r["plan"])
+    assert (plan["replace_at"] == plan["component_type"].map(policy["replace_at"])).all()
+    m = pd.read_csv(FLEET / "runs" / f"p{pct:02d}" / "maintenance.csv")
+    assert len(r["timeline"]) == (m["action"] != "no_fault").sum()
+
+
+def test_default_run_is_the_10_percent_run():
+    assert client.get("/api/fleet").json()["replace_at"] == client.get("/api/fleet?retire=10").json()["replace_at"]
+
+
+def test_unknown_retire_setting_is_422():
+    for url in ("/api/fleet?retire=7", "/api/drones/D-01?retire=50", "/api/reliability?retire=0"):
+        r = client.get(url)
+        assert r.status_code == 422, url

@@ -92,7 +92,7 @@ def test_a_warned_part_is_replaced_before_the_next_flight(built):
     # A warning (replace-at age reached, or a chart showed the part worn) means replace now.
     m = built["maintenance"]
     flight_no = m["flight_id"].str.rsplit("-", n=1).str[-1].astype(int)
-    planned = (m["reason"] == "reached replace-at age (B10)") | m["reason"].str.startswith("worn")
+    planned = m["reason"].str.startswith(("reached replace-at age", "worn"))
     assert planned.sum() > 50
     assert (m.loc[planned, "warned_after_flight"] == flight_no[planned]).all()
 
@@ -105,12 +105,15 @@ def test_false_alarms_change_nothing(built):
 
 
 def test_replace_at_policy_is_the_schedule(built):
-    policy = built["replace_at"].set_index("component_type")["b10"]
-    assert policy.to_dict() == pytest.approx(built["b10"].to_dict(), abs=0.05)
+    policy = built["replace_at"].set_index("component_type")
+    assert policy["replace_at"].to_dict() == pytest.approx(built["retire_at"].to_dict(), abs=0.05)
+    assert (policy["retire_pct"] == S.DEFAULT_RETIRE_PCT).all()
+    # the default run retires at B10 itself
+    assert policy["replace_at"].to_dict() == pytest.approx(policy["b10"].to_dict(), abs=0.05)
 
 
 def test_no_part_in_service_is_past_its_replace_at_age(built):
-    c, b10 = built["components"], built["b10"]
+    c, b10 = built["components"], built["retire_at"]
     live = c[c["end_date"].isna()]
     one_flight = {"motor": 35 / 60, "propeller": 35 / 60, "battery": 1}   # longest flight / one charge
     limit = live["component_type"].map(b10) + live["component_type"].map(one_flight)
@@ -138,3 +141,47 @@ def test_weibull_fit_recovers_the_true_life(built, ctype):
     e_lo, e_hi = widened(fit["eta"], fit["eta_lo"], fit["eta_hi"])
     assert b_lo <= true["beta"] <= b_hi
     assert e_lo <= true["eta"] <= e_hi
+
+
+# ---------------------------------------------------------------- the retirement what-if runs
+
+RUNS = FLEET / "runs"
+
+
+def test_one_run_per_retirement_setting_and_the_default_is_fleet():
+    summary = pd.read_csv(RUNS / "summary.csv")
+    assert summary["retire_pct"].tolist() == list(S.RETIRE_PCTS)
+    for name in S.RUN_TABLES:
+        pd.testing.assert_frame_equal(pd.read_csv(RUNS / f"p{S.DEFAULT_RETIRE_PCT:02d}" / f"{name}.csv"),
+                                      pd.read_csv(FLEET / f"{name}.csv"))
+
+
+def test_replace_at_is_b_p_of_the_history_fit():
+    # B_p = eta * (-ln(1 - p))^(1/beta); later retirement = an older replace-at age
+    from app.qc import b_life
+    ages = []
+    for pct in S.RETIRE_PCTS:
+        pol = pd.read_csv(RUNS / f"p{pct:02d}" / "replace_at.csv")
+        for r in pol.itertuples():
+            assert r.replace_at == pytest.approx(b_life(r.beta, r.eta, pct / 100), abs=0.1)
+        ages.append(pol.set_index("component_type")["replace_at"])
+    assert all((b > a).all() for a, b in zip(ages, ages[1:]))
+
+
+def test_runs_share_the_same_special_causes():
+    # same seed: only the retire rule differs, so the injected problems are identical
+    starts = {pct: pd.read_csv(RUNS / f"p{pct:02d}" / "answer_key.csv")[["drone_id", "cause", "start_flight"]]
+              for pct in S.RETIRE_PCTS}
+    for df in starts.values():
+        pd.testing.assert_frame_equal(df, starts[S.DEFAULT_RETIRE_PCT])
+
+
+def test_summary_counts_match_each_run():
+    summary = pd.read_csv(RUNS / "summary.csv").set_index("retire_pct")
+    for pct in S.RETIRE_PCTS:
+        m = pd.read_csv(RUNS / f"p{pct:02d}" / "maintenance.csv")
+        f = pd.read_csv(RUNS / f"p{pct:02d}" / "flights.csv")
+        row = summary.loc[pct]
+        assert row["parts_replaced"] == (m["action"] == "replace").sum()
+        assert row["failed_in_flight"] == (f["inflight_event"] == "return_home").sum()
+        assert row["false_alarms"] == (m["action"] == "no_fault").sum()

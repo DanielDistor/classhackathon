@@ -137,6 +137,11 @@ and reads off **B10**: the age by which 10% of parts of that type have failed. T
 
 Saved in `replace_at.csv`. Any part already past its B10 on 1 July is replaced before the log starts.
 
+**B10 is the default, not fixed.** The dashboard's slider retires parts at B1 to B30 instead (the age by which
+1% to 30% fail). Each setting is the same fleet simulated again under that rule, so every view updates.
+Retiring earlier uses more parts; retiring later lets more parts reach visible wear before the charts catch
+them. In every setting no part failed in flight. All numbers in this guide are for B10.
+
 ### 4b. The fleet's normal range
 
 A drone's own control chart needs its first **50 flights** to learn what is normal *for that drone*

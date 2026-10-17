@@ -1,0 +1,18 @@
+event_id,drone_id,rule_shape,cause,chart,component_type,position,start_flight,detected_after_flight,detected_by,fixed_after_flight,fix,how
+SC-01,D-01,2,hard landing,temp_rise_c,motor,4,264,265,rule 5,265,part replaced (special cause: hard landing (rule 5)),bent motor shaft: temperature rise steps up +1.5 sd and stays
+SC-02,D-02,6,prop imbalance,vibration_rms,propeller,3,61,65,EWMA; rule 1,65,part replaced (special cause: prop imbalance (EWMA; rule 1)),badly balanced prop after a field repair: vibration +1.3 sd
+SC-03,D-03,1,prop strike,vibration_rms,propeller,3,76,76,EWMA; rule 1,76,part replaced (special cause: prop strike (EWMA; rule 1)),"one vibration spike of +6 sd, then +1 sd from the chipped prop"
+SC-04,D-03,7,vibration log over-filtered,vibration_rms,,,176,211,rule 7,211,repaired,"firmware update smooths the log: vibration noise shrinks to 0.2x, readings too flat"
+SC-05,D-04,4,bad battery cell,sag_rate_v_per_min,battery,1,101,101,rule 1,101,part replaced (special cause: bad battery cell (rule 1)),"+2.5 sd voltage sag on that pack's flights only, so readings alternate"
+SC-06,D-04,1,prop strike,vibration_rms,propeller,4,194,194,EWMA; rule 1,194,part replaced (special cause: prop strike (EWMA; rule 1)),"one vibration spike of +6 sd, then +1 sd from the chipped prop"
+SC-07,D-05,1,prop strike,vibration_rms,propeller,4,141,141,rule 1,141,part replaced (special cause: prop strike (rule 1)),"one vibration spike of +6 sd, then +1 sd from the chipped prop"
+SC-08,D-05,5,loose power connector,sag_rate_v_per_min,,,194,197,rule 1,197,repaired,+3 sd voltage sag on a random 40% of flights
+SC-09,D-05,4,bad battery cell,sag_rate_v_per_min,battery,2,258,258,EWMA; rule 1,258,part replaced (special cause: bad battery cell (EWMA; rule 1)),"+2.5 sd voltage sag on that pack's flights only, so readings alternate"
+SC-10,D-06,5,loose power connector,sag_rate_v_per_min,,,109,111,rule 5,111,repaired,+3 sd voltage sag on a random 40% of flights
+SC-11,D-06,5,loose power connector,sag_rate_v_per_min,,,169,171,EWMA; rule 1,171,repaired,+3 sd voltage sag on a random 40% of flights
+SC-12,D-08,4,bad battery cell,sag_rate_v_per_min,battery,1,250,251,rule 1,251,part replaced (special cause: bad battery cell (rule 1)),"+2.5 sd voltage sag on that pack's flights only, so readings alternate"
+SC-13,D-09,2,hard landing,temp_rise_c,motor,4,91,92,EWMA; rule 6,92,part replaced (special cause: hard landing (EWMA; rule 6)),bent motor shaft: temperature rise steps up +1.5 sd and stays
+SC-14,D-09,8,loose motor mount,vibration_rms,,,232,239,rule 5,239,repaired,mount rattles in one of two modes: vibration +1.8 or -1.8 sd each flight
+SC-15,D-10,8,loose motor mount,vibration_rms,,,67,70,EWMA; rule 6,70,repaired,mount rattles in one of two modes: vibration +1.8 or -1.8 sd each flight
+SC-16,D-10,2,hard landing,temp_rise_c,motor,2,141,145,rule 6,145,part replaced (special cause: hard landing (rule 6)),bent motor shaft: temperature rise steps up +1.5 sd and stays
+SC-17,D-10,5,loose power connector,sag_rate_v_per_min,,,258,258,rule 1,258,repaired,+3 sd voltage sag on a random 40% of flights

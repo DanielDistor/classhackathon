@@ -1,10 +1,11 @@
+import { useState } from 'react'
 import useApi from '../useApi.js'
 import { getReliability } from '../api.js'
 import ReliabilityChart from '../charts/ReliabilityChart.jsx'
 import { Failed, LifeBar, Loading, Panel, Used } from './common.jsx'
 import { PART_NAME, PART_TITLE, flightsPhrase, fmt, partClass } from '../format.js'
 
-function RelCards({ fits }) {
+function RelCards({ fits, retire }) {
   return (
     <div className="grid-3 mb-3">
       {fits.map((r) => (
@@ -13,14 +14,11 @@ function RelCards({ fits }) {
           {r.note ? <p>Not enough failures to fit: {r.note}.</p> : (
             <>
               <div className="rc-main">
-                <span className="rc-label">Replace at B10 =</span>
+                <span className="rc-label">Replace at B{retire} =</span>
                 <span className="rc-value">{fmt(r.replace_at)}</span>
                 <span className="rc-unit">{r.unit}</span>
               </div>
-              <p className="rc-sub">
-                ≈ {fmt(r.replace_at_flights)} drone flights · the shop's schedule, fitted before the log. Refit on all data
-                now: B10 = {fmt(r.b10)}, β = {fmt(r.beta, 2)}, η = {fmt(r.eta)}
-              </p>
+              <p className="rc-sub">≈ {fmt(r.replace_at_flights)} flights · fit on all data: β = {fmt(r.beta, 2)}, η = {fmt(r.eta)}</p>
             </>
           )}
         </div>
@@ -51,10 +49,8 @@ function StatsTable({ fits }) {
         </table>
       </div>
       <p className="rule-note">
-        Two-parameter Weibull fitted by maximum likelihood with right-censoring. A part found worn at inspection counts as a
-        (potential) failure; a part damaged by a special cause, replaced on schedule or still flying counts as censored.
-        Shape β &gt; 1 means wear-out (the failure rate rises with age), which is what makes replacing at
-        B10 = η(−ln 0.9)^(1/β) worthwhile.
+        Maximum likelihood with right-censoring: a part found worn counts as a failure; damaged, retired or still-flying
+        parts are censored. β &gt; 1 means wear-out, which is why retiring early pays off.
       </p>
     </>
   )
@@ -100,25 +96,29 @@ function PartsByDrone({ plan, warnFlights }) {
   )
 }
 
-export default function ReliabilityTab() {
-  const { data: d, error } = useApi(getReliability, 'rel')
+export default function ReliabilityTab({ retire }) {
+  const { data: d, error } = useApi(() => getReliability(retire), `rel-${retire}`)
+  const [type, setType] = useState('propeller')
   if (error) return <Failed error={error} />
   if (!d) return <Loading what="the Weibull fits" />
+  const curve = d.curves.find((c) => c.type === type) || d.curves[0]
   return (
     <div className="pt-3">
       <p className="section-note">
-        Weibull survival models R(t) = exp(−(t/η)^β) fitted by maximum likelihood with right-censoring. Each part is
-        replaced at B10, the age by which 10% of parts fail (R(B10) = 90%): the warning fires when a part reaches it, and
-        the part is replaced before the next flight. The schedule uses the shop's replace-at ages, fitted on the parts
-        history before the log; the refit on all data is shown next to them.
+        Each part type's life, R(t) = exp(−(t/η)^β). Parts retire at B{retire}: the age by which {retire}% of that type
+        fails. The replace-at ages come from the parts history before the log.
       </p>
-      <RelCards fits={d.fits} />
-      <Panel title="Weibull reliability curves R(t) vs. Kaplan-Meier survival from the data">
-        <ReliabilityChart curves={d.curves} />
-        <p className="rule-note">Blue curve = fitted two-parameter Weibull R(t). Gray steps = Kaplan-Meier estimate from the same censored data, no model. Red dashed line = B10.</p>
+      <RelCards fits={d.fits} retire={retire} />
+      <Panel title="Reliability curve: Weibull fit vs. the data (Kaplan-Meier)">
+        <div className="chart-controls">
+          <select value={curve.type} onChange={(e) => setType(e.target.value)} aria-label="Part type">
+            {d.curves.map((c) => <option key={c.type} value={c.type}>{PART_TITLE[c.type]}</option>)}
+          </select>
+        </div>
+        <ReliabilityChart curve={curve} retire={retire} />
       </Panel>
-      <Panel title="Fitted Weibull parameters & 95% confidence intervals"><StatsTable fits={d.fits} /></Panel>
-      <Panel title="Replacement schedule, every drone"><PartsByDrone plan={d.plan} warnFlights={d.warn_flights} /></Panel>
+      <Panel collapsed title="Fitted parameters and 95% confidence intervals"><StatsTable fits={d.fits} /></Panel>
+      <Panel collapsed title="Replacement schedule, every drone"><PartsByDrone plan={d.plan} warnFlights={d.warn_flights} /></Panel>
     </div>
   )
 }

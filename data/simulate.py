@@ -56,6 +56,11 @@ import numpy as np
 import pandas as pd
 
 OUT_DIR = Path(__file__).resolve().parent / "fleet"
+#: Retirement settings simulated: a part retires at B_p, the age by which p% of its type fails.
+#: The fleet is run once per p with the same seed (same part lifetimes and special causes), into
+#: fleet/runs/pNN/; fleet/*.csv is the default run.
+RETIRE_PCTS = (1, 2, 5, 10, 15, 20, 30)
+DEFAULT_RETIRE_PCT = 10
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 import qc  # noqa: E402  the simulated technician acts on the tool's own statistics
 
@@ -360,13 +365,14 @@ class Chart:
         self.since_reset = []
 
 
-def flights_to_b10(p: Part, b10: float) -> float:
+def flights_to_retire(p: Part, retire_at: float) -> float:
     per_flight = 0.5 if p.ctype == "battery" else MEAN_FLIGHT_MIN / 60
-    return (b10 - p.age) / per_flight
+    return (retire_at - p.age) / per_flight
 
 
-def simulate_log(d: int, current: dict[tuple[str, int], Part], streams: dict, b10: dict[str, float],
-                 events: list[dict], fleet: dict[str, tuple[float, float]]) -> tuple[pd.DataFrame, list[dict], list[dict]]:
+def simulate_log(d: int, current: dict[tuple[str, int], Part], streams: dict, retire_at: dict[str, float],
+                 events: list[dict], fleet: dict[str, tuple[float, float]],
+                 retire_pct: int = DEFAULT_RETIRE_PCT) -> tuple[pd.DataFrame, list[dict], list[dict]]:
     drone = f"D-{d + 1:02d}"
     base = flight_base(d)
     times = list(base["datetime"])
@@ -482,9 +488,9 @@ def simulate_log(d: int, current: dict[tuple[str, int], Part], streams: dict, b1
             charts[c].reset()
         for key in list(current):
             p = current[key]
-            if flights_to_b10(p, b10[p.ctype]) <= 0:
+            if flights_to_retire(p, retire_at[p.ctype]) <= 0:
                 p.warned = k
-                replace(k, p, 0, "replaced_scheduled", "reached replace-at age (B10)")
+                replace(k, p, 0, "replaced_scheduled", f"reached replace-at age (B{retire_pct})")
 
     end = None
     for p in current.values():
@@ -504,8 +510,8 @@ def simulate_log(d: int, current: dict[tuple[str, int], Part], streams: dict, b1
     return f, comps, maint
 
 
-def build_fleet() -> dict[str, pd.DataFrame]:
-    """Every table for the fleet, as DataFrames (nothing written)."""
+def build_fleet(retire_pct: int = DEFAULT_RETIRE_PCT) -> dict[str, pd.DataFrame]:
+    """Every table for the fleet when parts retire at B_retire_pct, as DataFrames (nothing written)."""
     history, start_parts, streams = {}, {}, {}
     hist_rows = []
     for d in range(N_DRONES):
@@ -513,9 +519,12 @@ def build_fleet() -> dict[str, pd.DataFrame]:
         history[d], start_parts[d], streams[d] = rows, current, st
         hist_rows += rows + [comp_row(f"D-{d + 1:02d}", p, None, 0, "in_service") for p in current.values()]
     fits = qc.fit_by_type(pd.DataFrame(hist_rows))
-    b10 = fits.set_index("component_type")["b10"].to_dict()
-    policy = fits[["component_type", "unit", "b10", "beta", "eta", "n", "n_failed"]].round(
-        {"b10": 1, "beta": 3, "eta": 1}).assign(fitted_on=f"parts history before {LOG_START.date()}")
+    fits["replace_at"] = [qc.b_life(r.beta, r.eta, retire_pct / 100) for r in fits.itertuples()]
+    retire_at = fits.set_index("component_type")["replace_at"].to_dict()
+    policy = fits[["component_type", "unit", "replace_at", "b10", "beta", "eta", "n", "n_failed"]].round(
+        {"replace_at": 1, "b10": 1, "beta": 3, "eta": 1})
+    policy.insert(2, "retire_pct", retire_pct)
+    policy["fitted_on"] = f"parts history before {LOG_START.date()}"
 
     events = place_special_causes()
     ref = fleet_reference()
@@ -525,11 +534,11 @@ def build_fleet() -> dict[str, pd.DataFrame]:
         drone = f"D-{d + 1:02d}"
         current = start_parts[d]
         launch = []
-        for key, p in list(current.items()):   # launch inspection: anything past its B10 goes
-            if p.age >= b10[p.ctype]:
+        for key, p in list(current.items()):   # launch inspection: anything past its replace-at age goes
+            if p.age >= retire_at[p.ctype]:
                 launch.append(comp_row(drone, p, LOG_START, 0, "replaced_scheduled"))
                 current[key] = new_part(drone, p.ctype, p.pos, p.gen + 1, LOG_START, streams[d][key])
-        f, c, m = simulate_log(d, current, streams[d], b10, events, fleet)
+        f, c, m = simulate_log(d, current, streams[d], retire_at, events, fleet, retire_pct)
         flights.append(f)
         comps += history[d] + launch + c
         maint += m
@@ -551,24 +560,45 @@ def build_fleet() -> dict[str, pd.DataFrame]:
         key[col] = key[col].astype("Int64")
     return {"flights": flights.reset_index(drop=True), "components": components,
             "maintenance": maintenance, "answer_key": key, "replace_at": policy, "fleet_reference": ref,
-            "b10": pd.Series(b10)}
+            "retire_at": pd.Series(retire_at)}
+
+
+RUN_TABLES = ("flights", "components", "maintenance", "answer_key", "replace_at")
+
+
+def run_summary(t: dict, retire_pct: int) -> dict:
+    """One row of runs/summary.csv: what this retirement setting cost and prevented."""
+    m, f = t["maintenance"], t["flights"]
+    rep = m[m["action"] == "replace"]
+    row = dict(retire_pct=retire_pct)
+    row.update({f"replace_at_{r.component_type}": r.replace_at for r in t["replace_at"].itertuples()})
+    row.update(
+        parts_replaced=len(rep),
+        at_replace_age=int(rep["reason"].str.startswith("reached replace-at age").sum()),
+        found_worn=int(rep["reason"].str.startswith("worn").sum()),
+        special_causes_fixed=int(m["reason"].str.startswith("special cause").sum()),
+        failed_in_flight=int((f["inflight_event"] == "return_home").sum()),
+        false_alarms=int((m["action"] == "no_fault").sum()),
+    )
+    return row
 
 
 def main() -> None:
-    tables = build_fleet()
-    OUT_DIR.mkdir(exist_ok=True)
-    for name in ("flights", "components", "maintenance", "answer_key", "replace_at", "fleet_reference"):
-        tables[name].to_csv(OUT_DIR / f"{name}.csv", index=False, lineterminator="\n")
-    f, c, m, k = (tables[n] for n in ("flights", "components", "maintenance", "answer_key"))
-    print(f"fleet: flights={len(f)}  components={len(c)} (failed {int(c['status'].sum())})  "
-          f"maintenance rows={len(m)}  special causes={len(k)}")
-    print("replace-at ages (B10 fitted to the run-to-failure history): "
-          + ", ".join(f"{t} {v:.1f}" for t, v in tables["b10"].items()))
-    print("actions:", m["action"].value_counts().to_dict())
-    print("replacement reasons:", m.loc[m["action"] == "replace", "reason"].str.split(" \\(").str[0]
-          .str.replace(r"special cause: .*", "special cause", regex=True).value_counts().to_dict())
-    print(f"special causes detected: {int(k['detected_after_flight'].notna().sum())} of {len(k)}")
-    print(f"parts failed in flight: {int((f['inflight_event'] == 'return_home').sum())}")
+    runs_dir = OUT_DIR / "runs"
+    summary = []
+    for pct in RETIRE_PCTS:
+        t = build_fleet(pct)
+        folder = runs_dir / f"p{pct:02d}"
+        folder.mkdir(parents=True, exist_ok=True)
+        for name in RUN_TABLES:
+            t[name].to_csv(folder / f"{name}.csv", index=False, lineterminator="\n")
+        if pct == DEFAULT_RETIRE_PCT:
+            for name in RUN_TABLES + ("fleet_reference",):
+                t[name].to_csv(OUT_DIR / f"{name}.csv", index=False, lineterminator="\n")
+        summary.append(run_summary(t, pct))
+        print(f"B{pct:<2d}: " + ", ".join(f"{k}={v}" for k, v in summary[-1].items() if k != "retire_pct"))
+    pd.DataFrame(summary).to_csv(runs_dir / "summary.csv", index=False, lineterminator="\n")
+    print(f"wrote {len(RETIRE_PCTS)} runs to {runs_dir}; fleet/*.csv = the B{DEFAULT_RETIRE_PCT} run")
 
 
 if __name__ == "__main__":

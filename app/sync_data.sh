@@ -13,5 +13,9 @@ for d in ../data/*/; do
   name="$(basename "$d")"
   mkdir -p "data/$name"
   cp "$d"*.csv "data/$name/"
+  if [ -d "${d}runs" ]; then             # the retirement what-if runs (data/simulate.py)
+    rm -rf "data/$name/runs"
+    cp -R "${d}runs" "data/$name/runs"
+  fi
 done
 echo "Copied test datasets into app/data/: $(ls data | tr '\n' ' ')"

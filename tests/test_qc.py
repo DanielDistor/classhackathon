@@ -295,3 +295,13 @@ def test_fleet_status_watch_on_spc_rules_2_to_8():
     st = fleet_status(df).set_index("drone_id")
     assert st.loc["D-01", "status"] == "watch"
     assert "rule 4" in st.loc["D-01", "reason"]
+
+
+def test_drone_series_breaks_same_minute_ties_by_flight_number():
+    # Two flights logged in the same minute keep their flight order, whatever the row order.
+    f = pd.DataFrame({"flight_id": ["F-01-003", "F-01-002", "F-01-001"], "drone_id": "D-01",
+                      "datetime": ["2026-07-01T10:30", "2026-07-01T10:30", "2026-07-01T08:00"],
+                      "vibration_rms": [3.3, 3.2, 3.1]})
+    s = drone_series(f, "D-01", "vibration_rms")
+    assert s["flight_no"].tolist() == [1, 2, 3]
+    assert s["value"].tolist() == [3.1, 3.2, 3.3]

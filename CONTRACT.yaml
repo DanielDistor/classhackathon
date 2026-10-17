@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 21:55"
+updated: "2026-10-16 23:09"
 
 tasks:
   - id: H-01
@@ -336,3 +336,26 @@ tasks:
       (overdue clipped to 0, no parts raises); the API test checks every drone's bar
       equals the mean of its parts table; the cards and pop-up show "Parts health".
     result: "qc.parts_health added (3 tests: known answer 40, clipping, empty refuses); API sends parts_health + most-worn part, tested against the parts table for all 10 drones; cards and pop-up show Parts health; chart_margin kept for card order only."
+  - id: H-16
+    title: Retirement slider (what-if runs at 1-30%), dropdowns, shorter text
+    points: "Tool Design (25): the technician tunes the retire-at risk and sees its effect; a concise interface"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-16 22:56"
+    owns: ["data/simulate.py", "data/README.md", "data/fleet/", "app/data/", "app/sync_data.sh", "app/api.py", "app/qc.py", "app/static/", "web/src/", "tests/", "docs/how-it-works.md", "docs/plan.md"]
+    notes: >
+      Agreed with Div on 2026-10-16. Parts retire at B_p (the age by which p% of
+      that part type fails) instead of fixed B10. The fleet is simulated once per
+      p in 1, 2, 5, 10, 15, 20, 30% with the same seed (same part lifetimes and
+      special causes; only the retire rule differs), precomputed into
+      data/fleet/runs/pNN/. The dashboard's slider snaps to these and every view
+      updates; a trade-off chart shows parts used vs failures in flight per p.
+      Dropdowns: one control chart at a time (reading picker), Weibull curves by
+      part type; Due soon, How to read, fitted numbers and schedule collapsed.
+      Each explanation appears once. data/fleet/*.csv stays the 10% run.
+    definition_of_done: >
+      python data/simulate.py writes all 7 runs and a summary; pytest passes
+      (the 10% run equals data/fleet, every run's tool signals equal its
+      technician actions, the API serves each run); npm run build and vitest
+      pass; the served dashboard switches runs from the slider with no error.
+    result: "Slider over 7 precomputed runs (B1-B30, same seed): B1 312 warned replacements / 9 caught worn, B10 99 / 15, B30 65 / 23, 0 in-flight failures in every run; API ?retire= on every route + /api/runs; reading dropdown, Weibull part dropdown, folded Due soon / how-to-read / tables, Guide trimmed and dots coloured by fix. Fixed a qc bug: same-minute flights could reorder a chart (now time then flight number). pytest 108 passed, vitest 6 passed, all 4 screens render with live data; manifest regenerated (Python 3.12 kept)."

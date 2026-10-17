@@ -29,7 +29,7 @@ function Parts({ parts }) {
     <>
       <div className="scroll-x">
         <table className="numbers">
-          <thead><tr><th>Installed part</th><th>Used / replace at (B10)</th><th>Life used</th><th>Action</th></tr></thead>
+          <thead><tr><th>Installed part</th><th>Used / replace at</th><th>Life used</th><th>Action</th></tr></thead>
           <tbody>
             {parts.map((p) => (
               <tr key={p.component_id}>
@@ -46,69 +46,39 @@ function Parts({ parts }) {
           </tbody>
         </table>
       </div>
-      <p className="rule-note">
-        Flights left = (B10 − age) ÷ the drone's average flight length; a battery is charged every second flight. A part
-        is warned when it reaches B10, or earlier if a chart shows it worn, and is replaced before the next flight.
-      </p>
+      <p className="rule-note">Flights left = (replace-at age − age) ÷ the drone's average flight length; batteries fly every second flight.</p>
     </>
   )
 }
 
-function Numbers({ charts, nBaseline }) {
+/** One line under the reading picker: the chart's limits, latest value and how often it signalled. */
+function ChartLine({ c }) {
+  const s = c.summary
+  const k = c.decimals
   return (
-    <div className="scroll-x">
-      <table className="numbers">
-        <thead><tr><th>Reading</th><th>Baseline mean</th><th>3σ control limits</th><th>Latest</th><th>Flights that signalled</th><th>Restarts</th></tr></thead>
-        <tbody>
-          {charts.map((c) => {
-            const s = c.summary
-            const k = c.decimals
-            return (
-              <tr key={c.column}>
-                <td>{c.title}<div className="muted-cell">catches {c.catches}</div></td>
-                <td className="num">{fmt(s.center, k)} {c.unit}</td>
-                <td className="num">{fmt(s.lcl, k)} to {fmt(s.ucl, k)}</td>
-                <td className="num">{fmt(s.latest, k)}</td>
-                <td className="num">{s.n_signal} ({s.n_fleet} fleet check, {s.n_rule1} rule 1, {s.n_ewma} EWMA)</td>
-                <td className="num">{s.restarts}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      <p className="rule-note">Restarts count logged actions after the {nBaseline}-flight baseline.</p>
-    </div>
+    <p className="chart-line">
+      Catches {c.catches} · limits {fmt(s.lcl, k)} to {fmt(s.ucl, k)} {c.unit} (mean {fmt(s.center, k)}) · latest{' '}
+      {fmt(s.latest, k)} · signalled on {s.n_signal} flights ({s.n_fleet} fleet check, {s.n_rule1} rule 1, {s.n_ewma} EWMA)
+    </p>
   )
 }
 
 function ReadMe({ nBaseline }) {
   return (
-    <div className="read-me">
-      <p>
-        The shaded band is the drone's first {nBaseline} flights, its <b>baseline</b>. While it is being collected, each
-        reading is checked against the <b>fleet's normal range</b> (dash-dot, from every drone's acceptance flights; rule 1
-        only, because drones differ a little from each other), so a wearing part is caught even in a new drone. The
-        dashed <b>control limits</b> are the baseline mean ± 3σ, where σ̂ = average moving range ÷ 1.128; they never move.
-        The orange <b>EWMA</b> weights recent flights most (λ = 0.2) to catch slow wear; its own limits are narrower because
-        it averages.
-      </p>
-      <ul>
-        <li>A red <b>✕</b> is <b>rule 1</b>: one reading beyond 3σ. An amber <b>◆</b> is one of <b>rules 2–8</b>: a pattern (9 on
-          one side, 6 trending, 14 alternating, 2 of 3 beyond 2σ, 4 of 5 beyond 1σ, 15 within 1σ, 8 beyond 1σ on both sides). An
-          orange ring is the EWMA beyond its limit.</li>
-        <li>Each <b>thin vertical line</b> is a logged action (a part replaced, a repair, an inspection). After it the EWMA
-          starts again at the center line and the rules count afresh, so a run never spans a repair.</li>
-        <li>Using all 8 rules catches more problems and raises more false alarms: about 2% of readings signal with nothing
-          wrong. They show here but need no action, so they are not on the timeline.</li>
-        <li><b>Temperature rise</b> = hottest motor after landing − air temperature.</li>
-      </ul>
-    </div>
+    <ul className="read-me">
+      <li>Shaded: the first {nBaseline} flights (baseline), checked against the fleet range.</li>
+      <li>Rules 2–8: 9 on one side, 6 trending, 14 alternating, 2 of 3 beyond 2σ, 4 of 5 beyond 1σ, 15 within 1σ, 8 beyond
+        1σ on both sides.</li>
+      <li>Vertical lines: the technician acted; the EWMA and rules restart.</li>
+      <li>Other terms (EWMA, false alarms, limits): Guide &amp; Data Reference → Key terms.</li>
+    </ul>
   )
 }
 
-export default function DroneModal({ droneId, onClose }) {
-  const { data: d, error } = useApi(() => getDrone(droneId), droneId)
+export default function DroneModal({ droneId, retire, onClose }) {
+  const { data: d, error } = useApi(() => getDrone(droneId, retire), `${droneId}-${retire}`)
   const [showAll, setShowAll] = useState(false)
+  const [reading, setReading] = useState(0)
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -127,22 +97,25 @@ export default function DroneModal({ droneId, onClose }) {
         {d && (
           <>
             <Banner d={d} />
-            <Panel title="Maintenance timeline"
-                   note="One row per part slot. R = warned and replaced before the next flight (the part reached its replace-at age, or a chart showed it worn). F = failed in flight, replaced before the next flight. S = special cause found from a chart signal and fixed.">
+            <Panel title="Maintenance timeline">
               <Timeline events={d.timeline} rows={lanes} rowKey="lane" nFlights={d.n_flights} nBaseline={d.n_baseline} letters />
             </Panel>
-            <Panel title="Installed parts: flights left before the replace-at age (B10)"><Parts parts={d.parts} /></Panel>
-            <Panel title="Control charts">
-              <Numbers charts={d.charts} nBaseline={d.n_baseline} />
-              <label className="switch">
-                <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
-                Show all flights (default: the latest {CHART_WINDOW})
-              </label>
+            <Panel title="Installed parts"><Parts parts={d.parts} /></Panel>
+            <Panel title="Control chart">
+              <div className="chart-controls">
+                <select value={reading} onChange={(e) => setReading(Number(e.target.value))} aria-label="Reading to chart">
+                  {d.charts.map((c, i) => <option key={c.column} value={i}>{c.title}</option>)}
+                </select>
+                <label className="switch">
+                  <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+                  All flights (default: latest {CHART_WINDOW})
+                </label>
+              </div>
+              <ChartLine c={d.charts[reading]} />
               <MonitorLegend />
-              {d.charts.map((c) => <MonitorChart key={c.column} chart={c} last={showAll ? null : CHART_WINDOW} />)}
-              <p className="rule-note">Flight number across. Thin vertical lines: the technician acted, the chart restarts. Hover a chart for each flight's numbers.</p>
+              <MonitorChart chart={d.charts[reading]} last={showAll ? null : CHART_WINDOW} />
             </Panel>
-            <Panel title="How to read these charts"><ReadMe nBaseline={d.n_baseline} /></Panel>
+            <Panel collapsed title="How to read the chart"><ReadMe nBaseline={d.n_baseline} /></Panel>
             <div className="modal-foot"><button className="btn-close" onClick={onClose}>Close</button></div>
           </>
         )}

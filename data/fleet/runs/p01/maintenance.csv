@@ -1,0 +1,459 @@
+drone_id,flight_id,datetime,action,chart,component_type,position,removed_id,installed_id,warned_after_flight,reason
+D-06,F-06-017,2026-07-05T16:43,replace,temp_rise_c,motor,1,M-06-1-02,M-06-1-03,17,reached replace-at age (B1)
+D-03,F-03-028,2026-07-08T09:38,replace,vibration_rms,propeller,2,P-03-2-04,P-03-2-05,28,reached replace-at age (B1)
+D-09,F-09-020,2026-07-08T14:20,replace,sag_rate_v_per_min,battery,2,B-09-2-03,B-09-2-04,20,reached replace-at age (B1)
+D-04,F-04-027,2026-07-09T16:11,replace,sag_rate_v_per_min,battery,1,B-04-1-02,B-04-1-03,27,reached replace-at age (B1)
+D-02,F-02-035,2026-07-10T17:29,replace,vibration_rms,propeller,1,P-02-1-03,P-02-1-04,35,reached replace-at age (B1)
+D-02,F-02-035,2026-07-10T17:29,replace,vibration_rms,propeller,2,P-02-2-04,P-02-2-05,35,reached replace-at age (B1)
+D-02,F-02-035,2026-07-10T17:29,replace,vibration_rms,propeller,3,P-02-3-05,P-02-3-06,35,reached replace-at age (B1)
+D-02,F-02-035,2026-07-10T17:29,replace,vibration_rms,propeller,4,P-02-4-05,P-02-4-06,35,reached replace-at age (B1)
+D-07,F-07-039,2026-07-11T12:32,replace,vibration_rms,propeller,1,P-07-1-06,P-07-1-07,39,reached replace-at age (B1)
+D-07,F-07-039,2026-07-11T12:32,replace,vibration_rms,propeller,2,P-07-2-06,P-07-2-07,39,reached replace-at age (B1)
+D-07,F-07-039,2026-07-11T12:32,replace,vibration_rms,propeller,3,P-07-3-05,P-07-3-06,39,reached replace-at age (B1)
+D-07,F-07-039,2026-07-11T12:32,replace,vibration_rms,propeller,4,P-07-4-05,P-07-4-06,39,reached replace-at age (B1)
+D-04,F-04-037,2026-07-12T09:53,replace,vibration_rms,propeller,1,P-04-1-03,P-04-1-04,37,reached replace-at age (B1)
+D-04,F-04-037,2026-07-12T09:53,replace,vibration_rms,propeller,2,P-04-2-05,P-04-2-06,37,reached replace-at age (B1)
+D-04,F-04-037,2026-07-12T09:53,replace,vibration_rms,propeller,3,P-04-3-04,P-04-3-05,37,reached replace-at age (B1)
+D-04,F-04-037,2026-07-12T09:53,replace,vibration_rms,propeller,4,P-04-4-05,P-04-4-06,37,reached replace-at age (B1)
+D-08,F-08-042,2026-07-12T12:08,replace,vibration_rms,propeller,1,P-08-1-04,P-08-1-05,42,reached replace-at age (B1)
+D-08,F-08-042,2026-07-12T12:08,replace,vibration_rms,propeller,2,P-08-2-05,P-08-2-06,42,reached replace-at age (B1)
+D-08,F-08-042,2026-07-12T12:08,replace,vibration_rms,propeller,3,P-08-3-04,P-08-3-05,42,reached replace-at age (B1)
+D-08,F-08-042,2026-07-12T12:08,replace,vibration_rms,propeller,4,P-08-4-04,P-08-4-05,42,reached replace-at age (B1)
+D-03,F-03-040,2026-07-12T17:54,replace,vibration_rms,propeller,1,P-03-1-04,P-03-1-05,40,reached replace-at age (B1)
+D-03,F-03-040,2026-07-12T17:54,replace,vibration_rms,propeller,3,P-03-3-04,P-03-3-05,40,reached replace-at age (B1)
+D-03,F-03-040,2026-07-12T17:54,replace,vibration_rms,propeller,4,P-03-4-06,P-03-4-07,40,reached replace-at age (B1)
+D-01,F-01-039,2026-07-13T17:15,replace,vibration_rms,propeller,1,P-01-1-05,P-01-1-06,39,reached replace-at age (B1)
+D-01,F-01-039,2026-07-13T17:15,replace,vibration_rms,propeller,2,P-01-2-04,P-01-2-05,39,reached replace-at age (B1)
+D-01,F-01-039,2026-07-13T17:15,replace,vibration_rms,propeller,3,P-01-3-05,P-01-3-06,39,reached replace-at age (B1)
+D-01,F-01-039,2026-07-13T17:15,replace,vibration_rms,propeller,4,P-01-4-06,P-01-4-07,39,reached replace-at age (B1)
+D-06,F-06-040,2026-07-13T18:06,replace,vibration_rms,propeller,1,P-06-1-06,P-06-1-07,40,reached replace-at age (B1)
+D-06,F-06-040,2026-07-13T18:06,replace,vibration_rms,propeller,2,P-06-2-07,P-06-2-08,40,reached replace-at age (B1)
+D-06,F-06-040,2026-07-13T18:06,replace,vibration_rms,propeller,3,P-06-3-05,P-06-3-06,40,reached replace-at age (B1)
+D-06,F-06-040,2026-07-13T18:06,replace,vibration_rms,propeller,4,P-06-4-06,P-06-4-07,40,reached replace-at age (B1)
+D-10,F-10-038,2026-07-14T08:35,replace,sag_rate_v_per_min,battery,2,B-10-2-03,B-10-2-04,38,reached replace-at age (B1)
+D-10,F-10-039,2026-07-14T11:14,replace,vibration_rms,propeller,1,P-10-1-05,P-10-1-06,39,reached replace-at age (B1)
+D-10,F-10-039,2026-07-14T11:14,replace,vibration_rms,propeller,2,P-10-2-04,P-10-2-05,39,reached replace-at age (B1)
+D-10,F-10-039,2026-07-14T11:14,replace,vibration_rms,propeller,3,P-10-3-04,P-10-3-05,39,reached replace-at age (B1)
+D-10,F-10-039,2026-07-14T11:14,replace,vibration_rms,propeller,4,P-10-4-04,P-10-4-05,39,reached replace-at age (B1)
+D-09,F-09-037,2026-07-14T17:17,replace,vibration_rms,propeller,1,P-09-1-04,P-09-1-05,37,reached replace-at age (B1)
+D-09,F-09-037,2026-07-14T17:17,replace,vibration_rms,propeller,2,P-09-2-06,P-09-2-07,37,reached replace-at age (B1)
+D-09,F-09-037,2026-07-14T17:17,replace,vibration_rms,propeller,3,P-09-3-03,P-09-3-04,37,reached replace-at age (B1)
+D-09,F-09-037,2026-07-14T17:17,replace,vibration_rms,propeller,4,P-09-4-04,P-09-4-05,37,reached replace-at age (B1)
+D-05,F-05-040,2026-07-15T11:38,replace,vibration_rms,propeller,1,P-05-1-06,P-05-1-07,40,reached replace-at age (B1)
+D-05,F-05-040,2026-07-15T11:38,replace,vibration_rms,propeller,2,P-05-2-04,P-05-2-05,40,reached replace-at age (B1)
+D-05,F-05-040,2026-07-15T11:38,replace,vibration_rms,propeller,3,P-05-3-06,P-05-3-07,40,reached replace-at age (B1)
+D-05,F-05-040,2026-07-15T11:38,replace,vibration_rms,propeller,4,P-05-4-05,P-05-4-06,40,reached replace-at age (B1)
+D-07,F-07-053,2026-07-15T18:49,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-02,F-02-060,2026-07-17T14:24,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-08,F-08-061,2026-07-17T15:03,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 2)"
+D-05,F-05-057,2026-07-19T07:03,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-02,F-02-065,2026-07-19T07:54,replace,vibration_rms,propeller,3,P-02-3-06,P-02-3-07,,special cause: prop imbalance (EWMA; rule 1)
+D-03,F-03-062,2026-07-20T11:09,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 6)"
+D-05,F-05-062,2026-07-20T12:51,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-06,F-06-062,2026-07-21T11:02,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-06,F-06-062,2026-07-21T11:02,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-02,F-02-074,2026-07-21T16:47,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-02,F-02-074,2026-07-21T16:47,replace,vibration_rms,propeller,1,P-02-1-04,P-02-1-05,74,reached replace-at age (B1)
+D-02,F-02-074,2026-07-21T16:47,replace,vibration_rms,propeller,2,P-02-2-05,P-02-2-06,74,reached replace-at age (B1)
+D-02,F-02-074,2026-07-21T16:47,replace,vibration_rms,propeller,4,P-02-4-06,P-02-4-07,74,reached replace-at age (B1)
+D-03,F-03-065,2026-07-21T17:37,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 4)"
+D-05,F-05-069,2026-07-22T10:18,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-03,F-03-066,2026-07-22T11:03,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 1)"
+D-03,F-03-067,2026-07-22T11:44,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-03,F-03-068,2026-07-22T13:22,replace,vibration_rms,propeller,2,P-03-2-05,P-03-2-06,68,reached replace-at age (B1)
+D-01,F-01-066,2026-07-22T14:56,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 4)"
+D-06,F-06-067,2026-07-22T16:28,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 7)"
+D-08,F-08-079,2026-07-23T07:46,replace,vibration_rms,propeller,1,P-08-1-05,P-08-1-06,79,reached replace-at age (B1)
+D-08,F-08-079,2026-07-23T07:46,replace,vibration_rms,propeller,2,P-08-2-06,P-08-2-07,79,reached replace-at age (B1)
+D-08,F-08-079,2026-07-23T07:46,replace,vibration_rms,propeller,3,P-08-3-05,P-08-3-06,79,reached replace-at age (B1)
+D-08,F-08-079,2026-07-23T07:46,replace,vibration_rms,propeller,4,P-08-4-05,P-08-4-06,79,reached replace-at age (B1)
+D-02,F-02-080,2026-07-23T12:05,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (EWMA)"
+D-04,F-04-076,2026-07-23T18:02,replace,vibration_rms,propeller,1,P-04-1-04,P-04-1-05,76,reached replace-at age (B1)
+D-04,F-04-076,2026-07-23T18:02,replace,vibration_rms,propeller,2,P-04-2-06,P-04-2-07,76,reached replace-at age (B1)
+D-04,F-04-076,2026-07-23T18:02,replace,vibration_rms,propeller,3,P-04-3-05,P-04-3-06,76,reached replace-at age (B1)
+D-04,F-04-076,2026-07-23T18:02,replace,vibration_rms,propeller,4,P-04-4-06,P-04-4-07,76,reached replace-at age (B1)
+D-07,F-07-079,2026-07-24T11:53,replace,vibration_rms,propeller,1,P-07-1-07,P-07-1-08,79,reached replace-at age (B1)
+D-07,F-07-079,2026-07-24T11:53,replace,vibration_rms,propeller,2,P-07-2-07,P-07-2-08,79,reached replace-at age (B1)
+D-07,F-07-079,2026-07-24T11:53,replace,vibration_rms,propeller,3,P-07-3-06,P-07-3-07,79,reached replace-at age (B1)
+D-07,F-07-079,2026-07-24T11:53,replace,vibration_rms,propeller,4,P-07-4-06,P-07-4-07,79,reached replace-at age (B1)
+D-03,F-03-075,2026-07-24T18:08,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-10,F-10-070,2026-07-25T07:36,repair,vibration_rms,,,,,,special cause: loose motor mount (EWMA; rule 6)
+D-01,F-01-078,2026-07-25T07:44,replace,vibration_rms,propeller,1,P-01-1-06,P-01-1-07,78,reached replace-at age (B1)
+D-01,F-01-078,2026-07-25T07:44,replace,vibration_rms,propeller,2,P-01-2-05,P-01-2-06,78,reached replace-at age (B1)
+D-01,F-01-078,2026-07-25T07:44,replace,vibration_rms,propeller,3,P-01-3-06,P-01-3-07,78,reached replace-at age (B1)
+D-01,F-01-078,2026-07-25T07:44,replace,vibration_rms,propeller,4,P-01-4-07,P-01-4-08,78,reached replace-at age (B1)
+D-03,F-03-076,2026-07-25T09:35,replace,vibration_rms,propeller,3,P-03-3-05,P-03-3-06,,special cause: prop strike (EWMA; rule 1)
+D-06,F-06-079,2026-07-25T12:07,replace,vibration_rms,propeller,1,P-06-1-07,P-06-1-08,79,reached replace-at age (B1)
+D-06,F-06-079,2026-07-25T12:07,replace,vibration_rms,propeller,2,P-06-2-08,P-06-2-09,79,reached replace-at age (B1)
+D-06,F-06-079,2026-07-25T12:07,replace,vibration_rms,propeller,3,P-06-3-06,P-06-3-07,79,reached replace-at age (B1)
+D-06,F-06-079,2026-07-25T12:07,replace,vibration_rms,propeller,4,P-06-4-07,P-06-4-08,79,reached replace-at age (B1)
+D-04,F-04-082,2026-07-25T15:45,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-10,F-10-074,2026-07-25T16:05,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (EWMA)"
+D-09,F-09-077,2026-07-26T18:33,replace,vibration_rms,propeller,1,P-09-1-05,P-09-1-06,77,reached replace-at age (B1)
+D-09,F-09-077,2026-07-26T18:33,replace,vibration_rms,propeller,2,P-09-2-07,P-09-2-08,77,reached replace-at age (B1)
+D-09,F-09-077,2026-07-26T18:33,replace,vibration_rms,propeller,3,P-09-3-04,P-09-3-05,77,reached replace-at age (B1)
+D-09,F-09-077,2026-07-26T18:33,replace,vibration_rms,propeller,4,P-09-4-05,P-09-4-06,77,reached replace-at age (B1)
+D-03,F-03-080,2026-07-27T08:07,replace,vibration_rms,propeller,1,P-03-1-05,P-03-1-06,80,reached replace-at age (B1)
+D-03,F-03-080,2026-07-27T08:07,replace,vibration_rms,propeller,4,P-03-4-07,P-03-4-08,80,reached replace-at age (B1)
+D-07,F-07-090,2026-07-27T11:24,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1, 5)"
+D-07,F-07-092,2026-07-27T12:06,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 5)"
+D-05,F-05-081,2026-07-27T13:33,replace,vibration_rms,propeller,1,P-05-1-07,P-05-1-08,81,reached replace-at age (B1)
+D-05,F-05-081,2026-07-27T13:33,replace,vibration_rms,propeller,2,P-05-2-05,P-05-2-06,81,reached replace-at age (B1)
+D-05,F-05-081,2026-07-27T13:33,replace,vibration_rms,propeller,3,P-05-3-07,P-05-3-08,81,reached replace-at age (B1)
+D-05,F-05-081,2026-07-27T13:33,replace,vibration_rms,propeller,4,P-05-4-06,P-05-4-07,81,reached replace-at age (B1)
+D-10,F-10-080,2026-07-27T16:02,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 6)"
+D-10,F-10-080,2026-07-27T16:02,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-10,F-10-080,2026-07-27T16:02,replace,vibration_rms,propeller,1,P-10-1-06,P-10-1-07,80,reached replace-at age (B1)
+D-10,F-10-080,2026-07-27T16:02,replace,vibration_rms,propeller,2,P-10-2-05,P-10-2-06,80,reached replace-at age (B1)
+D-10,F-10-080,2026-07-27T16:02,replace,vibration_rms,propeller,3,P-10-3-05,P-10-3-06,80,reached replace-at age (B1)
+D-10,F-10-080,2026-07-27T16:02,replace,vibration_rms,propeller,4,P-10-4-05,P-10-4-06,80,reached replace-at age (B1)
+D-05,F-05-088,2026-07-29T16:03,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 2)"
+D-02,F-02-102,2026-07-30T07:51,replace,vibration_rms,propeller,3,P-02-3-07,P-02-3-08,102,reached replace-at age (B1)
+D-05,F-05-090,2026-07-30T10:08,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-04,F-04-101,2026-07-30T14:57,replace,sag_rate_v_per_min,battery,1,B-04-1-03,B-04-1-04,,special cause: bad battery cell (rule 1)
+D-10,F-10-100,2026-07-31T08:31,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-09,F-09-092,2026-08-01T09:05,replace,temp_rise_c,motor,4,M-09-4-02,M-09-4-03,,special cause: hard landing (EWMA; rule 6)
+D-07,F-07-109,2026-08-01T10:03,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-02,F-02-112,2026-08-01T15:50,replace,vibration_rms,propeller,1,P-02-1-05,P-02-1-06,112,reached replace-at age (B1)
+D-02,F-02-112,2026-08-01T15:50,replace,vibration_rms,propeller,2,P-02-2-06,P-02-2-07,112,reached replace-at age (B1)
+D-02,F-02-112,2026-08-01T15:50,replace,vibration_rms,propeller,4,P-02-4-07,P-02-4-08,112,reached replace-at age (B1)
+D-08,F-08-113,2026-08-02T12:57,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-07,F-07-117,2026-08-02T15:28,replace,vibration_rms,propeller,1,P-07-1-08,P-07-1-09,117,reached replace-at age (B1)
+D-07,F-07-117,2026-08-02T15:28,replace,vibration_rms,propeller,2,P-07-2-08,P-07-2-09,117,reached replace-at age (B1)
+D-07,F-07-117,2026-08-02T15:28,replace,vibration_rms,propeller,3,P-07-3-07,P-07-3-08,117,reached replace-at age (B1)
+D-07,F-07-117,2026-08-02T15:28,replace,vibration_rms,propeller,4,P-07-4-07,P-07-4-08,117,reached replace-at age (B1)
+D-08,F-08-117,2026-08-03T12:37,replace,vibration_rms,propeller,1,P-08-1-06,P-08-1-07,117,reached replace-at age (B1)
+D-08,F-08-117,2026-08-03T12:37,replace,vibration_rms,propeller,2,P-08-2-07,P-08-2-08,117,reached replace-at age (B1)
+D-08,F-08-117,2026-08-03T12:37,replace,vibration_rms,propeller,3,P-08-3-06,P-08-3-07,117,reached replace-at age (B1)
+D-08,F-08-117,2026-08-03T12:37,replace,vibration_rms,propeller,4,P-08-4-06,P-08-4-07,117,reached replace-at age (B1)
+D-04,F-04-114,2026-08-03T16:29,replace,vibration_rms,propeller,1,P-04-1-05,P-04-1-06,114,reached replace-at age (B1)
+D-04,F-04-114,2026-08-03T16:29,replace,vibration_rms,propeller,2,P-04-2-07,P-04-2-08,114,reached replace-at age (B1)
+D-04,F-04-114,2026-08-03T16:29,replace,vibration_rms,propeller,3,P-04-3-06,P-04-3-07,114,reached replace-at age (B1)
+D-04,F-04-114,2026-08-03T16:29,replace,vibration_rms,propeller,4,P-04-4-07,P-04-4-08,114,reached replace-at age (B1)
+D-05,F-05-104,2026-08-03T17:07,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-10,F-10-114,2026-08-03T17:16,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-06,F-06-111,2026-08-04T14:37,repair,sag_rate_v_per_min,,,,,,special cause: loose power connector (rule 5)
+D-10,F-10-120,2026-08-04T15:46,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-10,F-10-120,2026-08-04T15:46,replace,vibration_rms,propeller,1,P-10-1-07,P-10-1-08,120,reached replace-at age (B1)
+D-10,F-10-120,2026-08-04T15:46,replace,vibration_rms,propeller,2,P-10-2-06,P-10-2-07,120,reached replace-at age (B1)
+D-10,F-10-120,2026-08-04T15:46,replace,vibration_rms,propeller,3,P-10-3-06,P-10-3-07,120,reached replace-at age (B1)
+D-10,F-10-120,2026-08-04T15:46,replace,vibration_rms,propeller,4,P-10-4-06,P-10-4-07,120,reached replace-at age (B1)
+D-01,F-01-111,2026-08-04T18:43,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 5)"
+D-01,F-01-118,2026-08-06T07:51,replace,temp_rise_c,motor,1,M-01-1-03,M-01-1-04,118,reached replace-at age (B1)
+D-01,F-01-118,2026-08-06T07:51,replace,vibration_rms,propeller,1,P-01-1-07,P-01-1-08,118,reached replace-at age (B1)
+D-01,F-01-118,2026-08-06T07:51,replace,vibration_rms,propeller,2,P-01-2-06,P-01-2-07,118,reached replace-at age (B1)
+D-01,F-01-118,2026-08-06T07:51,replace,vibration_rms,propeller,3,P-01-3-07,P-01-3-08,118,reached replace-at age (B1)
+D-01,F-01-118,2026-08-06T07:51,replace,vibration_rms,propeller,4,P-01-4-08,P-01-4-09,118,reached replace-at age (B1)
+D-03,F-03-108,2026-08-06T13:58,replace,vibration_rms,propeller,2,P-03-2-06,P-03-2-07,108,reached replace-at age (B1)
+D-07,F-07-130,2026-08-06T14:57,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-06,F-06-119,2026-08-07T12:02,replace,vibration_rms,propeller,1,P-06-1-08,P-06-1-09,119,reached replace-at age (B1)
+D-06,F-06-119,2026-08-07T12:02,replace,vibration_rms,propeller,2,P-06-2-09,P-06-2-10,119,reached replace-at age (B1)
+D-06,F-06-119,2026-08-07T12:02,replace,vibration_rms,propeller,3,P-06-3-07,P-06-3-08,119,reached replace-at age (B1)
+D-06,F-06-119,2026-08-07T12:02,replace,vibration_rms,propeller,4,P-06-4-08,P-06-4-09,119,reached replace-at age (B1)
+D-08,F-08-131,2026-08-07T16:32,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-09,F-09-113,2026-08-07T17:17,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 6)"
+D-09,F-09-113,2026-08-07T17:17,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-05,F-05-118,2026-08-07T17:25,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 4)"
+D-09,F-09-115,2026-08-08T15:15,replace,vibration_rms,propeller,1,P-09-1-06,P-09-1-07,115,reached replace-at age (B1)
+D-09,F-09-115,2026-08-08T15:15,replace,vibration_rms,propeller,2,P-09-2-08,P-09-2-09,115,reached replace-at age (B1)
+D-09,F-09-115,2026-08-08T15:15,replace,vibration_rms,propeller,3,P-09-3-05,P-09-3-06,115,reached replace-at age (B1)
+D-09,F-09-115,2026-08-08T15:15,replace,vibration_rms,propeller,4,P-09-4-06,P-09-4-07,115,reached replace-at age (B1)
+D-05,F-05-121,2026-08-09T07:52,replace,vibration_rms,propeller,1,P-05-1-08,P-05-1-09,121,reached replace-at age (B1)
+D-05,F-05-121,2026-08-09T07:52,replace,vibration_rms,propeller,2,P-05-2-06,P-05-2-07,121,reached replace-at age (B1)
+D-05,F-05-121,2026-08-09T07:52,replace,vibration_rms,propeller,3,P-05-3-08,P-05-3-09,121,reached replace-at age (B1)
+D-05,F-05-121,2026-08-09T07:52,replace,vibration_rms,propeller,4,P-05-4-07,P-05-4-08,121,reached replace-at age (B1)
+D-05,F-05-122,2026-08-09T09:36,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-03,F-03-116,2026-08-09T10:59,replace,vibration_rms,propeller,3,P-03-3-06,P-03-3-07,116,reached replace-at age (B1)
+D-03,F-03-119,2026-08-10T08:54,replace,vibration_rms,propeller,1,P-03-1-06,P-03-1-07,119,reached replace-at age (B1)
+D-03,F-03-119,2026-08-10T08:54,replace,vibration_rms,propeller,4,P-03-4-08,P-03-4-09,119,reached replace-at age (B1)
+D-02,F-02-143,2026-08-10T09:09,replace,vibration_rms,propeller,3,P-02-3-08,P-02-3-09,143,reached replace-at age (B1)
+D-02,F-02-147,2026-08-10T15:50,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-10,F-10-145,2026-08-10T16:22,replace,temp_rise_c,motor,2,M-10-2-02,M-10-2-03,,special cause: hard landing (rule 6)
+D-03,F-03-120,2026-08-10T16:44,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-01,F-01-135,2026-08-11T17:07,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 5)"
+D-05,F-05-132,2026-08-12T08:36,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 2)"
+D-02,F-02-154,2026-08-12T12:23,replace,vibration_rms,propeller,1,P-02-1-06,P-02-1-07,154,reached replace-at age (B1)
+D-02,F-02-154,2026-08-12T12:23,replace,vibration_rms,propeller,2,P-02-2-07,P-02-2-08,154,reached replace-at age (B1)
+D-02,F-02-154,2026-08-12T12:23,replace,vibration_rms,propeller,4,P-02-4-08,P-02-4-09,154,reached replace-at age (B1)
+D-08,F-08-155,2026-08-13T14:37,replace,vibration_rms,propeller,1,P-08-1-07,P-08-1-08,155,reached replace-at age (B1)
+D-08,F-08-155,2026-08-13T14:37,replace,vibration_rms,propeller,2,P-08-2-08,P-08-2-09,155,reached replace-at age (B1)
+D-08,F-08-155,2026-08-13T14:37,replace,vibration_rms,propeller,3,P-08-3-07,P-08-3-08,155,reached replace-at age (B1)
+D-08,F-08-155,2026-08-13T14:37,replace,vibration_rms,propeller,4,P-08-4-07,P-08-4-08,155,reached replace-at age (B1)
+D-05,F-05-137,2026-08-13T16:03,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-01,F-01-144,2026-08-14T14:14,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-10,F-10-160,2026-08-14T17:17,replace,vibration_rms,propeller,1,P-10-1-08,P-10-1-09,160,reached replace-at age (B1)
+D-10,F-10-160,2026-08-14T17:17,replace,vibration_rms,propeller,2,P-10-2-07,P-10-2-08,160,reached replace-at age (B1)
+D-10,F-10-160,2026-08-14T17:17,replace,vibration_rms,propeller,3,P-10-3-07,P-10-3-08,160,reached replace-at age (B1)
+D-10,F-10-160,2026-08-14T17:17,replace,vibration_rms,propeller,4,P-10-4-07,P-10-4-08,160,reached replace-at age (B1)
+D-03,F-03-133,2026-08-14T17:54,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-07,F-07-151,2026-08-15T15:00,replace,vibration_rms,propeller,2,P-07-2-09,P-07-2-10,151,worn: found after a chart signal (EWMA; rule 5)
+D-07,F-07-157,2026-08-16T10:22,replace,vibration_rms,propeller,1,P-07-1-09,P-07-1-10,157,reached replace-at age (B1)
+D-07,F-07-157,2026-08-16T10:22,replace,vibration_rms,propeller,3,P-07-3-08,P-07-3-09,157,reached replace-at age (B1)
+D-07,F-07-157,2026-08-16T10:22,replace,vibration_rms,propeller,4,P-07-4-08,P-07-4-09,157,reached replace-at age (B1)
+D-02,F-02-159,2026-08-16T10:37,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-03,F-03-141,2026-08-16T10:51,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 7)"
+D-05,F-05-141,2026-08-16T12:05,replace,vibration_rms,propeller,4,P-05-4-08,P-05-4-09,,special cause: prop strike (rule 1)
+D-02,F-02-160,2026-08-16T13:21,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 4)"
+D-05,F-05-146,2026-08-17T09:15,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 6)"
+D-03,F-03-146,2026-08-17T17:24,replace,vibration_rms,propeller,2,P-03-2-07,P-03-2-08,146,reached replace-at age (B1)
+D-10,F-10-166,2026-08-17T18:38,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-04,F-04-154,2026-08-18T09:37,replace,vibration_rms,propeller,1,P-04-1-06,P-04-1-07,154,reached replace-at age (B1)
+D-04,F-04-154,2026-08-18T09:37,replace,vibration_rms,propeller,2,P-04-2-08,P-04-2-09,154,reached replace-at age (B1)
+D-04,F-04-154,2026-08-18T09:37,replace,vibration_rms,propeller,3,P-04-3-07,P-04-3-08,154,reached replace-at age (B1)
+D-04,F-04-154,2026-08-18T09:37,replace,vibration_rms,propeller,4,P-04-4-08,P-04-4-09,154,reached replace-at age (B1)
+D-01,F-01-155,2026-08-18T11:55,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-06,F-06-157,2026-08-18T13:14,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 7)"
+D-06,F-06-158,2026-08-18T13:15,replace,vibration_rms,propeller,1,P-06-1-09,P-06-1-10,158,reached replace-at age (B1)
+D-06,F-06-158,2026-08-18T13:15,replace,vibration_rms,propeller,2,P-06-2-10,P-06-2-11,158,reached replace-at age (B1)
+D-06,F-06-158,2026-08-18T13:15,replace,vibration_rms,propeller,3,P-06-3-08,P-06-3-09,158,reached replace-at age (B1)
+D-06,F-06-158,2026-08-18T13:15,replace,vibration_rms,propeller,4,P-06-4-09,P-06-4-10,158,reached replace-at age (B1)
+D-01,F-01-157,2026-08-18T17:26,replace,vibration_rms,propeller,1,P-01-1-08,P-01-1-09,157,reached replace-at age (B1)
+D-01,F-01-157,2026-08-18T17:26,replace,vibration_rms,propeller,2,P-01-2-07,P-01-2-08,157,reached replace-at age (B1)
+D-01,F-01-157,2026-08-18T17:26,replace,vibration_rms,propeller,3,P-01-3-08,P-01-3-09,157,reached replace-at age (B1)
+D-01,F-01-157,2026-08-18T17:26,replace,vibration_rms,propeller,4,P-01-4-09,P-01-4-10,157,reached replace-at age (B1)
+D-03,F-03-149,2026-08-18T18:07,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-05,F-05-151,2026-08-19T07:09,replace,temp_rise_c,motor,3,M-05-3-02,M-05-3-03,151,reached replace-at age (B1)
+D-09,F-09-154,2026-08-20T07:45,replace,vibration_rms,propeller,1,P-09-1-07,P-09-1-08,154,reached replace-at age (B1)
+D-09,F-09-154,2026-08-20T07:45,replace,vibration_rms,propeller,2,P-09-2-09,P-09-2-10,154,reached replace-at age (B1)
+D-09,F-09-154,2026-08-20T07:45,replace,vibration_rms,propeller,3,P-09-3-06,P-09-3-07,154,reached replace-at age (B1)
+D-09,F-09-154,2026-08-20T07:45,replace,vibration_rms,propeller,4,P-09-4-07,P-09-4-08,154,reached replace-at age (B1)
+D-03,F-03-154,2026-08-20T09:28,replace,vibration_rms,propeller,3,P-03-3-07,P-03-3-08,154,reached replace-at age (B1)
+D-07,F-07-164,2026-08-20T13:17,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-01,F-01-163,2026-08-20T14:18,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-05,F-05-162,2026-08-20T15:40,replace,vibration_rms,propeller,1,P-05-1-09,P-05-1-10,162,reached replace-at age (B1)
+D-05,F-05-162,2026-08-20T15:40,replace,vibration_rms,propeller,2,P-05-2-07,P-05-2-08,162,reached replace-at age (B1)
+D-05,F-05-162,2026-08-20T15:40,replace,vibration_rms,propeller,3,P-05-3-09,P-05-3-10,162,reached replace-at age (B1)
+D-04,F-04-164,2026-08-20T17:29,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-07,F-07-168,2026-08-21T09:24,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-06,F-06-171,2026-08-21T11:19,repair,sag_rate_v_per_min,,,,,,special cause: loose power connector (EWMA; rule 1)
+D-02,F-02-173,2026-08-21T11:53,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-04,F-04-169,2026-08-21T12:55,replace,temp_rise_c,motor,1,M-04-1-02,M-04-1-03,169,reached replace-at age (B1)
+D-09,F-09-160,2026-08-21T15:26,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-03,F-03-157,2026-08-22T07:51,replace,vibration_rms,propeller,1,P-03-1-07,P-03-1-08,157,reached replace-at age (B1)
+D-03,F-03-157,2026-08-22T07:51,replace,vibration_rms,propeller,4,P-03-4-09,P-03-4-10,157,reached replace-at age (B1)
+D-02,F-02-178,2026-08-22T13:01,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-01,F-01-175,2026-08-23T08:49,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-10,F-10-185,2026-08-24T08:41,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 4)"
+D-05,F-05-179,2026-08-24T10:28,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 1, 2)"
+D-02,F-02-184,2026-08-24T11:42,replace,vibration_rms,propeller,3,P-02-3-09,P-02-3-10,184,reached replace-at age (B1)
+D-06,F-06-180,2026-08-24T12:00,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-01,F-01-186,2026-08-24T15:03,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-05,F-05-181,2026-08-24T18:42,replace,vibration_rms,propeller,4,P-05-4-09,P-05-4-10,181,reached replace-at age (B1)
+D-10,F-10-188,2026-08-25T10:44,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 2)"
+D-08,F-08-192,2026-08-25T16:04,replace,vibration_rms,propeller,1,P-08-1-08,P-08-1-09,192,reached replace-at age (B1)
+D-08,F-08-192,2026-08-25T16:04,replace,vibration_rms,propeller,2,P-08-2-09,P-08-2-10,192,reached replace-at age (B1)
+D-08,F-08-192,2026-08-25T16:04,replace,vibration_rms,propeller,3,P-08-3-08,P-08-3-09,192,reached replace-at age (B1)
+D-08,F-08-192,2026-08-25T16:04,replace,vibration_rms,propeller,4,P-08-4-08,P-08-4-09,192,reached replace-at age (B1)
+D-09,F-09-172,2026-08-26T09:52,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 7)"
+D-03,F-03-174,2026-08-26T11:49,replace,sag_rate_v_per_min,battery,2,B-03-2-02,B-03-2-03,174,reached replace-at age (B1)
+D-01,F-01-196,2026-08-26T15:15,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-01,F-01-196,2026-08-26T15:15,replace,vibration_rms,propeller,1,P-01-1-09,P-01-1-10,196,reached replace-at age (B1)
+D-01,F-01-196,2026-08-26T15:15,replace,vibration_rms,propeller,2,P-01-2-08,P-01-2-09,196,reached replace-at age (B1)
+D-01,F-01-196,2026-08-26T15:15,replace,vibration_rms,propeller,3,P-01-3-09,P-01-3-10,196,reached replace-at age (B1)
+D-01,F-01-196,2026-08-26T15:15,replace,vibration_rms,propeller,4,P-01-4-10,P-01-4-11,196,reached replace-at age (B1)
+D-05,F-05-184,2026-08-26T18:07,replace,vibration_rms,propeller,2,P-05-2-08,P-05-2-09,184,worn: found after a chart signal (EWMA; rule 5)
+D-05,F-05-185,2026-08-27T07:00,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (EWMA)"
+D-02,F-02-194,2026-08-27T12:40,replace,sag_rate_v_per_min,battery,2,B-02-2-03,B-02-2-04,194,reached replace-at age (B1)
+D-02,F-02-195,2026-08-27T13:09,replace,vibration_rms,propeller,1,P-02-1-07,P-02-1-08,195,reached replace-at age (B1)
+D-02,F-02-195,2026-08-27T13:09,replace,vibration_rms,propeller,2,P-02-2-08,P-02-2-09,195,reached replace-at age (B1)
+D-02,F-02-195,2026-08-27T13:09,replace,vibration_rms,propeller,4,P-02-4-09,P-02-4-10,195,reached replace-at age (B1)
+D-08,F-08-199,2026-08-27T14:39,replace,temp_rise_c,motor,2,M-08-2-02,M-08-2-03,199,reached replace-at age (B1)
+D-10,F-10-195,2026-08-27T16:39,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-04,F-04-194,2026-08-27T17:53,replace,vibration_rms,propeller,4,P-04-4-09,P-04-4-10,,special cause: prop strike (EWMA; rule 1)
+D-04,F-04-194,2026-08-27T17:53,replace,vibration_rms,propeller,1,P-04-1-07,P-04-1-08,194,reached replace-at age (B1)
+D-04,F-04-194,2026-08-27T17:53,replace,vibration_rms,propeller,2,P-04-2-09,P-04-2-10,194,reached replace-at age (B1)
+D-04,F-04-194,2026-08-27T17:53,replace,vibration_rms,propeller,3,P-04-3-08,P-04-3-09,194,reached replace-at age (B1)
+D-03,F-03-182,2026-08-28T07:14,replace,temp_rise_c,motor,3,M-03-3-02,M-03-3-03,182,reached replace-at age (B1)
+D-03,F-03-184,2026-08-28T08:54,replace,vibration_rms,propeller,2,P-03-2-08,P-03-2-09,184,reached replace-at age (B1)
+D-07,F-07-186,2026-08-28T10:25,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-06,F-06-196,2026-08-28T16:34,replace,vibration_rms,propeller,1,P-06-1-10,P-06-1-11,196,reached replace-at age (B1)
+D-06,F-06-196,2026-08-28T16:34,replace,vibration_rms,propeller,2,P-06-2-11,P-06-2-12,196,reached replace-at age (B1)
+D-06,F-06-196,2026-08-28T16:34,replace,vibration_rms,propeller,3,P-06-3-09,P-06-3-10,196,reached replace-at age (B1)
+D-06,F-06-196,2026-08-28T16:34,replace,vibration_rms,propeller,4,P-06-4-10,P-06-4-11,196,reached replace-at age (B1)
+D-06,F-06-198,2026-08-29T12:13,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 8)"
+D-03,F-03-193,2026-08-29T12:24,replace,vibration_rms,propeller,3,P-03-3-08,P-03-3-09,193,reached replace-at age (B1)
+D-10,F-10-200,2026-08-29T13:17,replace,vibration_rms,propeller,1,P-10-1-09,P-10-1-10,200,reached replace-at age (B1)
+D-10,F-10-200,2026-08-29T13:17,replace,vibration_rms,propeller,2,P-10-2-08,P-10-2-09,200,reached replace-at age (B1)
+D-10,F-10-200,2026-08-29T13:17,replace,vibration_rms,propeller,3,P-10-3-08,P-10-3-09,200,reached replace-at age (B1)
+D-10,F-10-200,2026-08-29T13:17,replace,vibration_rms,propeller,4,P-10-4-08,P-10-4-09,200,reached replace-at age (B1)
+D-10,F-10-201,2026-08-29T14:50,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-01,F-01-204,2026-08-29T16:50,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 5, 6)"
+D-07,F-07-190,2026-08-29T17:39,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-07,F-07-190,2026-08-29T17:39,replace,vibration_rms,propeller,2,P-07-2-10,P-07-2-11,190,reached replace-at age (B1)
+D-10,F-10-203,2026-08-30T11:55,replace,sag_rate_v_per_min,battery,1,B-10-1-03,B-10-1-04,203,worn: found after a chart signal (rule 4)
+D-03,F-03-196,2026-08-30T13:40,replace,vibration_rms,propeller,1,P-03-1-08,P-03-1-09,196,reached replace-at age (B1)
+D-03,F-03-196,2026-08-30T13:40,replace,vibration_rms,propeller,4,P-03-4-10,P-03-4-11,196,reached replace-at age (B1)
+D-05,F-05-193,2026-08-30T13:51,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-07,F-07-192,2026-08-30T15:02,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-07,F-07-196,2026-08-31T09:42,replace,vibration_rms,propeller,1,P-07-1-10,P-07-1-11,196,reached replace-at age (B1)
+D-07,F-07-196,2026-08-31T09:42,replace,vibration_rms,propeller,3,P-07-3-09,P-07-3-10,196,reached replace-at age (B1)
+D-07,F-07-196,2026-08-31T09:42,replace,vibration_rms,propeller,4,P-07-4-09,P-07-4-10,196,reached replace-at age (B1)
+D-02,F-02-211,2026-08-31T13:43,replace,sag_rate_v_per_min,battery,1,B-02-1-03,B-02-1-04,211,reached replace-at age (B1)
+D-03,F-03-198,2026-08-31T14:15,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 4)"
+D-09,F-09-195,2026-08-31T16:58,replace,vibration_rms,propeller,1,P-09-1-08,P-09-1-09,195,reached replace-at age (B1)
+D-09,F-09-195,2026-08-31T16:58,replace,vibration_rms,propeller,2,P-09-2-10,P-09-2-11,195,reached replace-at age (B1)
+D-09,F-09-195,2026-08-31T16:58,replace,vibration_rms,propeller,3,P-09-3-07,P-09-3-08,195,reached replace-at age (B1)
+D-09,F-09-195,2026-08-31T16:58,replace,vibration_rms,propeller,4,P-09-4-08,P-09-4-09,195,reached replace-at age (B1)
+D-01,F-01-207,2026-09-01T07:05,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 5, 6)"
+D-08,F-08-211,2026-09-01T11:49,replace,sag_rate_v_per_min,battery,1,B-08-1-03,B-08-1-04,211,reached replace-at age (B1)
+D-08,F-08-212,2026-09-01T12:32,replace,sag_rate_v_per_min,battery,2,B-08-2-03,B-08-2-04,212,reached replace-at age (B1)
+D-05,F-05-194,2026-09-01T12:44,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 1)"
+D-02,F-02-215,2026-09-01T14:12,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 4)"
+D-06,F-06-211,2026-09-01T17:48,replace,sag_rate_v_per_min,battery,1,B-06-1-03,B-06-1-04,211,reached replace-at age (B1)
+D-05,F-05-197,2026-09-02T09:57,repair,sag_rate_v_per_min,,,,,,special cause: loose power connector (rule 1)
+D-10,F-10-214,2026-09-02T11:58,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-06,F-06-212,2026-09-02T16:07,replace,sag_rate_v_per_min,battery,2,B-06-2-03,B-06-2-04,212,reached replace-at age (B1)
+D-09,F-09-207,2026-09-02T17:14,replace,sag_rate_v_per_min,battery,1,B-09-1-04,B-09-1-05,207,reached replace-at age (B1)
+D-01,F-01-211,2026-09-02T18:19,replace,sag_rate_v_per_min,battery,1,B-01-1-03,B-01-1-04,211,reached replace-at age (B1)
+D-01,F-01-212,2026-09-02T18:19,replace,sag_rate_v_per_min,battery,2,B-01-2-05,B-01-2-06,212,reached replace-at age (B1)
+D-04,F-04-212,2026-09-03T08:11,replace,sag_rate_v_per_min,battery,2,B-04-2-04,B-04-2-05,212,reached replace-at age (B1)
+D-03,F-03-211,2026-09-03T12:07,repair,vibration_rms,,,,,,special cause: vibration log over-filtered (rule 7)
+D-03,F-03-211,2026-09-03T12:07,replace,sag_rate_v_per_min,battery,1,B-03-1-04,B-03-1-05,211,reached replace-at age (B1)
+D-10,F-10-217,2026-09-03T13:01,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-02,F-02-223,2026-09-03T13:33,replace,vibration_rms,propeller,3,P-02-3-10,P-02-3-11,223,reached replace-at age (B1)
+D-05,F-05-200,2026-09-03T15:37,replace,vibration_rms,propeller,1,P-05-1-10,P-05-1-11,200,reached replace-at age (B1)
+D-05,F-05-200,2026-09-03T15:37,replace,vibration_rms,propeller,3,P-05-3-10,P-05-3-11,200,reached replace-at age (B1)
+D-05,F-05-203,2026-09-04T09:18,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-07,F-07-211,2026-09-04T14:30,replace,sag_rate_v_per_min,battery,1,B-07-1-03,B-07-1-04,211,reached replace-at age (B1)
+D-07,F-07-212,2026-09-04T15:43,replace,sag_rate_v_per_min,battery,2,B-07-2-03,B-07-2-04,212,reached replace-at age (B1)
+D-10,F-10-225,2026-09-05T09:09,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-10,F-10-226,2026-09-05T11:07,replace,vibration_rms,propeller,4,P-10-4-09,P-10-4-10,226,worn: found after a chart signal (EWMA; rule 6)
+D-05,F-05-211,2026-09-05T14:42,replace,sag_rate_v_per_min,battery,1,B-05-1-04,B-05-1-05,211,reached replace-at age (B1)
+D-03,F-03-223,2026-09-05T15:54,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-03,F-03-223,2026-09-05T15:54,replace,vibration_rms,propeller,2,P-03-2-09,P-03-2-10,223,reached replace-at age (B1)
+D-05,F-05-212,2026-09-06T08:45,replace,sag_rate_v_per_min,battery,2,B-05-2-04,B-05-2-05,212,reached replace-at age (B1)
+D-05,F-05-213,2026-09-06T10:12,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 2)"
+D-06,F-06-222,2026-09-06T12:29,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 7)"
+D-07,F-07-217,2026-09-06T14:03,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 2)"
+D-02,F-02-233,2026-09-06T14:43,replace,vibration_rms,propeller,1,P-02-1-08,P-02-1-09,233,reached replace-at age (B1)
+D-02,F-02-233,2026-09-06T14:43,replace,vibration_rms,propeller,2,P-02-2-09,P-02-2-10,233,reached replace-at age (B1)
+D-02,F-02-233,2026-09-06T14:43,replace,vibration_rms,propeller,4,P-02-4-10,P-02-4-11,233,reached replace-at age (B1)
+D-06,F-06-223,2026-09-06T17:39,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-09,F-09-220,2026-09-06T17:41,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-01,F-01-229,2026-09-07T10:15,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-08,F-08-231,2026-09-07T15:24,replace,vibration_rms,propeller,1,P-08-1-09,P-08-1-10,231,reached replace-at age (B1)
+D-08,F-08-231,2026-09-07T15:24,replace,vibration_rms,propeller,2,P-08-2-10,P-08-2-11,231,reached replace-at age (B1)
+D-08,F-08-231,2026-09-07T15:24,replace,vibration_rms,propeller,3,P-08-3-09,P-08-3-10,231,reached replace-at age (B1)
+D-08,F-08-231,2026-09-07T15:24,replace,vibration_rms,propeller,4,P-08-4-09,P-08-4-10,231,reached replace-at age (B1)
+D-09,F-09-224,2026-09-07T18:20,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-03,F-03-229,2026-09-08T07:26,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-05,F-05-221,2026-09-08T09:22,replace,vibration_rms,propeller,4,P-05-4-10,P-05-4-11,221,reached replace-at age (B1)
+D-04,F-04-231,2026-09-08T13:28,replace,vibration_rms,propeller,1,P-04-1-08,P-04-1-09,231,reached replace-at age (B1)
+D-04,F-04-231,2026-09-08T13:28,replace,vibration_rms,propeller,2,P-04-2-10,P-04-2-11,231,reached replace-at age (B1)
+D-04,F-04-231,2026-09-08T13:28,replace,vibration_rms,propeller,3,P-04-3-09,P-04-3-10,231,reached replace-at age (B1)
+D-04,F-04-231,2026-09-08T13:28,replace,vibration_rms,propeller,4,P-04-4-10,P-04-4-11,231,reached replace-at age (B1)
+D-03,F-03-232,2026-09-08T17:03,replace,vibration_rms,propeller,3,P-03-3-09,P-03-3-10,232,reached replace-at age (B1)
+D-05,F-05-224,2026-09-08T17:27,replace,vibration_rms,propeller,2,P-05-2-09,P-05-2-10,224,reached replace-at age (B1)
+D-03,F-03-236,2026-09-09T10:11,replace,vibration_rms,propeller,1,P-03-1-09,P-03-1-10,236,reached replace-at age (B1)
+D-03,F-03-236,2026-09-09T10:11,replace,vibration_rms,propeller,4,P-03-4-11,P-03-4-12,236,reached replace-at age (B1)
+D-01,F-01-233,2026-09-09T12:20,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-10,F-10-239,2026-09-09T16:35,replace,vibration_rms,propeller,1,P-10-1-10,P-10-1-11,239,reached replace-at age (B1)
+D-10,F-10-239,2026-09-09T16:35,replace,vibration_rms,propeller,2,P-10-2-09,P-10-2-10,239,reached replace-at age (B1)
+D-10,F-10-239,2026-09-09T16:35,replace,vibration_rms,propeller,3,P-10-3-09,P-10-3-10,239,reached replace-at age (B1)
+D-07,F-07-230,2026-09-10T09:20,replace,vibration_rms,propeller,2,P-07-2-11,P-07-2-12,230,reached replace-at age (B1)
+D-01,F-01-235,2026-09-10T10:29,replace,vibration_rms,propeller,1,P-01-1-10,P-01-1-11,235,reached replace-at age (B1)
+D-01,F-01-235,2026-09-10T10:29,replace,vibration_rms,propeller,2,P-01-2-09,P-01-2-10,235,reached replace-at age (B1)
+D-01,F-01-235,2026-09-10T10:29,replace,vibration_rms,propeller,3,P-01-3-10,P-01-3-11,235,reached replace-at age (B1)
+D-01,F-01-235,2026-09-10T10:29,replace,vibration_rms,propeller,4,P-01-4-11,P-01-4-12,235,reached replace-at age (B1)
+D-07,F-07-233,2026-09-10T11:04,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-09,F-09-232,2026-09-10T12:06,replace,sag_rate_v_per_min,battery,2,B-09-2-04,B-09-2-05,232,reached replace-at age (B1)
+D-06,F-06-234,2026-09-10T16:12,replace,vibration_rms,propeller,1,P-06-1-11,P-06-1-12,234,reached replace-at age (B1)
+D-06,F-06-234,2026-09-10T16:12,replace,vibration_rms,propeller,2,P-06-2-12,P-06-2-13,234,reached replace-at age (B1)
+D-06,F-06-234,2026-09-10T16:12,replace,vibration_rms,propeller,3,P-06-3-10,P-06-3-11,234,reached replace-at age (B1)
+D-06,F-06-234,2026-09-10T16:12,replace,vibration_rms,propeller,4,P-06-4-11,P-06-4-12,234,reached replace-at age (B1)
+D-04,F-04-234,2026-09-11T07:49,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-01,F-01-238,2026-09-11T09:56,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-07,F-07-236,2026-09-11T14:13,replace,vibration_rms,propeller,1,P-07-1-11,P-07-1-12,236,reached replace-at age (B1)
+D-07,F-07-236,2026-09-11T14:13,replace,vibration_rms,propeller,3,P-07-3-10,P-07-3-11,236,reached replace-at age (B1)
+D-07,F-07-236,2026-09-11T14:13,replace,vibration_rms,propeller,4,P-07-4-10,P-07-4-11,236,reached replace-at age (B1)
+D-06,F-06-237,2026-09-11T17:28,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 7)"
+D-05,F-05-235,2026-09-11T18:06,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-08,F-08-246,2026-09-12T11:09,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 2)"
+D-09,F-09-236,2026-09-12T18:00,replace,vibration_rms,propeller,1,P-09-1-09,P-09-1-10,236,reached replace-at age (B1)
+D-09,F-09-236,2026-09-12T18:00,replace,vibration_rms,propeller,2,P-09-2-11,P-09-2-12,236,reached replace-at age (B1)
+D-09,F-09-236,2026-09-12T18:00,replace,vibration_rms,propeller,3,P-09-3-08,P-09-3-09,236,reached replace-at age (B1)
+D-09,F-09-236,2026-09-12T18:00,replace,vibration_rms,propeller,4,P-09-4-09,P-09-4-10,236,reached replace-at age (B1)
+D-04,F-04-248,2026-09-13T08:58,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 4)"
+D-05,F-05-242,2026-09-13T11:49,replace,vibration_rms,propeller,1,P-05-1-11,P-05-1-12,242,reached replace-at age (B1)
+D-05,F-05-242,2026-09-13T11:49,replace,vibration_rms,propeller,3,P-05-3-11,P-05-3-12,242,reached replace-at age (B1)
+D-08,F-08-251,2026-09-13T17:54,replace,sag_rate_v_per_min,battery,1,B-08-1-04,B-08-1-05,,special cause: bad battery cell (rule 1)
+D-09,F-09-239,2026-09-14T07:14,repair,vibration_rms,,,,,,special cause: loose motor mount (rule 5)
+D-10,F-10-250,2026-09-14T08:05,replace,sag_rate_v_per_min,battery,2,B-10-2-04,B-10-2-05,250,reached replace-at age (B1)
+D-01,F-01-252,2026-09-14T15:24,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-10,F-10-255,2026-09-15T12:16,replace,vibration_rms,propeller,3,P-10-3-10,P-10-3-11,255,worn: found after a chart signal (EWMA; rule 1)
+D-05,F-05-246,2026-09-15T13:18,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1, 5)"
+D-10,F-10-258,2026-09-16T11:04,repair,sag_rate_v_per_min,,,,,,special cause: loose power connector (rule 1)
+D-06,F-06-251,2026-09-16T17:49,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 4)"
+D-03,F-03-262,2026-09-17T07:58,replace,vibration_rms,propeller,2,P-03-2-10,P-03-2-11,262,reached replace-at age (B1)
+D-07,F-07-254,2026-09-17T09:04,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-10,F-10-265,2026-09-17T16:35,replace,vibration_rms,propeller,4,P-10-4-10,P-10-4-11,265,reached replace-at age (B1)
+D-05,F-05-258,2026-09-18T10:12,replace,sag_rate_v_per_min,battery,2,B-05-2-05,B-05-2-06,,special cause: bad battery cell (EWMA; rule 1)
+D-05,F-05-261,2026-09-19T11:31,replace,vibration_rms,propeller,4,P-05-4-11,P-05-4-12,261,reached replace-at age (B1)
+D-07,F-07-260,2026-09-19T12:39,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-10,F-10-271,2026-09-19T13:09,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-05,F-05-263,2026-09-19T13:45,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-05,F-05-263,2026-09-19T13:45,replace,vibration_rms,propeller,2,P-05-2-10,P-05-2-11,263,reached replace-at age (B1)
+D-02,F-02-263,2026-09-19T15:51,replace,vibration_rms,propeller,3,P-02-3-11,P-02-3-12,263,reached replace-at age (B1)
+D-03,F-03-270,2026-09-20T07:20,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 4)"
+D-10,F-10-272,2026-09-20T07:42,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 1)"
+D-01,F-01-265,2026-09-20T07:44,replace,temp_rise_c,motor,4,M-01-4-02,M-01-4-03,,special cause: hard landing (rule 5)
+D-07,F-07-261,2026-09-20T08:57,replace,temp_rise_c,motor,1,M-07-1-02,M-07-1-03,261,reached replace-at age (B1)
+D-03,F-03-272,2026-09-20T12:41,replace,vibration_rms,propeller,3,P-03-3-10,P-03-3-11,272,reached replace-at age (B1)
+D-08,F-08-270,2026-09-20T13:01,replace,vibration_rms,propeller,1,P-08-1-10,P-08-1-11,270,reached replace-at age (B1)
+D-08,F-08-270,2026-09-20T13:01,replace,vibration_rms,propeller,2,P-08-2-11,P-08-2-12,270,reached replace-at age (B1)
+D-08,F-08-270,2026-09-20T13:01,replace,vibration_rms,propeller,3,P-08-3-10,P-08-3-11,270,reached replace-at age (B1)
+D-08,F-08-270,2026-09-20T13:01,replace,vibration_rms,propeller,4,P-08-4-10,P-08-4-11,270,reached replace-at age (B1)
+D-03,F-03-275,2026-09-20T18:44,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-04,F-04-271,2026-09-21T07:03,replace,vibration_rms,propeller,1,P-04-1-09,P-04-1-10,271,reached replace-at age (B1)
+D-04,F-04-271,2026-09-21T07:03,replace,vibration_rms,propeller,2,P-04-2-11,P-04-2-12,271,reached replace-at age (B1)
+D-04,F-04-271,2026-09-21T07:03,replace,vibration_rms,propeller,3,P-04-3-10,P-04-3-11,271,reached replace-at age (B1)
+D-04,F-04-271,2026-09-21T07:03,replace,vibration_rms,propeller,4,P-04-4-11,P-04-4-12,271,reached replace-at age (B1)
+D-03,F-03-276,2026-09-21T08:26,replace,vibration_rms,propeller,1,P-03-1-10,P-03-1-11,276,reached replace-at age (B1)
+D-03,F-03-276,2026-09-21T08:26,replace,vibration_rms,propeller,4,P-03-4-12,P-03-4-13,276,reached replace-at age (B1)
+D-09,F-09-273,2026-09-21T16:43,replace,vibration_rms,propeller,1,P-09-1-10,P-09-1-11,273,reached replace-at age (B1)
+D-09,F-09-273,2026-09-21T16:43,replace,vibration_rms,propeller,2,P-09-2-12,P-09-2-13,273,reached replace-at age (B1)
+D-09,F-09-273,2026-09-21T16:43,replace,vibration_rms,propeller,3,P-09-3-09,P-09-3-10,273,reached replace-at age (B1)
+D-09,F-09-273,2026-09-21T16:43,replace,vibration_rms,propeller,4,P-09-4-10,P-09-4-11,273,reached replace-at age (B1)
+D-01,F-01-273,2026-09-21T18:37,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-01,F-01-273,2026-09-21T18:37,replace,vibration_rms,propeller,1,P-01-1-11,P-01-1-12,273,reached replace-at age (B1)
+D-01,F-01-273,2026-09-21T18:37,replace,vibration_rms,propeller,2,P-01-2-10,P-01-2-11,273,reached replace-at age (B1)
+D-01,F-01-273,2026-09-21T18:37,replace,vibration_rms,propeller,3,P-01-3-11,P-01-3-12,273,reached replace-at age (B1)
+D-01,F-01-273,2026-09-21T18:37,replace,vibration_rms,propeller,4,P-01-4-12,P-01-4-13,273,reached replace-at age (B1)
+D-08,F-08-274,2026-09-22T08:15,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-07,F-07-269,2026-09-22T08:39,replace,vibration_rms,propeller,2,P-07-2-12,P-07-2-13,269,reached replace-at age (B1)
+D-06,F-06-270,2026-09-22T09:28,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 6)"
+D-03,F-03-278,2026-09-22T09:38,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-04,F-04-277,2026-09-22T14:37,replace,temp_rise_c,motor,3,M-04-3-02,M-04-3-03,277,worn: found after a chart signal (EWMA)
+D-06,F-06-273,2026-09-23T11:16,replace,vibration_rms,propeller,1,P-06-1-12,P-06-1-13,273,reached replace-at age (B1)
+D-06,F-06-273,2026-09-23T11:16,replace,vibration_rms,propeller,2,P-06-2-13,P-06-2-14,273,reached replace-at age (B1)
+D-06,F-06-273,2026-09-23T11:16,replace,vibration_rms,propeller,3,P-06-3-11,P-06-3-12,273,reached replace-at age (B1)
+D-06,F-06-273,2026-09-23T11:16,replace,vibration_rms,propeller,4,P-06-4-12,P-06-4-13,273,reached replace-at age (B1)
+D-05,F-05-279,2026-09-23T11:18,replace,vibration_rms,propeller,1,P-05-1-12,P-05-1-13,279,reached replace-at age (B1)
+D-05,F-05-279,2026-09-23T11:18,replace,vibration_rms,propeller,3,P-05-3-12,P-05-3-13,279,reached replace-at age (B1)
+D-02,F-02-273,2026-09-23T11:45,replace,vibration_rms,propeller,1,P-02-1-09,P-02-1-10,273,reached replace-at age (B1)
+D-02,F-02-273,2026-09-23T11:45,replace,vibration_rms,propeller,2,P-02-2-10,P-02-2-11,273,reached replace-at age (B1)
+D-02,F-02-273,2026-09-23T11:45,replace,vibration_rms,propeller,4,P-02-4-11,P-02-4-12,273,reached replace-at age (B1)
+D-10,F-10-279,2026-09-23T13:34,replace,vibration_rms,propeller,1,P-10-1-11,P-10-1-12,279,reached replace-at age (B1)
+D-10,F-10-279,2026-09-23T13:34,replace,vibration_rms,propeller,2,P-10-2-10,P-10-2-11,279,reached replace-at age (B1)
+D-07,F-07-275,2026-09-23T14:44,replace,vibration_rms,propeller,1,P-07-1-12,P-07-1-13,275,reached replace-at age (B1)
+D-07,F-07-275,2026-09-23T14:44,replace,vibration_rms,propeller,3,P-07-3-11,P-07-3-12,275,reached replace-at age (B1)
+D-07,F-07-275,2026-09-23T14:44,replace,vibration_rms,propeller,4,P-07-4-11,P-07-4-12,275,reached replace-at age (B1)
+D-05,F-05-282,2026-09-23T16:12,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-02,F-02-276,2026-09-23T16:30,replace,temp_rise_c,motor,2,M-02-2-02,M-02-2-03,276,reached replace-at age (B1)
+D-09,F-09-278,2026-09-23T18:29,replace,temp_rise_c,motor,2,M-09-2-02,M-09-2-03,278,worn: found after a chart signal (rule 4)
+D-10,F-10-281,2026-09-24T07:59,replace,vibration_rms,propeller,2,P-10-2-11,P-10-2-12,281,worn: found after a chart signal (EWMA; rule 1)
+D-05,F-05-285,2026-09-24T09:02,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 1)"
+D-05,F-05-285,2026-09-24T09:02,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-02,F-02-280,2026-09-24T15:18,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-07,F-07-283,2026-09-25T17:32,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 6)"
+D-02,F-02-288,2026-09-26T07:18,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 2)"
+D-01,F-01-289,2026-09-26T07:20,no_fault,sag_rate_v_per_min,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-08,F-08-291,2026-09-26T18:54,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 2)"
+D-05,F-05-296,2026-09-28T12:15,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 3)"
+D-05,F-05-296,2026-09-28T12:15,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (rule 1)"
+D-07,F-07-292,2026-09-28T12:32,no_fault,vibration_rms,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 1)"
+D-10,F-10-294,2026-09-28T13:52,replace,vibration_rms,propeller,3,P-10-3-11,P-10-3-12,294,reached replace-at age (B1)
+D-09,F-09-296,2026-09-28T16:38,replace,vibration_rms,propeller,3,P-09-3-10,P-09-3-11,296,worn: found after a chart signal (rule 6)
+D-07,F-07-297,2026-09-29T10:23,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (rule 5)"
+D-05,F-05-298,2026-09-29T15:31,no_fault,temp_rise_c,,,,,,"chart signal, nothing found: a false alarm (EWMA; rule 1, 5)"
+D-05,F-05-298,2026-09-29T15:31,replace,vibration_rms,propeller,4,P-05-4-12,P-05-4-13,298,reached replace-at age (B1)

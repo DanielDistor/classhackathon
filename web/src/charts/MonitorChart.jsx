@@ -53,7 +53,6 @@ export default function MonitorChart({ chart, last }) {
 
   return (
     <figure className="svg-chart">
-      <figcaption><b>{chart.title}</b>: catches {chart.catches}</figcaption>
       <div className="svg-wrap">
         <svg viewBox={`0 0 ${W} ${H}`} role="img" onMouseMove={onMove} onMouseLeave={() => setHover(null)}
              aria-label={`${chart.title} control chart, flights ${xs[0]} to ${xs[xs.length - 1]}`}>
@@ -73,7 +72,7 @@ export default function MonitorChart({ chart, last }) {
             <g>
               <rect x={x(base[0].flight_no - 0.5)} y={M.top} width={x(base[base.length - 1].flight_no + 0.5) - x(base[0].flight_no - 0.5)}
                     height={H - M.top - M.bottom} fill={C.grid} opacity={0.5} />
-              <text x={x(base[0].flight_no - 0.5) + 6} y={M.top + 14} className="tick">baseline: first {base.length} flights, checked against the fleet range</text>
+              <text x={x(base[0].flight_no - 0.5) + 6} y={M.top + 14} className="tick">baseline</text>
             </g>
           )}
           {resets.map((r) => <line key={r} x1={x(r + 0.5)} x2={x(r + 0.5)} y1={M.top} y2={H - M.bottom} stroke={C.grid} strokeWidth={1.4} />)}

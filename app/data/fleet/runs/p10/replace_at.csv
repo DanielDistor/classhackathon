@@ -1,0 +1,4 @@
+component_type,unit,retire_pct,replace_at,b10,beta,eta,n,n_failed,fitted_on
+battery,charge cycles,10,197.2,197.2,3.731,360.4,51,22,parts history before 2026-07-01
+motor,flight hours,10,240.3,240.3,3.101,496.5,62,15,parts history before 2026-07-01
+propeller,flight hours,10,47.9,47.9,1.922,154.6,151,100,parts history before 2026-07-01

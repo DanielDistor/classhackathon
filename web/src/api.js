@@ -15,7 +15,9 @@ async function getJson(path) {
 
 // Relative paths ("api/...", no leading slash) so it also works under a Posit
 // Connect content path like /content/<guid>/.
-export const getFleet = () => getJson('api/fleet')
-export const getDrone = (id) => getJson(`api/drones/${encodeURIComponent(id)}`)
-export const getReliability = () => getJson('api/reliability')
+// retire = the retirement setting p: parts retire at B_p (one precomputed run each).
+export const getRuns = () => getJson('api/runs')
+export const getFleet = (retire) => getJson(`api/fleet?retire=${retire}`)
+export const getDrone = (id, retire) => getJson(`api/drones/${encodeURIComponent(id)}?retire=${retire}`)
+export const getReliability = (retire) => getJson(`api/reliability?retire=${retire}`)
 export const getGuide = () => getJson('api/guide')
