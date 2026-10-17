@@ -151,55 +151,64 @@ export default function Guide({ dataset, onEnter }) {
     life_value: `${p.life_value} ${p.component_type === 'battery' ? 'charges' : 'flight hours'}`,
   }))
   return (
-    <div className="intro">
+    <div className="intro welcome-fit">
       <div className="hero">
         <div className="intro-wrap">
-          <p className="eyebrow">Six Sigma Hackathon · Team Flight Control</p>
           <h1>Drone Fleet Reliability Monitor</h1>
           <p className="lede">Catch wear before it becomes a mid-air failure. Every morning, the fleet maintenance technician
             sees which of the 10 drones can fly, which parts to swap next - and why.</p>
-          <div className="hero-stats">
-            <span className="stat-chip">10 drones</span><span className="stat-chip">3,000 flights</span>
-            <span className="stat-chip">every replacement logged</span>
-          </div>
           <div className="hero-cta">
             <button className="btn-hero" onClick={onEnter}>Open the dashboard  →</button>
-            <span className="hero-hint">or read on</span>
           </div>
         </div>
       </div>
       <div className="intro-wrap intro-body">
-        <h2>What you get</h2>
-        <div className="grid-3">{WHAT_YOU_GET.map(([n, d]) => <div key={n} className="info-card tab-card"><h3>{n}</h3><p>{d}</p></div>)}</div>
-
-        <h2>How it works</h2>
-        <div className="grid-3">{STEPS.map(([n, t, b]) => <div key={n} className="step"><span className="step-num">{n}</span><h3>{t}</h3><p>{b}</p></div>)}</div>
-
-        <h2>The test fleet</h2>
-        <div className="callout">
-          <p><strong>Invented data, on purpose.</strong> Because we generated the fleet, we know every problem in it and can
-            check the tool catches each one, like testing a smoke alarm with real smoke.</p>
-        </div>
-        {error && <Failed error={error} />}
-        {!g && !error && <Loading what="the test fleet" />}
-        {g && <FleetCard g={g} />}
-
-        <h2>The data, from the drone up</h2>
-        <Fold summary="The drone and the 5 things the technician measures">
-          <div className="diagram-card">
-            <DroneDiagram />
-            <table className="parts">
-              <thead><tr><th /><th>Part</th><th>What the technician writes down</th><th>Column in the data</th></tr></thead>
-              <tbody>
-                {PARTS.map(([n, part, what, rec, cols]) => (
-                  <tr key={n}><td><span className="num-badge">{n}</span></td><td><strong>{part}</strong><div className="muted">{what}</div></td>
-                    <td>{rec}</td><td><code>{cols}</code></td></tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="welcome-split">
+          <div className="welcome-boxes">
+            <section className="welcome-box">
+              <h2>The problem</h2>
+              <p>A drone delivery startup is experiencing mid-air failures, but it only investigates after a crash.
+                Technicians need a way to log wear and tear before and during each flight, and to use it to manage and
+                improve the fleet's reliability.</p>
+            </section>
+            <section className="welcome-box">
+              <h2>What the dashboard does</h2>
+              <ul className="welcome-list">{WHAT_YOU_GET.map(([n, d]) => <li key={n}><b>{n}:</b> {d}</li>)}</ul>
+            </section>
+            <section className="welcome-box">
+              <h2>How it works</h2>
+              <ol className="welcome-list">{STEPS.map(([n, t, b]) => <li key={n}><b>{t}:</b> {b}</li>)}</ol>
+            </section>
           </div>
+          <figure className="welcome-drone">
+            <DroneDiagram />
+            <figcaption>The parts the tool tracks</figcaption>
+          </figure>
+        </div>
+
+        <div className="welcome-folds">
+        <span className="welcome-more">More details</span>
+        <Fold summary="Test fleet">
+          <div className="callout">
+            <p><strong>Invented data, on purpose.</strong> Because we generated the fleet, we know every problem in it and can
+              check the tool catches each one, like testing a smoke alarm with real smoke.</p>
+          </div>
+          {error && <Failed error={error} />}
+          {!g && !error && <Loading what="the test fleet" />}
+          {g && <FleetCard g={g} />}
         </Fold>
-        <Fold summary="One flight, three moments">
+        <Fold summary="What is measured">
+          <table className="parts">
+            <thead><tr><th /><th>Part</th><th>What the technician writes down</th><th>Column in the data</th></tr></thead>
+            <tbody>
+              {PARTS.map(([n, part, what, rec, cols]) => (
+                <tr key={n}><td><span className="num-badge">{n}</span></td><td><strong>{part}</strong><div className="muted">{what}</div></td>
+                  <td>{rec}</td><td><code>{cols}</code></td></tr>
+              ))}
+            </tbody>
+          </table>
+        </Fold>
+        <Fold summary="One flight">
           <div className="grid-3 moments">
             {MOMENTS.map(([when, who, items], i) => (
               <div key={when} className="info-card moment">
@@ -210,7 +219,7 @@ export default function Guide({ dataset, onEnter }) {
             ))}
           </div>
         </Fold>
-        <Fold summary="Example rows from the data files">
+        <Fold summary="Example rows">
           {g && (
             <div className="stack">
               <div className="info-card"><h3>flights.csv: the flight logbook</h3>
@@ -223,13 +232,10 @@ export default function Guide({ dataset, onEnter }) {
           )}
         </Fold>
 
-        <h2>Key terms</h2>
-        <Fold summary="Open the key terms">
+        <Fold summary="Key terms">
           <div className="terms">{TERMS.map(([t, d]) => <div key={t} className="term"><dt>{t}</dt><dd>{d}</dd></div>)}</div>
         </Fold>
 
-        <div className="continue-row">
-          <button className="btn-continue" onClick={onEnter}>Continue to the dashboard  →</button>
         </div>
       </div>
     </div>

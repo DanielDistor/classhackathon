@@ -68,3 +68,35 @@ table.mini-parts td.num { white-space: nowrap; }
   .modal-box { padding: 16px 12px 10px; }
   .tip { white-space: normal; width: 200px; }
 }
+
+/* welcome page: text on the left, the drone picture on the right, all on one screen.
+   An opened dropdown spans the full width below the row. */
+.welcome-fit .hero { padding: 22px 0 20px; }
+.welcome-fit .hero .eyebrow { margin-bottom: 6px; }
+.welcome-fit .hero h1 { font-size: 2.2rem; margin: 0 0 8px; }
+.welcome-fit .hero .lede { font-size: 1.02rem; max-width: 760px; }
+.welcome-fit .hero .hero-cta { margin-top: 12px; }
+.welcome-fit .intro-wrap { max-width: 1240px; }
+.welcome-fit .intro-body { padding-top: 4px; padding-bottom: 16px; }
+.welcome-split { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: 20px; align-items: stretch; }
+.welcome-drone { display: flex; flex-direction: column; justify-content: center; }
+.welcome-boxes { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.welcome-box { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; }
+.welcome-fit .welcome-box h2 { font-size: 1.02rem; margin: 0 0 4px; }
+.welcome-split p, .welcome-list { font-size: 0.93rem; line-height: 1.5; }
+.welcome-split p { margin: 0; }
+.welcome-list { margin: 0; padding-left: 20px; }
+.welcome-list li { margin-bottom: 2px; }
+.welcome-drone { margin: 16px 0 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.welcome-drone svg { overflow: visible; }
+.welcome-drone .d-name { font-size: 22px; }
+.welcome-drone .d-sub { font-size: 17px; }
+.welcome-drone .d-front { font-size: 16px; }
+.welcome-drone figcaption { font-size: 0.82rem; color: var(--ink-3); text-align: center; margin-top: 6px; }
+.welcome-folds { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--line); }
+.welcome-more { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin-right: 4px; }
+.welcome-folds .fold { margin-top: 0; border-radius: 999px; }
+.welcome-folds .fold > summary { padding: 7px 15px; font-size: 0.88rem; }
+.welcome-folds .fold[open] { flex-basis: 100%; order: 1; border-radius: var(--radius); }
+@media (max-width: 900px) { .welcome-split { grid-template-columns: 1fr; gap: 0; } }
