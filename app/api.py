@@ -260,7 +260,7 @@ def reliability_view(retire: int = RETIRE, dataset: str = DATASET) -> dict:
 
 #: Estimated costs in dollars (planned replacement = part + labour + downtime; failure in flight =
 #: a crashed delivery drone, its package and recovery). Placeholders: change them in the dashboard.
-DEFAULT_COSTS = {"motor": (350.0, 8000.0), "propeller": (80.0, 8000.0), "battery": (380.0, 8000.0)}
+DEFAULT_COSTS = {"motor": (280.0, 6000.0), "propeller": (75.0, 6000.0), "battery": (300.0, 6000.0)}
 
 
 @app.get("/api/cost")

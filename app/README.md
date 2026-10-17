@@ -111,7 +111,7 @@ Dashboard routes are `GET` and take `?dataset=` (`fleet` = Fleet A, the default,
 | `/api/fleet` | every drone's status, reason and parts health; every installed part's countdown; the timeline; activity counts | `fleet_status`, `replacement_plan`, `parts_health`, `maintenance_timeline` |
 | `/api/drones/{drone_id}` | one drone: status, parts, timeline, and its three control charts (one row per flight). 404 for an unknown drone | `monitor_chart`, `reset_flights`, `drone_series` |
 | `/api/reliability` | Weibull fit per part type with 95% intervals, replace-at ages, R(t) and Kaplan-Meier curves | `fit_by_type`, `reliability`, `km_curve` |
-| `/api/cost` | cost per drone-flight of each policy, from the model (no charts) and from the simulated runs (with charts), and the cheapest choice. Prices: `cp_motor`, `cf_motor`, `cp_propeller`, `cf_propeller`, `cp_battery`, `cf_battery` (defaults $350 / $80 / $380 planned, $8,000 per failure in flight) | `retirement_cost` |
+| `/api/cost` | cost per drone-flight of each policy, from the model (no charts) and from the simulated runs (with charts), and the cheapest choice. Prices: `cp_motor`, `cf_motor`, `cp_propeller`, `cf_propeller`, `cp_battery`, `cf_battery` (defaults $280 / $75 / $300 planned, $6,000 per failure in flight) | `retirement_cost` |
 | `/api/runs` | the slider settings and what each run replaced, caught and lost | |
 | `/api/guide` | the answer key, replacement counts and example rows for the welcome page | |
 

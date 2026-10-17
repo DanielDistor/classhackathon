@@ -26,10 +26,10 @@
       "checksum": "61939823fbcc7e8de3b61ab105331baf"
     },
     "README.md": {
-      "checksum": "59c210c63ef6841f4c8ebd0ad29b45a3"
+      "checksum": "4594afa554e9e4cf7d1a6883cc12f90e"
     },
     "api.py": {
-      "checksum": "b50e17c0b0f05c7f22176eb9b510d91d"
+      "checksum": "7de45c809436c496c55b8dcadf3c5929"
     },
     "data/fleet/answer_key.csv": {
       "checksum": "be1678d874785221947a8fd9ad616284"
@@ -286,8 +286,8 @@
     "qc.py": {
       "checksum": "6bc2484cea70f85eacd9cb28bbfd26fa"
     },
-    "static/assets/index-CJS0nK9z.js": {
-      "checksum": "94793bfd65800b3b9e0aa3c1171ceed6"
+    "static/assets/index-DwXZHMXy.js": {
+      "checksum": "87d917ecb3b326917c4bf846b5391199"
     },
     "static/assets/index-cYD807a8.css": {
       "checksum": "534977db115c295a9ad690862b44c175"
@@ -296,7 +296,7 @@
       "checksum": "92d88bdc0c94468d394bb7b65d6dae31"
     },
     "static/index.html": {
-      "checksum": "5cb638ed9c4cc537c1b617f8c1ea5e9b"
+      "checksum": "f1a65cdd7d06289e6eff7a63b1ed6e01"
     }
   }
 }

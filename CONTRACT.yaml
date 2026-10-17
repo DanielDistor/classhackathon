@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 23:51"
+updated: "2026-10-17 12:38"
 
 tasks:
   - id: H-01
@@ -483,3 +483,21 @@ tasks:
       works with notes; bad files and constant readings are refused); uploading the example in
       the browser shows D-02 and D-03 Do not fly and D-01 propeller 1 due.
     result: "Upload box above the tabs; POST /api/upload combines an .xlsx (flights + components, optional maintenance) with Fleet A and Fleet B (drones renamed A/B/U) into a Combined tab with the fleet cards, pop-ups and pooled Weibull; the three existing tabs are unchanged (94 routes identical to the pushed version); example workbook = a third simulated fleet (seed 9101); 7 tests pass."
+
+  - id: H-23
+    title: Lower estimated prices, typed-only price boxes, docs updated
+    points: "protects Tool Design and Documentation: believable prices, one input style, every doc in step"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-17 12:35"
+    owns: ["app/api.py", "web/src/", "app/static/", "app/manifest.json", "tests/", "README.md", "app/README.md", "demo/README.md", "docs/how-it-works.md", "docs/plan.md"]
+    notes: >
+      Asked by Div on 2026-10-17. Estimated prices lowered, propellers about the
+      same: planned propeller 75, motor 280, battery 300; failure in flight 6000.
+      The price boxes take typed numbers only (no up/down arrows). Every doc that
+      quotes the prices or the resulting costs is updated.
+    definition_of_done: >
+      API defaults and dashboard defaults agree; pytest and vitest pass; no doc
+      still quotes the old prices or results (checked by search); the Cost tab
+      renders with the new numbers.
+    result: "Prices lowered (planned propeller 75, motor 280, battery 300; failure 6000) in the API and the dashboard; price boxes are typed text (digits and one decimal point, no arrows). Fleet A at B10: $21.26 cheapest without charts vs $3.56 with them, saves $53,093; Fleet B $25.59 (at 2%) vs $4.70, $62,660. demo/README, app/README, how-it-works and plan updated; search finds no old price or result. pytest 141 passed, vitest 6 passed; Cost tab renders with the new numbers."

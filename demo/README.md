@@ -73,11 +73,11 @@ API: <http://127.0.0.1:8000/api/runs?dataset=fleet>
 
 | What you see | Value | How to read it |
 |---|---|---|
-| No charts: cheapest choice | replace at 1.5% → **$26.26** per drone-flight | From the age-replacement model. With no warnings, the cheapest plan is to replace parts very early |
-| With charts: replace at 10% (slider) | **$4.08** per drone-flight | From the simulated run. Planned replacements only, since nothing failed in flight |
-| The charts save | **$66,528** over these 3,000 flights (**$22.18** each) | The value of warning before a failure |
+| No charts: cheapest choice | replace at 1.5% → **$21.26** per drone-flight | From the age-replacement model. With no warnings, the cheapest plan is to replace parts very early |
+| With charts: replace at 10% (slider) | **$3.56** per drone-flight | From the simulated run. Planned replacements only, since nothing failed in flight |
+| The charts save | **$53,093** over these 3,000 flights (**$17.70** each) | The value of warning before a failure |
 
-The prices are estimates ($350 / $80 / $380 for a planned motor / propeller / battery, $8,000 for a failure in
+The prices are estimates ($280 / $75 / $300 for a planned motor / propeller / battery, $6,000 for a failure in
 flight) and can be changed on the tab.
 
 API: <http://127.0.0.1:8000/api/cost?dataset=fleet>
@@ -97,7 +97,7 @@ dropdown. 11 problems planted (`data/fleet_b/answer_key.csv`).
 | 2. One drone | D-09, Vibration, flight 111 | reading **4.58** m/s² against limits **2.25 to 3.82**, EWMA **3.35**: rule 1 + EWMA. Answer key: prop strike starting flight 111, caught after flight 111 |
 | 3. Weibull | motor / propeller / battery | β 2.62 / 1.74 / 2.67, η 514 h / 152 h / 425 cycles, B10 218 h / 42 h / 183 cycles |
 | 4. Slider | B1 → B30 | 437 → 62 parts replaced, 10 → 28 caught worn, 0 failed in flight at every setting |
-| 5. Cost | at B10 | **$5.46** per flight with the charts vs **$31.72** for the cheapest choice without them (replace at 1.5%): the charts save **$78,769** over 3,000 flights |
+| 5. Cost | at B10 | **$4.70** per flight with the charts vs **$25.59** for the cheapest choice without them (replace at 2%): the charts save **$62,660** over 3,000 flights |
 
 **How to read it:** a second fleet with different problems gives the same result. Every planted problem is
 caught, and no part fails in flight, so the method works beyond the one dataset it was built on.

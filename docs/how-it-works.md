@@ -341,10 +341,10 @@ Start it locally with `./run.sh` from the repo folder and open
 ### The **Cost & savings** tab
 
 - **Headline:** the cheapest choice *without* charts against the charts at the slider's setting, and what that
-  saves over the 3,000 flights. With the estimated prices, Fleet A: no charts at best costs $26.26 per
-  drone-flight (replace at 1.5%); with charts at B10 it costs $4.08, a saving of about $66,500.
-- **Prices** (estimates; type your own): planned replacement = part + labour + downtime (propeller $80, motor
-  $350, battery $380); failure in flight = a crashed drone, its package and recovery ($8,000).
+  saves over the 3,000 flights. With the estimated prices, Fleet A: no charts at best costs $21.26 per
+  drone-flight (replace at 1.5%); with charts at B10 it costs $3.56, a saving of about $53,100.
+- **Prices** (estimates; type your own): planned replacement = part + labour + downtime (propeller $75, motor
+  $280, battery $300); failure in flight = a crashed drone, its package and recovery ($6,000).
 - **Chart:** the blue line is the textbook age-replacement model (Barlow & Proschan) on each part's Weibull:
   with no charts, p% of parts fail in flight before B_p, so cost per drone-flight = (planned cost × parts
   retired + failure cost × parts failing) ÷ the use each part gives. The orange dots are what each simulated

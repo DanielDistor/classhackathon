@@ -177,7 +177,7 @@ def test_cost_view_model_matches_qc_and_runs_count_the_log():
     pol = pd.read_csv(FLEET / "runs" / "p10" / "replace_at.csv")
     f = pd.read_csv(FLEET / "runs" / "p10" / "flights.csv")
     use = {"motor": 4 * f["flight_min"].mean() / 60, "propeller": 4 * f["flight_min"].mean() / 60, "battery": 1.0}
-    costs = {"motor": (350, 8000), "propeller": (15, 2000), "battery": (380, 8000)}
+    costs = {"motor": (280, 6000), "propeller": (15, 2000), "battery": (300, 6000)}
     direct = qc.retirement_cost(pol, costs, use, [10]).groupby("retire_pct")["cost_per_flight"].sum()
     assert total.loc[10] == pytest.approx(direct.loc[10], rel=1e-5)
     m = pd.read_csv(FLEET / "runs" / "p10" / "maintenance.csv")

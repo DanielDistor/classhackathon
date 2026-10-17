@@ -6,7 +6,9 @@ import { Failed, Loading, Panel } from './common.jsx'
 import { PART_TITLE, fmt } from '../format.js'
 
 // Estimates: planned = part + labour + downtime; failure = a crashed drone, its package and recovery.
-const DEFAULTS = { motor: [350, 8000], propeller: [80, 8000], battery: [380, 8000] }
+const DEFAULTS = { motor: [280, 6000], propeller: [75, 6000], battery: [300, 6000] }
+const asText = (c) => Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v.map(String)]))
+const asNumbers = (c) => Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v.map(Number)]))
 const money = (x, d = 0) => `$${fmt(x, d)}`
 
 /** Cost per drone-flight vs the retirement %: the age-only model (line) and the simulated runs with the charts (dots). */
@@ -93,15 +95,17 @@ function Table({ d, retire }) {
  * simulated runs with charts, at editable estimated prices.
  */
 export default function CostTab({ dataset, retire }) {
-  const [draft, setDraft] = useState(DEFAULTS)
+  const [draft, setDraft] = useState(() => asText(DEFAULTS))     // what is typed, as text
   const [costs, setCosts] = useState(DEFAULTS)
   useEffect(() => {                              // refetch shortly after typing stops
-    const t = setTimeout(() => setCosts(draft), 500)
+    const t = setTimeout(() => setCosts(asNumbers(draft)), 500)
     return () => clearTimeout(t)
   }, [draft])
   const valid = Object.values(costs).every(([cp, cf]) => cp > 0 && cf > 0)
   const { data: d, error } = useApi(() => getCost(dataset, costs), `cost-${dataset}-${JSON.stringify(costs)}`)
-  const set = (type, i, v) => setDraft({ ...draft, [type]: draft[type].map((x, j) => (j === i ? Number(v) : x)) })
+  // typing only: keep digits and one decimal point
+  const clean = (v) => v.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
+  const set = (type, i, v) => setDraft({ ...draft, [type]: draft[type].map((x, j) => (j === i ? clean(v) : x)) })
   return (
     <div className="pt-3">
       {valid && d && <Savings d={d} retire={retire} />}
@@ -114,7 +118,7 @@ export default function CostTab({ dataset, retire }) {
                 <tr key={label}>
                   <td>{label}</td>
                   {Object.keys(DEFAULTS).map((t) => (
-                    <td key={t}><input type="number" min="1" value={draft[t][i]} onChange={(e) => set(t, i, e.target.value)}
+                    <td key={t}><input type="text" inputMode="decimal" value={draft[t][i]} onChange={(e) => set(t, i, e.target.value)}
                                        aria-label={`${label}, ${t}`} /></td>
                   ))}
                 </tr>
