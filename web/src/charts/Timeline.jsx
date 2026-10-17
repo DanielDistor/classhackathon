@@ -1,19 +1,25 @@
 import { useState } from 'react'
 import { COLORS as C, linear, niceTicks } from './scale.js'
 
-/** marker -> (label, colour). Shape and letter carry the meaning too, never colour alone. */
+/** marker -> (label, colour). Shape and letter carry the meaning too, never colour alone.
+ *  Filled = a part was used; the hollow diamond (Sr) = a special cause repaired without one. */
 export const MARKER_STYLE = {
   R: ['warned → replaced before the next flight', C.series],
   F: ['failed in flight → replaced', C.critical],
-  S: ['special cause → fixed', C.violet],
+  S: ['special cause → part replaced', C.violet],
+  Sr: ['special cause → repaired, no new part', C.violet],
 }
+/** Which style an event uses: a repaired special cause gets the hollow diamond. */
+const styleOf = (e) => (e.marker === 'S' && e.repaired ? 'Sr' : e.marker)
 export const PART_LANES = ['motor 1', 'motor 2', 'motor 3', 'motor 4', 'propeller 1', 'propeller 2',
   'propeller 3', 'propeller 4', 'battery 1', 'battery 2']
 
 function Mark({ m, cx, cy, r = 5.5 }) {
   const col = MARKER_STYLE[m][1]
   if (m === 'F') return <path d={`M${cx - r},${cy - r}L${cx + r},${cy + r}M${cx + r},${cy - r}L${cx - r},${cy + r}`} stroke={col} strokeWidth={3.2} strokeLinecap="round" />
-  if (m === 'S') return <path d={`M${cx},${cy - r - 1}L${cx + r + 1},${cy}L${cx},${cy + r + 1}L${cx - r - 1},${cy}Z`} fill={col} stroke={C.surface} />
+  const diamond = `M${cx},${cy - r - 1}L${cx + r + 1},${cy}L${cx},${cy + r + 1}L${cx - r - 1},${cy}Z`
+  if (m === 'S') return <path d={diamond} fill={col} stroke={C.surface} />
+  if (m === 'Sr') return <path d={diamond} fill={C.surface} stroke={col} strokeWidth={2.2} />
   return <circle cx={cx} cy={cy} r={r} fill={col} stroke={C.surface} />
 }
 
@@ -30,7 +36,7 @@ export default function Timeline({ events, rows, rowKey, nFlights, nBaseline, le
   const x = linear([0, nFlights + 2], [M.left, W - M.right])
   const y = (lane) => M.top + rows.indexOf(lane) * rowH + rowH / 2
   const shown = events.filter((e) => rows.includes(e[rowKey]))
-  const order = { R: 0, S: 1, F: 2 }
+  const order = { R: 0, Sr: 1, S: 1, F: 2 }
 
   return (
     <div className="svg-wrap">
@@ -54,10 +60,10 @@ export default function Timeline({ events, rows, rowKey, nFlights, nBaseline, le
             <text x={M.left - 10} y={y(r) + 4} textAnchor="end" className="tick lane">{r}</text>
           </g>
         ))}
-        {[...shown].sort((a, b) => order[a.marker] - order[b.marker]).map((e, i) => (
+        {[...shown].sort((a, b) => order[styleOf(a)] - order[styleOf(b)]).map((e, i) => (
           <g key={i} onMouseEnter={() => setHover(e)} onMouseLeave={() => setHover(null)} className="tl-mark">
             <circle cx={x(e.flight_no)} cy={y(e[rowKey])} r={11} fill="transparent" />
-            <Mark m={e.marker} cx={x(e.flight_no)} cy={y(e[rowKey])} />
+            <Mark m={styleOf(e)} cx={x(e.flight_no)} cy={y(e[rowKey])} />
             {letters && <text x={x(e.flight_no)} y={y(e[rowKey]) - 9} textAnchor="middle" className="tick tiny">{e.marker}</text>}
           </g>
         ))}
@@ -65,13 +71,13 @@ export default function Timeline({ events, rows, rowKey, nFlights, nBaseline, le
       {hover && (
         <div className="tip" style={{ left: `${(x(hover.flight_no) / W) * 100}%`, top: `${(y(hover[rowKey]) / H) * 100}%` }}>
           <b>{hover.drone_id}, after flight {hover.flight_no}</b>
-          <div>{hover.marker}: {MARKER_STYLE[hover.marker][0]}</div>
+          <div>{hover.marker}: {MARKER_STYLE[styleOf(hover)][0]}</div>
           <div>{hover.lane}: {hover.trigger}</div>
         </div>
       )}
       <ul className="chart-legend center">
         {Object.entries(MARKER_STYLE).map(([m, [label]]) => (
-          <li key={m}><svg width="16" height="16"><Mark m={m} cx={8} cy={8} r={4.5} /></svg>{m} = {label}</li>
+          <li key={m}><svg width="16" height="16"><Mark m={m} cx={8} cy={8} r={4.5} /></svg>{m === 'Sr' ? 'S' : m} = {label}</li>
         ))}
       </ul>
     </div>

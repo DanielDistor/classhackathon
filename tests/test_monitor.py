@@ -213,3 +213,14 @@ def test_tool_matches_the_technician_in_other_runs(dataset, pct):
             ch = monitor_chart(s["value"], s["flight_no"], reset_flights(m, drone, col), fleet=ref[col])
             tech = set(flight_numbers(acted.loc[(acted["drone_id"] == drone) & (acted["chart"] == col), "flight_id"]))
             assert set(ch.loc[ch["signal"], "flight_no"]) == tech, (dataset, pct, drone, col)
+
+
+@pytest.mark.parametrize("dataset", ["fleet", "fleet_b"])
+def test_repaired_flags_exactly_the_repairs(dataset):
+    # repaired = a special cause fixed without a new part; every other marker used a part
+    m = pd.read_csv(FLEET.parent / dataset / "maintenance.csv")
+    tl = maintenance_timeline(m)
+    assert tl["repaired"].sum() == (m["action"] == "repair").sum() > 0
+    assert (tl.loc[tl["repaired"], "marker"] == "S").all()
+    assert (tl.loc[tl["repaired"], "lane"] == "repairs").all()
+    assert not tl.loc[tl["marker"].isin(["R", "F"]), "repaired"].any()

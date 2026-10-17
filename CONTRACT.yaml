@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 23:21"
+updated: "2026-10-16 23:27"
 
 tasks:
   - id: H-01
@@ -383,3 +383,22 @@ tasks:
       on exactly the technician's flights, the API serves it); npm run build and
       vitest pass; every screen renders for both fleets.
     result: "Fleet B (seed 7100) added beside Fleet A (5300): 10 drones x 300 flights, 7 retirement runs; 11/11 special causes caught (all 7 injected shapes), tool = technician on 30/30 charts at B1, B10 and B30, Weibull recovers every true beta/eta inside the plain 95% intervals. Fleet dropdown in the dashboard, dataset= on every API route, SPEC section 7 and the codebook updated. pytest 124 passed, vitest 6 passed; all 4 screens render for both fleets."
+
+  - id: H-18
+    title: Timeline - hollow diamond for special causes repaired without a new part
+    points: "protects Tool Design: the timeline shows which actions used a part"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-16 23:26"
+    owns: ["app/qc.py", "web/src/", "app/static/", "app/manifest.json", "tests/", "docs/how-it-works.md"]
+    notes: >
+      Asked by Div on 2026-10-16. S covered both special causes that damaged a
+      part (replaced) and ones fixed without a part (loose connector, loose
+      mount, firmware setting). qc.maintenance_timeline adds a repaired flag;
+      the timeline draws a filled violet diamond for "part replaced" and a
+      hollow one for "repaired, no part". Filled marker = a part was used.
+    definition_of_done: >
+      repaired is True exactly for the maintenance log's repair rows (tested
+      on both fleets); npm run build and vitest pass; the timeline and its
+      legend show both diamonds; pytest passes.
+    result: "maintenance_timeline adds repaired (True exactly for repair rows, tested on both fleets); the timeline draws a filled violet diamond for a special cause with a part replaced and a hollow one for a repair: rendered counts 7 hollow / 10 filled (Fleet A), 6 / 5 (Fleet B), legend shows both. pytest 126 passed, vitest 6 passed."

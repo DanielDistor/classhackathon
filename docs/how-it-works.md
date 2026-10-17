@@ -302,8 +302,9 @@ Start it locally with `./run.sh` from the repo folder and open
    - **Next part due**, and how many flights until it.
    - Click a card to open that drone's details.
 4. **Fleet maintenance timeline.** Every drone on one row, flight number across.
-   **R** (blue) = warned and replaced, **F** (red ✕) = failed in flight, **S** (violet) = special cause
-   fixed. Read it as the fleet's maintenance history at a glance.
+   **R** (blue) = warned and replaced, **F** (red ✕) = failed in flight, **S** (violet diamond) = special
+   cause fixed: filled ◆ when a part was replaced, hollow ◇ when it was repaired with no new part (a loose
+   connector or mount, a firmware setting). Every filled marker used a part.
 
 ### Clicking a drone opens its details
 

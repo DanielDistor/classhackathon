@@ -47,7 +47,7 @@ const TERMS = [
   ['False alarm', 'A signal with nothing wrong: about 2% of readings with all 8 rules. Shown on the charts, no action needed.'],
   ['Temperature rise / voltage sag', 'Hottest motor − air temperature; voltage drop per flight minute.'],
   ['B_p (replace-at age)', 'The age by which p% of a part type fails, from a Weibull fit with censoring. The slider picks p; the default is B10.'],
-  ['R / F / S', 'Warned and replaced / failed in flight / special cause fixed. All happen before the next flight.'],
+  ['R / F / S', 'Warned and replaced / failed in flight / special cause fixed (filled ◆ = part replaced, hollow ◇ = repaired, no part). All before the next flight.'],
 ]
 
 

@@ -532,7 +532,7 @@ MAINTENANCE_ACTIONS = ("replace", "repair", "no_fault")
 #: chart marks the signal and restarts, nothing is replaced.
 MARKERS = {"R": "warned and replaced before the next flight (reached its replace-at age, or a chart showed it worn)",
            "F": "failed in flight, replaced before the next flight",
-           "S": "special cause found from a chart signal and fixed (part replaced or repaired)"}
+           "S": "special cause found from a chart signal and fixed: part replaced, or repaired without one (repaired)"}
 CHART_NAME = {col: name for col, name, _ in MONITORED}
 #: Columns a replace-at policy needs (data/fleet/replace_at.csv).
 REQUIRED_POLICY_COLUMNS = ("component_type", "unit", "replace_at")
@@ -582,8 +582,9 @@ def maintenance_timeline(maintenance: pd.DataFrame) -> pd.DataFrame:
     lane is the part slot ("propeller 2") for part actions, or "repairs" for a special
     cause fixed without a new part. trigger says what led to it: "replace-at age",
     "chart: <what fired>", "failed in flight" or the special cause. False alarms
-    (no_fault) are left out. Returns drone_id, lane, flight_no, marker, trigger; in
-    flight order.
+    (no_fault) are left out. repaired is True for a special cause fixed without a new part
+    (the only actions that use no part). Returns drone_id, lane, flight_no, marker, trigger,
+    repaired; in flight order.
     """
     m = check_maintenance(maintenance)
     fno = flight_numbers(m["flight_id"])
@@ -601,8 +602,8 @@ def maintenance_timeline(maintenance: pd.DataFrame) -> pd.DataFrame:
             marker, trigger = "R", "chart: " + r.reason.split("(", 1)[-1].rstrip(")")
         else:
             marker, trigger = "R", "replace-at age"
-        rows.append((r.drone_id, lane, int(k), marker, trigger))
-    out = pd.DataFrame(rows, columns=["drone_id", "lane", "flight_no", "marker", "trigger"])
+        rows.append((r.drone_id, lane, int(k), marker, trigger, r.action == "repair"))
+    out = pd.DataFrame(rows, columns=["drone_id", "lane", "flight_no", "marker", "trigger", "repaired"])
     return out.sort_values(["drone_id", "flight_no", "lane"], kind="stable").reset_index(drop=True)
 
 
