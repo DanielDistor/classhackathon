@@ -166,3 +166,27 @@ def test_fleet_b_is_served_from_its_own_folder():
 
 def test_unknown_dataset_is_422():
     assert client.get("/api/fleet?dataset=fleet_c").status_code == 422
+
+
+# ---------------------------------------------------------------- cost of the retirement choice (H-19)
+
+def test_cost_view_model_matches_qc_and_runs_count_the_log():
+    r = client.get("/api/cost?cp_propeller=15&cf_propeller=2000").json()
+    total = pd.DataFrame(r["model_total"]).set_index("retire_pct")["cost_per_flight"]
+    assert r["best_pct"] == total.idxmin() and r["best_cost"] == pytest.approx(total.min())
+    pol = pd.read_csv(FLEET / "runs" / "p10" / "replace_at.csv")
+    f = pd.read_csv(FLEET / "runs" / "p10" / "flights.csv")
+    use = {"motor": 4 * f["flight_min"].mean() / 60, "propeller": 4 * f["flight_min"].mean() / 60, "battery": 1.0}
+    costs = {"motor": (120, 2500), "propeller": (15, 2000), "battery": (90, 1500)}
+    direct = qc.retirement_cost(pol, costs, use, [10]).groupby("retire_pct")["cost_per_flight"].sum()
+    assert total.loc[10] == pytest.approx(direct.loc[10], rel=1e-5)
+    m = pd.read_csv(FLEET / "runs" / "p10" / "maintenance.csv")
+    planned = m[(m["action"] == "replace") & m["reason"].str.startswith(("reached replace-at age", "worn"))]
+    run10 = next(x for x in r["runs"] if x["retire_pct"] == 10)
+    assert run10["planned"] == len(planned)
+    want = sum(costs[t][0] * n for t, n in planned["component_type"].value_counts().items()) / len(f)
+    assert run10["cost_per_flight"] == pytest.approx(want)
+
+
+def test_cost_view_refuses_non_positive_costs():
+    assert client.get("/api/cost?cf_motor=0").status_code == 422

@@ -240,6 +240,51 @@ def reliability_view(retire: int = RETIRE, dataset: str = DATASET) -> dict:
             "plan": records(d["plan"])}
 
 
+#: Placeholder costs in dollars (planned replacement, failure in flight): change them in the dashboard.
+DEFAULT_COSTS = {"motor": (120.0, 2500.0), "propeller": (15.0, 2000.0), "battery": (90.0, 1500.0)}
+
+
+@app.get("/api/cost")
+def cost_view(dataset: str = DATASET,
+              cp_motor: float = DEFAULT_COSTS["motor"][0], cf_motor: float = DEFAULT_COSTS["motor"][1],
+              cp_propeller: float = DEFAULT_COSTS["propeller"][0], cf_propeller: float = DEFAULT_COSTS["propeller"][1],
+              cp_battery: float = DEFAULT_COSTS["battery"][0], cf_battery: float = DEFAULT_COSTS["battery"][1]) -> dict:
+    """Cost of the retirement choice, per drone-flight, two ways.
+
+    model: the age-replacement cost model (qc.retirement_cost) on each part type's Weibull, for
+           retirement at B_p over a fine grid of p. It assumes nothing warns before a failure.
+    runs:  the simulated runs, where the charts do warn: planned replacements (at age or caught
+           worn) x cp + failures in flight x cf, per drone-flight, at each slider setting.
+    """
+    costs = {"motor": (cp_motor, cf_motor), "propeller": (cp_propeller, cf_propeller),
+             "battery": (cp_battery, cf_battery)}
+    if any(not (cp > 0 and cf > 0) for cp, cf in costs.values()):
+        raise HTTPException(422, "every cost must be a positive number")
+    base = fleet(dataset)
+    policy = base["policy"]
+    hours = float(base["flights"]["flight_min"].mean()) / 60
+    use = {"motor": 4 * hours, "propeller": 4 * hours, "battery": 1.0}    # per drone-flight, all slots
+    grid = sorted(set(np.round(np.linspace(0.5, 40, 80), 2)) | set(RETIRE_PCTS))
+    model = qc.retirement_cost(policy, costs, use, grid)
+    total = model.groupby("retire_pct", as_index=False)["cost_per_flight"].sum()
+    best = total.loc[total["cost_per_flight"].idxmin()]
+    runs = []
+    for pct in RETIRE_PCTS:
+        d = fleet(dataset, pct)
+        m = d["maintenance"]
+        rep = m[m["action"] == "replace"]
+        planned = rep[rep["reason"].str.startswith(("reached replace-at age", "worn"))]
+        failed = rep[rep["reason"] == "failed in flight"]
+        dollars = (sum(costs[t][0] * n for t, n in planned["component_type"].value_counts().items())
+                   + sum(costs[t][1] * n for t, n in failed["component_type"].value_counts().items()))
+        runs.append({"retire_pct": pct, "cost_per_flight": dollars / len(d["flights"]),
+                     "planned": len(planned), "failed": len(failed)})
+    return {"dataset": dataset, "costs": {k: {"planned": v[0], "failure": v[1]} for k, v in costs.items()},
+            "model": records(model[["retire_pct", "component_type", "cost_per_flight"]]),
+            "model_total": records(total), "best_pct": float(best["retire_pct"]),
+            "best_cost": float(best["cost_per_flight"]), "runs": runs}
+
+
 @app.get("/api/guide")
 def guide_view(dataset: str = DATASET) -> dict:
     """Guide page: the injected special causes (answer key), what the technician did, example rows."""

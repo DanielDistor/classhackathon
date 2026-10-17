@@ -57,7 +57,7 @@ export default function RetireControl({ runs, retire, onChange, dataset, onDatas
         <p className="ctl-sub">
           Replace a part when {retire}% of its type would have failed: motors {fmt(row.replace_at_motor)} h,
           propellers {fmt(row.replace_at_propeller)} h, batteries {fmt(row.replace_at_battery)} cycles.
-          Every view below shows the fleet flown under this rule.
+          Every view below shows the fleet flown under this rule. Cost trade-off: Weibull tab.
         </p>
       </div>
       <Bars title="Parts warned and replaced" rows={rows} field="warned" retire={retire} onPick={onChange} />

@@ -230,3 +230,57 @@ def test_parts_health_refuses_no_parts():
     from app.qc import parts_health
     with pytest.raises(ValueError):
         parts_health(_plan([]))
+
+
+# ---------------------------------------------------------------- age-replacement cost (H-19)
+
+def test_survival_integral_known_answers():
+    from app.qc import survival_integral
+    # exponential (beta = 1): integral_0^t e^(-u/eta) du = eta (1 - e^(-t/eta))
+    assert survival_integral(50, 1.0, 100) == pytest.approx(100 * (1 - math.exp(-0.5)))
+    # large t: the mean life eta * Gamma(1 + 1/beta)
+    assert survival_integral(1e6, 2.5, 500) == pytest.approx(500 * math.gamma(1.4), rel=1e-9)
+
+
+def test_survival_integral_matches_numerical_integration():
+    from scipy.integrate import quad
+    from app.qc import survival_integral
+    for beta, eta, t in [(2.5, 500, 240), (1.8, 150, 48), (3.0, 400, 197)]:
+        ref, _ = quad(lambda u: math.exp(-((u / eta) ** beta)), 0, t)
+        assert survival_integral(t, beta, eta) == pytest.approx(ref, rel=1e-9)
+
+
+def test_cost_rate_known_answer_and_limits():
+    from app.qc import replacement_cost_rate
+    # exponential: (cp e^(-t/eta) + cf (1 - e^(-t/eta))) / (eta (1 - e^(-t/eta)))
+    t, eta, cp, cf = 50, 100, 10, 200
+    e = math.exp(-t / eta)
+    assert replacement_cost_rate(t, 1.0, eta, cp, cf) == pytest.approx((cp * e + cf * (1 - e)) / (eta * (1 - e)))
+    # run to failure (t -> infinity): cf / mean life
+    assert replacement_cost_rate(1e7, 2.5, 500, 10, 200) == pytest.approx(200 / (500 * math.gamma(1.4)), rel=1e-6)
+
+
+def test_cost_rate_has_an_optimum_for_wear_out_parts():
+    from app.qc import replacement_cost_rate
+    t = np.linspace(5, 1500, 600)
+    c = replacement_cost_rate(t, 2.5, 500, 10, 200)
+    k = int(np.argmin(c))
+    assert 0 < k < len(t) - 1                                   # lowest point inside, not at an end
+    exp_c = replacement_cost_rate(t, 1.0, 500, 10, 200)
+    assert np.all(np.diff(exp_c) <= 1e-12)                      # beta = 1: waiting is never worse
+
+
+def test_cost_rate_refuses_bad_input():
+    from app.qc import replacement_cost_rate
+    for args in [(100, 2.5, 500, 0, 200), (100, 2.5, 500, 10, -1), (100, 0, 500, 10, 200), (0, 2.5, 500, 10, 200)]:
+        with pytest.raises(ValueError):
+            replacement_cost_rate(*args)
+
+
+def test_retirement_cost_table():
+    from app.qc import b_life, retirement_cost
+    policy = pd.DataFrame({"component_type": ["propeller"], "beta": [1.8], "eta": [150.0]})
+    out = retirement_cost(policy, {"propeller": (15, 2000)}, {"propeller": 4 * 22 / 60}, [1, 10, 30])
+    assert out["replace_at"].tolist() == pytest.approx([b_life(1.8, 150, p) for p in (0.01, 0.10, 0.30)])
+    assert out["fail_share"].tolist() == [0.01, 0.10, 0.30]
+    assert out["cost_per_flight"].tolist() == pytest.approx((out["cost_per_use"] * 4 * 22 / 60).tolist())

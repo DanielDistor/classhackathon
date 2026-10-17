@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 23:27"
+updated: "2026-10-16 23:34"
 
 tasks:
   - id: H-01
@@ -402,3 +402,25 @@ tasks:
       on both fleets); npm run build and vitest pass; the timeline and its
       legend show both diamonds; pytest passes.
     result: "maintenance_timeline adds repaired (True exactly for repair rows, tested on both fleets); the timeline draws a filled violet diamond for a special cause with a part replaced and a hollow one for a repair: rendered counts 7 hollow / 10 filled (Fleet A), 6 / 5 (Fleet B), legend shows both. pytest 126 passed, vitest 6 passed."
+
+  - id: H-19
+    title: Cost of the retirement choice - age-replacement cost model (planned vs failure cost)
+    points: "Tool Implementation (25): a valid reliability analysis that supports the retirement decision"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-16 23:29"
+    owns: ["app/qc.py", "app/api.py", "web/src/", "app/static/", "app/manifest.json", "tests/", "docs/how-it-works.md", "docs/plan.md"]
+    notes: >
+      Asked by Div on 2026-10-16. The simulated runs show the cost side (B1 uses
+      ~5x the parts of B30) but no failures at any setting, because the charts
+      catch every worn part. The age-replacement model (Barlow & Proschan) gives
+      the other side: cost per unit of use C(T) = (Cp R(T) + Cf F(T)) / int_0^T R,
+      from each part type's Weibull, for T = B_p. Cp (planned) and Cf (in-flight
+      failure) are user inputs with placeholder defaults. Shown on the Weibull
+      tab: cost per drone-flight vs retirement %, cheapest % marked, current
+      slider % marked, and a note that the model assumes no chart warning.
+    definition_of_done: >
+      qc function tested: exponential closed form, numerical integral cross
+      check, optimum exists when beta > 1 and Cf > Cp, refuses bad input; API
+      route tested; npm run build and vitest pass; the panel renders.
+    result: "qc.survival_integral / replacement_cost_rate / retirement_cost (tests: exponential closed form, quad cross-check to 1e-9, run-to-failure limit, optimum inside the range for beta 2.5, none for beta 1, bad input refused); /api/cost with editable prices; Weibull tab panel: age-only model cheapest at B1 ($6.48 per drone-flight with placeholder prices) vs simulated runs with charts $0.93 at B10, $0.72 at B30, 0 failures. pytest 134 passed, vitest 6 passed; panel renders with live data."

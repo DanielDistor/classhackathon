@@ -757,6 +757,58 @@ def compare_lots(components: pd.DataFrame, component_type: str = "battery") -> p
     return _fit_rows(c.groupby("lot"), "lot").sort_values("lot").reset_index(drop=True)
 
 
+def survival_integral(t, beta: float, eta: float):
+    """Expected use a part delivers up to age t: the integral of R(u) from 0 to t.
+
+    = eta * Gamma(1 + 1/beta) * P(1/beta, (t/eta)^beta), with P the regularized lower incomplete
+    gamma function; it tends to the mean life as t grows. Works on arrays too.
+    """
+    from scipy.special import gamma, gammainc
+    t = np.asarray(t, dtype=float)
+    return eta * gamma(1 + 1 / beta) * gammainc(1 / beta, (t / eta) ** beta)
+
+
+def replacement_cost_rate(t, beta: float, eta: float, cp: float, cf: float):
+    """Long-run cost per unit of use when each part is replaced at age t, or at failure if sooner.
+
+    The age-replacement model (Barlow & Proschan): every part ends in a planned replacement
+    (cost cp, chance R(t)) or a failure (cost cf, chance F(t) = 1 - R(t)), after an expected
+    use of integral_0^t R(u) du, so the cost rate is (cp R(t) + cf F(t)) / integral_0^t R.
+    Replacing early wastes life; replacing late risks the failure cost. When beta > 1 and
+    cf > cp the curve has a lowest point; with beta <= 1 waiting is never worse.
+    It assumes nothing warns of a failure first (no control charts).
+    """
+    if not (beta > 0 and eta > 0 and cp > 0 and cf > 0):
+        raise ValueError("need beta > 0, eta > 0 and positive costs cp, cf")
+    t = np.asarray(t, dtype=float)
+    if np.any(t <= 0):
+        raise ValueError("every replace-at age must be greater than 0")
+    r = reliability(t, beta, eta)
+    return (cp * r + cf * (1 - r)) / survival_integral(t, beta, eta)
+
+
+def retirement_cost(policy: pd.DataFrame, costs: dict, use_per_flight: dict, pcts) -> pd.DataFrame:
+    """Cost per drone-flight of retiring parts at B_p, for each p in pcts and each part type.
+
+    policy          one row per component_type with the Weibull beta and eta (replace_at.csv)
+    costs           {component_type: (cp, cf)}: a planned replacement, and a failure in flight
+    use_per_flight  {component_type: use per drone-flight, all slots}: e.g. 4 motors x the
+                    mean flight hours, or 1 charge cycle for a drone's 2 alternating batteries
+    Returns retire_pct, component_type, replace_at (B_p), fail_share (= p, the share of parts
+    that fail before B_p without a warning), cost_per_use and cost_per_flight.
+    """
+    rows = []
+    for r in policy.itertuples():
+        cp, cf = costs[r.component_type]
+        for pct in pcts:
+            age = b_life(r.beta, r.eta, pct / 100)
+            rate = float(replacement_cost_rate(age, r.beta, r.eta, cp, cf))
+            rows.append(dict(retire_pct=pct, component_type=r.component_type, replace_at=age,
+                             fail_share=pct / 100, cost_per_use=rate,
+                             cost_per_flight=rate * use_per_flight[r.component_type]))
+    return pd.DataFrame(rows)
+
+
 def km_curve(life: Iterable[float], status: Iterable[int]) -> pd.DataFrame:
     """Kaplan-Meier estimate of survival straight from the data (no model).
 

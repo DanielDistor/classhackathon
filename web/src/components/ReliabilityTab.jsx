@@ -2,6 +2,7 @@ import { useState } from 'react'
 import useApi from '../useApi.js'
 import { getReliability } from '../api.js'
 import ReliabilityChart from '../charts/ReliabilityChart.jsx'
+import CostPanel from './CostPanel.jsx'
 import { Failed, LifeBar, Loading, Panel, Used } from './common.jsx'
 import { PART_NAME, PART_TITLE, flightsPhrase, fmt, partClass } from '../format.js'
 
@@ -109,6 +110,7 @@ export default function ReliabilityTab({ retire, dataset }) {
         fails. The replace-at ages come from the parts history before the log.
       </p>
       <RelCards fits={d.fits} retire={retire} />
+      <Panel title="Cost of the retirement choice, per drone-flight"><CostPanel dataset={dataset} retire={retire} /></Panel>
       <Panel title="Reliability curve: Weibull fit vs. the data (Kaplan-Meier)">
         <div className="chart-controls">
           <select value={curve.type} onChange={(e) => setType(e.target.value)} aria-label="Part type">

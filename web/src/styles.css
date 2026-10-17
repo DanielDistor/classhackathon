@@ -2224,3 +2224,11 @@ details.fold-panel[open] > summary {
        font-size: 0.85rem;
        color: var(--ink-2);
 }
+
+.cost-inputs input {
+       width: 90px;
+       font: inherit;
+       padding: 3px 6px;
+       border: 1px solid var(--line);
+       border-radius: 6px;
+}

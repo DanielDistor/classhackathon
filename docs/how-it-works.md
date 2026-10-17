@@ -336,6 +336,13 @@ Start it locally with `./run.sh` from the repo folder and open
 - **The fitted numbers** with 95% confidence intervals: shape β (above 1 means parts wear out, so
   replacing them early pays off), scale η, B10, and mean life.
 - **Replacement schedule**: every drone's 10 parts with flights left, folded per drone.
+- **Cost of the retirement choice**: enter each part type's price for a planned replacement and for a failure
+  in flight (placeholders: motor $120 / $2,500, propeller $15 / $2,000, battery $90 / $1,500). The blue line is
+  the textbook age-replacement model (Barlow & Proschan) on each part's Weibull: cost per drone-flight =
+  (planned cost × share retired + failure cost × share failing first) ÷ expected use per part, assuming
+  nothing warns before a failure. With these prices it is cheapest at about B1 ($6.48 per drone-flight).
+  The orange dots are what the simulated runs actually cost *with* the charts: no failures, so later
+  retirement only gets cheaper ($0.93 at B10, $0.72 at B30). The gap is what the charts are worth.
 
 ### The **Guide & Data Reference** page (button at the top right)
 

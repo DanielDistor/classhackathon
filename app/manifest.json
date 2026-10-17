@@ -29,7 +29,7 @@
       "checksum": "28de13dc8140a1fad3010d1bd35f230e"
     },
     "api.py": {
-      "checksum": "9bd247ca06f49e2381ee0b9601a32fba"
+      "checksum": "032a0576691e2b4aa4fed17be79b3f4d"
     },
     "data/fleet/answer_key.csv": {
       "checksum": "be1678d874785221947a8fd9ad616284"
@@ -284,16 +284,16 @@
       "checksum": "5cb425985b8ba97d231e6210c5a8fff7"
     },
     "qc.py": {
-      "checksum": "e78b853219cc1bbc190df3650b197c50"
+      "checksum": "6bc2484cea70f85eacd9cb28bbfd26fa"
     },
-    "static/assets/index-B_3nuZvZ.css": {
-      "checksum": "37a94070d66e85d4b930782dd72d320c"
+    "static/assets/index-Dcp5LvV0.js": {
+      "checksum": "eca007639bb78bc9138edbb444a25872"
     },
-    "static/assets/index-_cF8pXHt.js": {
-      "checksum": "598c3b86edb1123a9a7eac18a4c9b96f"
+    "static/assets/index-Lk8WJ43e.css": {
+      "checksum": "28ce4f8d0a6a600a28df3af3a1b49d77"
     },
     "static/index.html": {
-      "checksum": "6e10094ee4c892a94816fb23a7f9b669"
+      "checksum": "6b805f2b31f7bf42f84c4eae9cfc16e2"
     }
   }
 }

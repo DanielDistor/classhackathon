@@ -22,3 +22,6 @@ export const getFleet = (retire, ds) => getJson(`api/fleet?retire=${retire}&data
 export const getDrone = (id, retire, ds) => getJson(`api/drones/${encodeURIComponent(id)}?retire=${retire}&dataset=${ds}`)
 export const getReliability = (retire, ds) => getJson(`api/reliability?retire=${retire}&dataset=${ds}`)
 export const getGuide = (ds) => getJson(`api/guide?dataset=${ds}`)
+// costs = { motor: [planned, failure], propeller: [...], battery: [...] } in dollars
+export const getCost = (ds, costs) => getJson(`api/cost?dataset=${ds}&` + Object.entries(costs)
+  .map(([t, [cp, cf]]) => `cp_${t}=${cp}&cf_${t}=${cf}`).join('&'))
