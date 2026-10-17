@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-16 23:34"
+updated: "2026-10-16 23:51"
 
 tasks:
   - id: H-01
@@ -424,3 +424,22 @@ tasks:
       check, optimum exists when beta > 1 and Cf > Cp, refuses bad input; API
       route tested; npm run build and vitest pass; the panel renders.
     result: "qc.survival_integral / replacement_cost_rate / retirement_cost (tests: exponential closed form, quad cross-check to 1e-9, run-to-failure limit, optimum inside the range for beta 2.5, none for beta 1, bad input refused); /api/cost with editable prices; Weibull tab panel: age-only model cheapest at B1 ($6.48 per drone-flight with placeholder prices) vs simulated runs with charts $0.93 at B10, $0.72 at B30, 0 failures. pytest 134 passed, vitest 6 passed; panel renders with live data."
+
+  - id: H-20
+    title: Cost & savings tab with realistic placeholder prices
+    points: "Tool Design (25): the retirement decision and what the charts save, on one screen"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-16 23:48"
+    owns: ["app/api.py", "web/src/", "app/static/", "app/manifest.json", "tests/", "docs/how-it-works.md", "docs/plan.md"]
+    notes: >
+      Asked by Div on 2026-10-16. The cost panel moves from the Weibull tab to its
+      own dashboard tab, "Cost & savings", under the fleet dropdown and slider:
+      a savings headline for the current setting, the price inputs, the chart
+      (no-charts model line vs with-charts simulated runs) with plainer labels,
+      and a table per setting. Default prices: planned propeller 80, motor 350,
+      battery 380; failure in flight 8000 each (estimates, labelled as such).
+    definition_of_done: >
+      pytest and vitest pass; the tab renders with live data for both fleets;
+      the headline numbers equal the API's model and run costs.
+    result: "Cost & savings tab beside the two dashboard tabs: headline cheapest no-charts choice vs charts at the slider setting (Fleet A at B10: $26.26 vs $4.08 per drone-flight, saves $66,528 over 3,000 flights; Fleet B $31.72 vs $5.46, $78,769), estimated prices (planned prop 80 / motor 350 / battery 380, failure 8000), relabelled chart, folded table per setting. Headline numbers equal the API (rendered for both fleets). pytest 134 passed, vitest 6 passed."

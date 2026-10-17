@@ -29,7 +29,7 @@
       "checksum": "28de13dc8140a1fad3010d1bd35f230e"
     },
     "api.py": {
-      "checksum": "032a0576691e2b4aa4fed17be79b3f4d"
+      "checksum": "fc9957f86706da9ec5a21eeed45ca8fc"
     },
     "data/fleet/answer_key.csv": {
       "checksum": "be1678d874785221947a8fd9ad616284"
@@ -286,14 +286,14 @@
     "qc.py": {
       "checksum": "6bc2484cea70f85eacd9cb28bbfd26fa"
     },
-    "static/assets/index-Dcp5LvV0.js": {
-      "checksum": "eca007639bb78bc9138edbb444a25872"
+    "static/assets/index-CxtWtdEH.css": {
+      "checksum": "8b9de787b40c4701c5e6b942ba3a6aa6"
     },
-    "static/assets/index-Lk8WJ43e.css": {
-      "checksum": "28ce4f8d0a6a600a28df3af3a1b49d77"
+    "static/assets/index-fUnVLJWL.js": {
+      "checksum": "b2ee228a436c3906f51fdebea5f72eeb"
     },
     "static/index.html": {
-      "checksum": "6b805f2b31f7bf42f84c4eae9cfc16e2"
+      "checksum": "24b22805b886bf5afa43c8a5956901ea"
     }
   }
 }

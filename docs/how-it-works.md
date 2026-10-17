@@ -336,13 +336,21 @@ Start it locally with `./run.sh` from the repo folder and open
 - **The fitted numbers** with 95% confidence intervals: shape β (above 1 means parts wear out, so
   replacing them early pays off), scale η, B10, and mean life.
 - **Replacement schedule**: every drone's 10 parts with flights left, folded per drone.
-- **Cost of the retirement choice**: enter each part type's price for a planned replacement and for a failure
-  in flight (placeholders: motor $120 / $2,500, propeller $15 / $2,000, battery $90 / $1,500). The blue line is
-  the textbook age-replacement model (Barlow & Proschan) on each part's Weibull: cost per drone-flight =
-  (planned cost × share retired + failure cost × share failing first) ÷ expected use per part, assuming
-  nothing warns before a failure. With these prices it is cheapest at about B1 ($6.48 per drone-flight).
-  The orange dots are what the simulated runs actually cost *with* the charts: no failures, so later
-  retirement only gets cheaper ($0.93 at B10, $0.72 at B30). The gap is what the charts are worth.
+
+
+### The **Cost & savings** tab
+
+- **Headline:** the cheapest choice *without* charts against the charts at the slider's setting, and what that
+  saves over the 3,000 flights. With the estimated prices, Fleet A: no charts at best costs $26.26 per
+  drone-flight (replace at 1.5%); with charts at B10 it costs $4.08, a saving of about $66,500.
+- **Prices** (estimates; type your own): planned replacement = part + labour + downtime (propeller $80, motor
+  $350, battery $380); failure in flight = a crashed drone, its package and recovery ($8,000).
+- **Chart:** the blue line is the textbook age-replacement model (Barlow & Proschan) on each part's Weibull:
+  with no charts, p% of parts fail in flight before B_p, so cost per drone-flight = (planned cost × parts
+  retired + failure cost × parts failing) ÷ the use each part gives. The orange dots are what each simulated
+  run actually cost *with* the charts: the same early-wearing parts were caught and replaced on the ground,
+  so there were no failures.
+- **Every setting in numbers** (folded): parts replaced, caught worn, failures and both costs per setting.
 
 ### The **Guide & Data Reference** page (button at the top right)
 

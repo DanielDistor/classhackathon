@@ -2232,3 +2232,47 @@ details.fold-panel[open] > summary {
        border: 1px solid var(--line);
        border-radius: 6px;
 }
+
+/* ---------- Cost & savings tab (H-20) ---------- */
+.savings {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+       gap: 12px;
+       margin-bottom: 16px;
+}
+
+.savings > div {
+       background: var(--card);
+       border: 1px solid var(--line);
+       border-radius: var(--radius);
+       padding: 12px 16px;
+       display: flex;
+       flex-direction: column;
+}
+
+.savings .sv-save {
+       border-color: var(--go);
+       background: var(--go-bg, #e8f5ec);
+}
+
+.sv-label {
+       font-size: 0.8rem;
+       color: var(--ink-2);
+       font-weight: 600;
+}
+
+.sv-value {
+       font-size: 1.6rem;
+       font-weight: 700;
+       font-variant-numeric: tabular-nums;
+}
+
+.sv-unit {
+       font-size: 0.8rem;
+       color: var(--ink-3);
+}
+
+tr.row-on td {
+       background: var(--surface);
+       font-weight: 650;
+}

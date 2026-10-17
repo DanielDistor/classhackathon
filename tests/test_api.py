@@ -177,7 +177,7 @@ def test_cost_view_model_matches_qc_and_runs_count_the_log():
     pol = pd.read_csv(FLEET / "runs" / "p10" / "replace_at.csv")
     f = pd.read_csv(FLEET / "runs" / "p10" / "flights.csv")
     use = {"motor": 4 * f["flight_min"].mean() / 60, "propeller": 4 * f["flight_min"].mean() / 60, "battery": 1.0}
-    costs = {"motor": (120, 2500), "propeller": (15, 2000), "battery": (90, 1500)}
+    costs = {"motor": (350, 8000), "propeller": (15, 2000), "battery": (380, 8000)}
     direct = qc.retirement_cost(pol, costs, use, [10]).groupby("retire_pct")["cost_per_flight"].sum()
     assert total.loc[10] == pytest.approx(direct.loc[10], rel=1e-5)
     m = pd.read_csv(FLEET / "runs" / "p10" / "maintenance.csv")
@@ -186,6 +186,8 @@ def test_cost_view_model_matches_qc_and_runs_count_the_log():
     assert run10["planned"] == len(planned)
     want = sum(costs[t][0] * n for t, n in planned["component_type"].value_counts().items()) / len(f)
     assert run10["cost_per_flight"] == pytest.approx(want)
+    assert run10["no_charts_per_flight"] == pytest.approx(total.loc[10])
+    assert run10["caught_worn"] == planned["reason"].str.startswith("worn").sum()
 
 
 def test_cost_view_refuses_non_positive_costs():

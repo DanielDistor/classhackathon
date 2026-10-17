@@ -240,8 +240,9 @@ def reliability_view(retire: int = RETIRE, dataset: str = DATASET) -> dict:
             "plan": records(d["plan"])}
 
 
-#: Placeholder costs in dollars (planned replacement, failure in flight): change them in the dashboard.
-DEFAULT_COSTS = {"motor": (120.0, 2500.0), "propeller": (15.0, 2000.0), "battery": (90.0, 1500.0)}
+#: Estimated costs in dollars (planned replacement = part + labour + downtime; failure in flight =
+#: a crashed delivery drone, its package and recovery). Placeholders: change them in the dashboard.
+DEFAULT_COSTS = {"motor": (350.0, 8000.0), "propeller": (80.0, 8000.0), "battery": (380.0, 8000.0)}
 
 
 @app.get("/api/cost")
@@ -277,8 +278,11 @@ def cost_view(dataset: str = DATASET,
         failed = rep[rep["reason"] == "failed in flight"]
         dollars = (sum(costs[t][0] * n for t, n in planned["component_type"].value_counts().items())
                    + sum(costs[t][1] * n for t, n in failed["component_type"].value_counts().items()))
+        no_charts = float(total.loc[total["retire_pct"] == pct, "cost_per_flight"].iloc[0])
         runs.append({"retire_pct": pct, "cost_per_flight": dollars / len(d["flights"]),
-                     "planned": len(planned), "failed": len(failed)})
+                     "no_charts_per_flight": no_charts, "n_flights": len(d["flights"]),
+                     "planned": len(planned), "caught_worn": int(planned["reason"].str.startswith("worn").sum()),
+                     "failed": len(failed)})
     return {"dataset": dataset, "costs": {k: {"planned": v[0], "failure": v[1]} for k, v in costs.items()},
             "model": records(model[["retire_pct", "component_type", "cost_per_flight"]]),
             "model_total": records(total), "best_pct": float(best["retire_pct"]),

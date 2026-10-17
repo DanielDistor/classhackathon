@@ -6,14 +6,17 @@ import ReliabilityTab from './components/ReliabilityTab.jsx'
 import DroneModal from './components/DroneModal.jsx'
 import Guide from './components/Guide.jsx'
 import RetireControl from './components/RetireControl.jsx'
+import CostTab from './components/CostTab.jsx'
 import { Failed, Loading } from './components/common.jsx'
 
-const TABS = [['fleet', 'Fleet health & replacements'], ['weibull', 'Weibull reliability & replace-at ages']]
+const TABS = [['fleet', 'Fleet health & replacements'], ['weibull', 'Weibull reliability & replace-at ages'],
+  ['cost', 'Cost & savings']]
 
 // The page lives in the URL hash (#guide, #weibull, #fleet/D-05) so Back works and links can be shared.
 function readHash() {
   const [page, drone] = window.location.hash.replace(/^#/, '').split('/')
-  return { page: page === 'guide' ? 'guide' : 'dashboard', tab: page === 'weibull' ? 'weibull' : 'fleet', drone: drone || null }
+  const tab = ['weibull', 'cost'].includes(page) ? page : 'fleet'
+  return { page: page === 'guide' ? 'guide' : 'dashboard', tab, drone: drone || null }
 }
 
 export default function App() {
@@ -58,6 +61,7 @@ export default function App() {
         {view.tab === 'fleet' && (fleet.error ? <Failed error={fleet.error} />
           : fleet.data ? <FleetTab d={fleet.data} onOpen={(id) => go(`fleet/${id}`)} /> : <Loading what="the fleet" />)}
         {view.tab === 'weibull' && <ReliabilityTab retire={retire} dataset={dataset} />}
+        {view.tab === 'cost' && <CostTab retire={retire} dataset={dataset} />}
       </div>
       {view.drone && <DroneModal droneId={view.drone} retire={retire} dataset={dataset} onClose={closeDrone} />}
     </div>
