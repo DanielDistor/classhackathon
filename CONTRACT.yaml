@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-17 13:02"
+updated: "2026-10-17 13:05"
 
 tasks:
   - id: H-01
@@ -518,3 +518,19 @@ tasks:
       npm run build and vitest pass; the About tab renders with all four names,
       NetIDs and working GitHub links.
     result: "About tab (last tab, about 107 words): team cards for Daniel Distor dd745, Divyanshu Kekatpure dmk323, Duc Bui dmb488, Jonathan Ma jjm498 with GitHub links (all four profiles and the repo answer HTTP 200), live app and repo links, methods and software credits incl. Claude Code, simulated-data note. npm run build and vitest 6 passed; tab renders."
+
+  - id: H-25
+    title: About becomes a footer at the bottom of every page
+    points: "protects Tool Design: credits always reachable without a tab"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-17 13:04"
+    owns: ["web/src/", "app/static/", "app/manifest.json"]
+    notes: >
+      Asked by Div on 2026-10-17: instead of an About tab, show the about section
+      at the end of each page (every dashboard tab and the Guide page), so
+      scrolling down always reaches it. Same content as H-24, as a compact footer.
+    definition_of_done: >
+      npm run build and vitest pass; no About tab; the footer renders at the
+      bottom of the dashboard and the Guide page with all four creators.
+    result: "About tab removed; AboutFooter renders at the bottom of the Fleet, Weibull, Cost and Guide pages (checked: footer present in the lower half of each page with all four creators, no About tab). npm run build and vitest 6 passed."

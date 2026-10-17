@@ -1,4 +1,4 @@
-// The About tab: who built the tool, where it lives, and what it borrows. Plain content.
+// The about section at the bottom of every page: who built the tool, where it lives, what it borrows.
 
 const TEAM = [
   ['Daniel Distor', 'dd745', 'DanielDistor'],
@@ -11,10 +11,11 @@ const REPO = 'https://github.com/DanielDistor/classhackathon'
 
 const Link = ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
 
-export default function AboutTab() {
+export default function AboutFooter() {
   return (
-    <div className="pt-3 about">
-      <p className="section-note">
+    <footer className="about-footer">
+      <h4>About</h4>
+      <p>
         <b>Team Flight Control</b> · Cornell Six Sigma Hackathon, October 2026. A quality-control tool for a drone
         delivery fleet's maintenance technician: which drones can fly, and which parts to replace before they fail.
       </p>
@@ -34,6 +35,6 @@ export default function AboutTab() {
         <li><b>Built with</b>: FastAPI, React, Vite, pandas, NumPy, SciPy, lifelines; written with help from Claude Code.</li>
         <li><b>Data</b>: simulated test fleets, not a real company's records.</li>
       </ul>
-    </div>
+    </footer>
   )
 }
