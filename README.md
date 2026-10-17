@@ -48,11 +48,13 @@ The tool turns these into three views:
    drone opens its parts, its timeline and its three control charts (one at a time, picked from a dropdown).
 2. **Weibull reliability & replace-at ages.** How long each part type lasts and the age to replace it at.
 3. **Cost & savings.** What the replacement policy costs per flight, with and without the control charts.
-4. **Check your own logbook.** The box at the top of the dashboard takes the technician's own Excel workbook
-   (or a flights CSV) and runs every check on it: each drone's status and control charts, and, with a parts
-   sheet, the Weibull replace-at ages and the parts due. The results appear under the box. An example workbook,
-   [`data/example_upload/example_logbook.xlsx`](data/example_upload/example_logbook.xlsx), can be downloaded from
-   the same box. Nothing is stored.
+4. **Combined (after an upload).** The box at the top of the dashboard takes the technician's own Excel
+   workbook (`flights` and `components` sheets, optional `maintenance`). It is combined with Fleet A and Fleet B
+   into one fleet on a new **Combined** tab: drones renamed by source (A01–A10, B01–B10, U01…), the fleet
+   cards and drone pop-ups, and the Weibull fits on all the parts together. The three tabs above keep showing
+   the test fleets unchanged. An example workbook,
+   [`data/example_upload/example_logbook.xlsx`](data/example_upload/example_logbook.xlsx) (a third simulated
+   fleet), can be downloaded from the same box.
 
 A slider sets the replacement policy (replace parts at B1 to B30, below), and a dropdown switches between the
 two test fleets.
@@ -122,7 +124,7 @@ setting: 1, 2, 5, 10, 15, 20 or 30).
 | `POST /api/spc/imr` | I-MR limits for your own readings: `{"values": [...], "n_baseline": 50}` |
 | `POST /api/spc/monitor` | I chart with all 8 rules + EWMA for your own readings |
 | `POST /api/weibull` | Weibull fit for your own part lives: `{"life": [...], "status": [1, 0, ...]}` |
-| `POST /api/upload` | the whole tool on your own logbook: an `.xlsx` with a `flights` sheet (optional `maintenance`, `components`) or a flights `.csv` |
+| `POST /api/upload` | combines your logbook (`.xlsx`) with Fleet A and Fleet B and returns the combined dataset's id; the routes above serve it with `?dataset=<id>` |
 
 Bad input gets a 422 with a plain message instead of a misleading number. The functions behind each route
 are listed in [`app/README.md`](app/README.md).

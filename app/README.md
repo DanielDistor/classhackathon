@@ -122,7 +122,7 @@ Statistics on your own numbers (`POST`, JSON body):
 | `/api/spc/imr` | `{"values": [...], "n_baseline": 50}` | `imr_limits` |
 | `/api/spc/monitor` | `{"values": [...], "n_baseline": 50}` | `monitor_chart`, one row per reading |
 | `/api/weibull` | `{"life": [...], "status": [1, 0, ...]}` | `weibull_fit` |
-| `/api/upload` | a file (multipart): `.xlsx` with a `flights` sheet and optional `maintenance` and `components` sheets, or a flights `.csv`; up to 10 MB | every drone's `status` (`fleet_status`), its three charts (`monitor_chart`), and with a parts sheet the `fits` (`fit_by_type`) and `plan` (`replacement_plan`), plus `notes` on any sheet left out. Bad files get a 422 naming the problem. Tests: `tests/test_upload.py` |
+| `/api/upload` | a file (multipart): an `.xlsx` with `flights` and `components` sheets, optional `maintenance`; up to 10 MB | `{dataset, name, n_drones, n_flights, sources, notes}`. The sheets are checked (`check_flights`, `check_components`, `check_maintenance`), then combined with Fleet A and Fleet B: drones renamed by source (A01, B01, U01 …) in every id, replace-at ages = the B10 fitted on all the parts (`fit_by_type`), the fleet range from every drone's first 20 flights. Every `GET` route serves the result with `?dataset=<id>`; the test fleets are not changed. Bad files get a 422 naming the problem. Tests: `tests/test_upload.py` |
 
 ## Deploy (Posit Connect)
 

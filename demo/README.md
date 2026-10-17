@@ -18,7 +18,7 @@ Fleet B.
 
 | What you see | Value | How to read it |
 |---|---|---|
-| Status counts | **10 can fly, 0 warning, 0 do not fly** | Every signal so far has been acted on, so no drone has an open warning today |
+| Status counts and cards | **0 warning, 0 do not fly**; all 10 cards green | Every signal so far has been acted on, so no drone has an open warning today |
 | Parts due within 10 flights | **3** | The parts to have in stock now |
 | Due soon (open the panel) | D-09 propeller 3 in **2** flights, D-06 propeller 2 in **4**, D-08 propeller 2 in **5** | Each is replaced when it reaches its replace-at age, before the next flight |
 | History line | **99** parts replaced (**84** at their replace-at age, **15** caught worn by a chart), **0** failed in flight, **17** special causes fixed | The charts caught every worn part and every planted problem before a failure |
@@ -91,7 +91,7 @@ dropdown. 11 problems planted (`data/fleet_b/answer_key.csv`).
 
 | Step | What you see | Value |
 |---|---|---|
-| 1. Status | counts | **10 can fly, 0 warning, 0 do not fly**, **0** parts due within 10 flights |
+| 1. Status | counts and cards | **0 warning, 0 do not fly** (all 10 green), **0** parts due within 10 flights |
 | 1. Next due | Due soon panel | D-05 motor 4 in **30** flights, D-08 propeller 3 in **30**, D-09 propeller 3 in **33** |
 | 1. History | history line | **119** replaced (**104** at age, **15** caught worn), **0** failed in flight, **11** special causes fixed |
 | 2. One drone | D-09, Vibration, flight 111 | reading **4.58** m/s² against limits **2.25 to 3.82**, EWMA **3.35**: rule 1 + EWMA. Answer key: prop strike starting flight 111, caught after flight 111 |
@@ -104,20 +104,20 @@ caught, and no part fails in flight, so the method works beyond the one dataset 
 
 ---
 
-## Your own logbook: the upload box
+## Your own logbook: the Combined tab
 
-At the top of the dashboard, click **Download the example workbook**, then **Upload a file** and pick it. The
-results appear right under the box (**Close the results ×** hides them):
+At the top of the dashboard, click **Download the example workbook**, then **Upload a file** and pick it. A fourth
+tab, **Combined (30 drones)**, appears and opens. The three tabs above still show the test fleets, unchanged.
 
 | What you see | Value | How to read it |
 |---|---|---|
-| D-02 | **Do not fly**: vibration trend (EWMA) above its upper limit since flight 67 | The prop strike on flight 64 (a red ✕) and the chipped prop after it. Its vibration chart opens first |
-| D-03 | **Do not fly**: motor temperature rise trend (EWMA) above its upper limit since flight 56 | The motor started wearing at flight 50; the EWMA caught it 6 flights later |
-| D-01 | **Can fly** | Healthy readings |
-| Weibull from the parts sheet | B10 = 183 h (motors), 61 h (propellers), 180 cycles (batteries) | Fitted on that workbook's own 60 parts |
-| Due within 10 flights | D-01 propeller 1, 59 / 61 flight hours, **in 7 flights** | Order the part now |
+| Combined fleet | **30 drones, 9,000 flights**: Fleet A (A01–A10), Fleet B (B01–B10), the workbook (U01–U10) | Every id is renamed by source, so drones that were all called D-01 sit side by side |
+| Weibull on all the parts | propellers **360 failed / 828**, B10 **45.6 h**; motors **73 / 284**, B10 **215.7 h**; batteries **80 / 213**, B10 **171.0 cycles** | Three fleets' parts give tighter intervals than one |
+| Drones shown | 10 at a time, *Drones 1–10 of 30*: **example_logbook.xlsx** (U01–U10), then **Next 10 →** for Fleet A (A01–A10) and Fleet B (B01–B10); **Jump to** goes straight to one | The history line counts the drones shown: for the workbook, **99** replaced, **1** failed in flight, **13** special causes fixed |
+| Due within 10 flights | **8** of the workbook's parts (**22** across all 30 drones) | Counted against the combined replace-at ages |
+| A drone, e.g. U03 | its control charts and parts, from the workbook's readings | The same charts as the main tabs, for a drone the tool has never seen |
 
-A file without the `maintenance` or `components` sheet still works; the tab says what was left out. A file with a
+**Remove the upload** takes the tab away again. A workbook without a `maintenance` sheet still loads, with a note; a
 missing column is refused with the column's name.
 
 ---

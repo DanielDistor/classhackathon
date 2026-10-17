@@ -17,6 +17,10 @@ from __future__ import annotations
 
 import io
 import json
+import re
+import shutil
+import tempfile
+import uuid
 from functools import lru_cache
 from pathlib import Path
 
@@ -43,11 +47,23 @@ RETIRE = Query(DEFAULT_RETIRE_PCT, description="retire parts at B_p: when p% of 
 DATASET = Query(DEFAULT_DATASET, description="test dataset: " + ", ".join(f"{k} ({v})" for k, v in DATASET_NAMES.items()))
 
 
+#: Logbooks uploaded since the server started: dataset id -> {"name": file name, "dir": folder}.
+UPLOADS: dict[str, dict] = {}
+UPLOAD_DIR = Path(tempfile.gettempdir()) / "drone-fleet-uploads"
+
+
 def dataset_dir(dataset: str) -> Path:
-    """The folder of one test dataset; 422 for an unknown name."""
+    """The folder of one test dataset or uploaded logbook; 422 for an unknown name."""
+    if dataset in UPLOADS:
+        return UPLOADS[dataset]["dir"]
     if dataset not in DATASETS:
-        raise HTTPException(422, f"dataset must be one of {DATASETS}, got {dataset!r}")
+        raise HTTPException(422, f"dataset must be one of {DATASETS} or an uploaded logbook, got {dataset!r}")
     return DATA / dataset
+
+
+def has_runs(dataset: str) -> bool:
+    """True for a test fleet simulated at every retirement setting; an upload is one run."""
+    return (dataset_dir(dataset) / "runs").is_dir()
 STATIC = HERE / "static"         # the built React app (cd ../web && npm run build)
 
 #: Parts within this many flights of their replace-at age are listed as "coming up".
@@ -146,7 +162,8 @@ def runs_view(dataset: str = DATASET) -> dict:
     """The retirement settings, and what each run cost and prevented (data/<dataset>/runs/summary.csv)."""
     path = dataset_dir(dataset) / "runs" / "summary.csv"
     summary = pd.read_csv(path) if path.exists() else pd.DataFrame()
-    return {"default": DEFAULT_RETIRE_PCT, "options": RETIRE_PCTS, "summary": records(summary),
+    options = RETIRE_PCTS if has_runs(dataset) else [DEFAULT_RETIRE_PCT]
+    return {"default": DEFAULT_RETIRE_PCT, "options": options, "summary": records(summary),
             "dataset": dataset, "datasets": [{"id": k, "name": DATASET_NAMES[k]} for k in DATASETS]}
 
 
@@ -271,7 +288,7 @@ def cost_view(dataset: str = DATASET,
     total = model.groupby("retire_pct", as_index=False)["cost_per_flight"].sum()
     best = total.loc[total["cost_per_flight"].idxmin()]
     runs = []
-    for pct in RETIRE_PCTS:
+    for pct in (RETIRE_PCTS if has_runs(dataset) else [DEFAULT_RETIRE_PCT]):
         d = fleet(dataset, pct)
         m = d["maintenance"]
         rep = m[m["action"] == "replace"]
@@ -293,7 +310,9 @@ def cost_view(dataset: str = DATASET,
 @app.get("/api/guide")
 def guide_view(dataset: str = DATASET) -> dict:
     """Guide page: the injected special causes (answer key), what the technician did, example rows."""
-    key = pd.read_csv(dataset_dir(dataset) / "answer_key.csv")
+    key_path = dataset_dir(dataset) / "answer_key.csv"
+    key = pd.read_csv(key_path) if key_path.exists() else pd.DataFrame(
+        columns=["drone_id", "cause", "rule_shape", "start_flight", "detected_after_flight", "detected_by", "fix"])
     d = fleet(dataset)
     m, f, c = d["maintenance"], d["flights"], d["components"]
     reasons = m.loc[m["action"] == "replace", "reason"]
@@ -305,7 +324,7 @@ def guide_view(dataset: str = DATASET) -> dict:
     flight_cols = ["flight_id", "drone_id", "datetime", "flight_min", "ambient_temp_c", "motor_temp_max_c",
                    "voltage_start_v", "voltage_end_v", "vibration_rms"]
     return {
-        "dataset": dataset, "dataset_name": DATASET_NAMES[dataset],
+        "dataset": dataset, "dataset_name": UPLOADS[dataset]["name"] if dataset in UPLOADS else DATASET_NAMES[dataset],
         "n_flights": d["n_flights"], "n_rows": len(f), "n_baseline": qc.N_BASELINE,
         "events": records(key[["drone_id", "cause", "rule_shape", "start_flight", "detected_after_flight",
                                "detected_by", "fix"]]),
@@ -379,62 +398,113 @@ def _read_logbook(name: str, raw: bytes) -> dict[str, pd.DataFrame]:
     raise HTTPException(422, "upload an Excel workbook (.xlsx) or a flights CSV (.csv)")
 
 
+#: Source letter for each fleet in the combined dataset: its drones become A01, B01, U01, ...
+COMBINE = {"fleet": "A", "fleet_b": "B"}
+UPLOAD_PREFIX = "U"
+
+
+def _relabel(t: dict[str, pd.DataFrame], prefix: str) -> dict[str, pd.DataFrame]:
+    """Rename one fleet's drones to <prefix><number> (D-07 -> A07) in every id that names a drone, so
+    fleets that reuse D-01 ... D-10 can sit side by side. Flight ids keep their flight number
+    (F-07-074 -> F-A07-074) and part ids their type, slot and generation (M-07-3-02 -> M-A07-3-02)."""
+    def drone(d) -> str:
+        digits = re.sub(r"\D", "", str(d))
+        return f"{prefix}{digits.zfill(2) if digits else d}"
+
+    def part(cid, new_drone) -> str:
+        if not isinstance(cid, str) or not cid:
+            return cid
+        bits = cid.split("-")
+        return f"{bits[0]}-{new_drone}-{bits[-2]}-{bits[-1]}" if len(bits) >= 4 else f"{cid}-{prefix}"
+
+    def flight(fid, new_drone) -> str:
+        return f"F-{new_drone}-{str(fid).rsplit('-', 1)[-1]}"
+
+    out = {}
+    for name, df in t.items():
+        df = df.copy()
+        new = df["drone_id"].map(drone)
+        if "flight_id" in df:
+            df["flight_id"] = [flight(f, n) for f, n in zip(df["flight_id"], new)]
+        for col in ("component_id", "removed_id", "installed_id"):
+            if col in df:
+                df[col] = [part(c, n) for c, n in zip(df[col], new)]
+        df["drone_id"] = new
+        if "datetime" in df:
+            df["datetime"] = pd.to_datetime(df["datetime"]).dt.strftime("%Y-%m-%dT%H:%M")
+        out[name] = df
+    return out
+
+
 @app.post("/api/upload")
-async def upload_logbook(file: UploadFile = File(..., description="an .xlsx with a 'flights' sheet "
-                                                  "(and optional 'maintenance' and 'components' sheets), or a flights .csv")) -> dict:
-    """Run the whole tool on your own logbook: every drone's status and control charts, and, with a
-    'components' sheet, the Weibull fits and each installed part's countdown. Same columns as data/fleet/
-    (data/README.md); the example is web/public/example_logbook.xlsx. Nothing is stored."""
+async def upload_logbook(file: UploadFile = File(..., description="an .xlsx with 'flights' and 'components' sheets "
+                                                  "(optional: 'maintenance')")) -> dict:
+    """Combine your own logbook with Fleet A and Fleet B into one dataset, for the dashboard's Combined tab.
+
+    Your workbook needs the same sheets and columns as a data/ folder (data/README.md); the example is
+    web/public/example_logbook.xlsx. Drones are renamed by source (Fleet A: A01-A10, Fleet B: B01-B10,
+    yours: U01, ...). On the combined data, every part type's replace-at age is the B10 fitted on all the
+    parts (qc.fit_by_type), and each reading's fleet range is the mean and standard deviation of every
+    drone's first 20 flights. Every GET route then serves it with ?dataset=<the id returned>. Kept in
+    memory and a temp folder until the server restarts.
+    """
     raw = await file.read()
     if len(raw) > MAX_UPLOAD:
         raise HTTPException(413, f"the file is larger than {MAX_UPLOAD // 2**20} MB")
     sheets = _read_logbook(file.filename or "", raw)
-    if "flights" not in sheets:
-        raise HTTPException(422, f"the workbook needs a sheet named 'flights' (found: {', '.join(sheets) or 'none'})")
+    missing = [k for k in ("flights", "components") if k not in sheets]
+    if missing:
+        raise HTTPException(422, f"the workbook needs sheets named {' and '.join(repr(m) for m in missing)} "
+                                 f"(found: {', '.join(sheets) or 'none'})")
     notes = []
     try:
-        flights_raw = qc.check_flights(sheets["flights"].dropna(how="all"))
-        flights = qc.add_derived(flights_raw)
-        maintenance = None
+        mine = {"flights": qc.check_flights(sheets["flights"].dropna(how="all")),
+                "components": qc.check_components(sheets["components"].dropna(how="all"))}
+        comps = mine["components"]
+        brand_new = (comps["status"] == 0) & (comps["life_value"] == 0)   # installed just now: no life information
+        if brand_new.any():
+            mine["components"] = comps[~brand_new]
+            notes.append(f"{int(brand_new.sum())} part(s) with 0 use and still in service left out of the Weibull fit.")
         if "maintenance" in sheets and not sheets["maintenance"].dropna(how="all").empty:
-            maintenance = qc.check_maintenance(sheets["maintenance"].dropna(how="all"))
+            mine["maintenance"] = qc.check_maintenance(sheets["maintenance"].dropna(how="all"))
         else:
-            notes.append("No maintenance sheet: the charts never restart, so every past signal stays open.")
-        status = qc.fleet_status(flights, maintenance)
+            mine["maintenance"] = pd.DataFrame(columns=list(qc.REQUIRED_MAINTENANCE_COLUMNS))
+            notes.append("No maintenance sheet: your drones' charts never restart, so every past signal stays open.")
     except ValueError as err:
         raise HTTPException(422, str(err)) from None
 
-    charts = {}
-    for drone in sorted(flights["drone_id"].unique()):
-        mine = []
-        for col, title, catches, unit, dec in DRONE_CHARTS:
-            s = qc.drone_series(flights, drone, col)
-            resets = qc.reset_flights(maintenance, drone, col)
-            try:
-                ch = qc.monitor_chart(s["value"], s["flight_no"], resets)
-            except ValueError as err:
-                mine.append({"column": col, "title": title, "unit": unit, "error": str(err)})
-                continue
-            mine.append({"column": col, "title": title, "catches": catches, "unit": unit, "decimals": dec,
-                         "resets": resets, "points": records(ch[CHART_COLUMNS])})
-        charts[drone] = mine
+    parts = [_relabel(mine, UPLOAD_PREFIX)]
+    for ds, prefix in COMBINE.items():
+        folder = dataset_dir(ds)
+        parts.append(_relabel({n: pd.read_csv(folder / f"{n}.csv") for n in ("flights", "components", "maintenance")},
+                              prefix))
+    combined = {n: pd.concat([p[n] for p in parts], ignore_index=True) for n in ("flights", "components", "maintenance")}
+    fits = qc.fit_by_type(combined["components"]).dropna(subset=["b10"])
+    combined["replace_at"] = fits.assign(replace_at=fits["b10"])[["component_type", "unit", "replace_at", "b10",
+                                                                   "beta", "eta"]]
+    f = qc.add_derived(combined["flights"])
+    first = f[qc.flight_numbers(f["flight_id"]) <= 20]
+    combined["fleet_reference"] = pd.DataFrame([dict(chart=c, center=first[c].mean(), sigma=first[c].std())
+                                                for c, _, _ in qc.MONITORED])
 
-    fits, plan = [], []
-    if "components" in sheets and not sheets["components"].dropna(how="all").empty:
-        try:
-            components = qc.check_components(sheets["components"].dropna(how="all"))
-            by_type = qc.fit_by_type(components)
-            fits = records(by_type)
-            if by_type["b10"].notna().any():
-                plan = records(qc.replacement_plan(components, flights_raw, by_type))
-        except ValueError as err:
-            notes.append(f"Parts history not used: {err}")
-    else:
-        notes.append("No components sheet: no Weibull fits or replace-at ages.")
-
-    return {"file": file.filename, "n_flights": len(flights), "n_drones": int(flights["drone_id"].nunique()),
-            "status": records(status), "charts": charts, "fits": fits, "plan": plan, "notes": notes,
-            "warn_flights": qc.WARN_FLIGHTS}
+    dataset = f"combined-{uuid.uuid4().hex[:8]}"
+    folder = UPLOAD_DIR / dataset
+    folder.mkdir(parents=True, exist_ok=True)
+    for name, df in combined.items():
+        df.to_csv(folder / f"{name}.csv", index=False)
+    UPLOADS[dataset] = {"name": file.filename or "your logbook", "dir": folder}
+    try:
+        d = fleet(dataset)                       # compute everything once: refuse what the tool cannot use
+    except (ValueError, KeyError) as err:
+        UPLOADS.pop(dataset)
+        shutil.rmtree(folder, ignore_errors=True)
+        raise HTTPException(422, f"could not combine this logbook with the test fleets: {err}") from None
+    by_source = d["flights"]["drone_id"].str[0].value_counts().to_dict()
+    return {"dataset": dataset, "name": UPLOADS[dataset]["name"],
+            "n_drones": int(d["flights"]["drone_id"].nunique()), "n_flights": len(d["flights"]),
+            "sources": [{"prefix": k, "name": v, "n_drones": int(d["flights"].loc[d["flights"]["drone_id"].str[0] == k, "drone_id"].nunique())}
+                        for k, v in (("A", "Fleet A"), ("B", "Fleet B"), (UPLOAD_PREFIX, UPLOADS[dataset]["name"]))],
+            "n_flights_by_source": {k: int(v) for k, v in by_source.items()}, "notes": notes}
 
 
 # ---------------------------------------------------------------- the React app

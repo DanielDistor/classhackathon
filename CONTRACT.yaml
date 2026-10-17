@@ -473,7 +473,8 @@ tasks:
     started_at: "2026-10-17 00:40"
     owns: ["app/api.py", "app/requirements.txt", "app/manifest.json", "app/static/", "web/src/components/UploadTab.jsx",
            "web/src/App.jsx", "web/src/api.js", "web/src/base.css", "web/public/", "data/example_upload/",
-           "tests/test_upload.py", "README.md", "app/README.md", "data/README.md", "demo/README.md"]
+           "tests/test_upload.py", "README.md", "app/README.md", "data/README.md", "demo/README.md",
+           "web/src/components/CombinedTab.jsx"]
     notes: >
       Requested by Daniel on 2026-10-17. An upload box at the top of the dashboard posts the
       file to POST /api/upload, which runs the same qc.py functions as the test fleets.
@@ -481,4 +482,4 @@ tasks:
       tests/test_upload.py passes (the example finds exactly its planted problems; CSV-only
       works with notes; bad files and constant readings are refused); uploading the example in
       the browser shows D-02 and D-03 Do not fly and D-01 propeller 1 due.
-    result: "Upload box above every tab, results shown under it (no separate tab); POST /api/upload (xlsx or csv, 10 MB cap); seeded example workbook (3 drones x 70 flights, README sheet); 5 new tests pass; checked in the browser: D-02 and D-03 Do not fly, D-01 propeller 1 due in 7 flights."
+    result: "Upload box above the tabs; POST /api/upload combines an .xlsx (flights + components, optional maintenance) with Fleet A and Fleet B (drones renamed A/B/U) into a Combined tab with the fleet cards, pop-ups and pooled Weibull; the three existing tabs are unchanged (94 routes identical to the pushed version); example workbook = a third simulated fleet (seed 9101); 7 tests pass."

@@ -210,19 +210,21 @@ For checking the tool's numbers. A real fleet would not come with these.
 
 ## `example_upload/`: an example logbook to upload
 
-[`example_upload/example_logbook.xlsx`](example_upload/example_logbook.xlsx) is a small workbook for the
-dashboard's **Check your own logbook** box, made by [`example_upload/make_example.py`](example_upload/make_example.py)
-(seed 2031, identical every run). It shows the format a technician would fill in:
+[`example_upload/example_logbook.xlsx`](example_upload/example_logbook.xlsx) is the workbook the dashboard's
+**Check your own logbook** box offers as a download. [`example_upload/make_example.py`](example_upload/make_example.py)
+makes it with the same simulator as Fleet A and Fleet B, at a third seed (9101), so it is a third fleet in exactly
+the same format: 10 drones × 300 flights, Jul 1 – Sep 29, 2026, parts replaced at B10.
 
-| Sheet | Rows | What it holds |
+| Sheet | Rows | Same as |
 |---|---|---|
-| `README` | 15 | what each sheet and column means |
-| `flights` | 210 | 3 drones × 70 flights, Oct 1–18, 2026; the same 10 columns as `flights.csv` above |
-| `maintenance` | 1 | one propeller replaced on D-01 after flight 40 |
-| `components` | 60 | one past part and the installed part for every slot (4 motors, 4 propellers, 2 batteries per drone) |
+| `README` | 8 | what each sheet holds |
+| `flights` | 3,000 | `flights.csv` (required) |
+| `components` | 426 | `components.csv` (required) |
+| `maintenance` | 290 | `maintenance.csv` (optional: left out, the charts never restart) |
+| `replace_at` | 3 | `replace_at.csv` (optional: left out, the B10 fitted from components) |
+| `fleet_reference` | 3 | `fleet_reference.csv` (optional: left out, every drone's first 20 flights) |
 
-Planted: **D-02** prop strike on flight 64 (vibration +6 sd, then +1.5 sd from the chipped prop), **D-03** motor
-wear from flight 50 (temperature rise +0.25 °C per flight), **D-01** healthy readings with propeller 1 close to its
-replace-at age. Uploaded, the tool shows D-02 and D-03 as Do not fly, D-01 as Can fly, and D-01 propeller 1 due
-in about 7 flights (`tests/test_upload.py`).
-
+The answer key is left out, as a technician's logbook would not have one. Uploaded, it is combined with Fleet A and
+Fleet B on the dashboard's **Combined** tab (30 drones, 9,000 flights). The tool reads `flights`, `components` and
+`maintenance`; the combined replace-at ages and fleet range are worked out from all three fleets
+(`tests/test_upload.py`).
