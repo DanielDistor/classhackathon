@@ -286,17 +286,17 @@
     "qc.py": {
       "checksum": "6bc2484cea70f85eacd9cb28bbfd26fa"
     },
-    "static/assets/index-DNzZRyPQ.css": {
-      "checksum": "6b3f46dced35b08143b3ea90c02beef0"
-    },
-    "static/assets/index-Dg0F5rEc.js": {
+    "static/assets/index-CMyxZmQE.js": {
       "checksum": "40a10c4290e743357cc8aeea447b906d"
+    },
+    "static/assets/index-CZPLCXuU.css": {
+      "checksum": "c804b8f861501db6f8b2e4c91ac65ebd"
     },
     "static/example_logbook.xlsx": {
       "checksum": "92d88bdc0c94468d394bb7b65d6dae31"
     },
     "static/index.html": {
-      "checksum": "66789a63e1eeb9e7ae215baf5d570b3d"
+      "checksum": "639516500f16fb93b76cee0303bf1335"
     }
   }
 }

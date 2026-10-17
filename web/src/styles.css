@@ -2278,36 +2278,47 @@ tr.row-on td {
        font-weight: 650;
 }
 
-/* ---------- About footer at the bottom of every page (H-25) ---------- */
+/* ---------- About footer at the bottom of every page (H-25): navy like the header ---------- */
 .about-footer {
-       max-width: 1240px;
-       margin: 32px auto 0;
-       padding: 18px 24px 28px;
-       border-top: 1px solid var(--line);
+       background: var(--navy);
+       color: #fff;
+       margin-top: 32px;
+       /* full-width band; the content lines up with the 1240px dashboard */
+       padding: 22px max(24px, calc((100% - 1240px) / 2 + 24px)) 30px;
        font-size: 0.85rem;
-       color: var(--ink-2);
 }
 
 .about-footer h4 {
-       font-size: 0.9rem;
+       font-size: 0.95rem;
        margin: 0 0 6px;
-       color: var(--ink);
+       color: #fff;
 }
 
 .about-footer p {
-       margin: 0 0 10px;
+       margin: 0 0 12px;
+       color: #fff;
+}
+
+.about-footer a {
+       color: #bcd7ff;
+       text-decoration: underline;
+       text-underline-offset: 2px;
+}
+
+.about-footer a:hover {
+       color: #fff;
 }
 
 .team {
        display: grid;
        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
        gap: 8px;
-       margin: 0 0 10px;
+       margin: 0 0 12px;
 }
 
 .person {
-       background: var(--card);
-       border: 1px solid var(--line);
+       background: rgba(255, 255, 255, 0.08);
+       border: 1px solid rgba(255, 255, 255, 0.18);
        border-radius: var(--radius);
        padding: 8px 12px;
        display: flex;
@@ -2316,12 +2327,13 @@ tr.row-on td {
 }
 
 .person span {
-       color: var(--ink-3);
+       color: rgba(255, 255, 255, 0.72);
 }
 
 .about-list {
        padding-left: 18px;
        margin: 0;
+       color: #fff;
 }
 
 .about-list li {
