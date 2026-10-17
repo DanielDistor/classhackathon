@@ -289,7 +289,7 @@ Start it locally with `./run.sh` from the repo folder and open
      - *Warning*: a signal nobody has acted on yet.
      - *Do not fly*: the latest flight was beyond the limits, or the EWMA is beyond its limit right now;
        inspect before flying.
-   - **Telemetry health** (0–100%): how much room the drone's tightest reading has left before its limit.
+   - **Parts health** (0–100%): the average share of replace-at life its 10 parts have left (100% = all new, 0% = all due).
    - **Next part due**, and how many flights until it.
    - Click a card to open that drone's details.
 4. **Fleet maintenance timeline.** Every drone on one row, flight number across.

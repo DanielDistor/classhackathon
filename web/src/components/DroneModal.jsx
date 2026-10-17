@@ -3,19 +3,19 @@ import useApi from '../useApi.js'
 import { getDrone } from '../api.js'
 import MonitorChart, { MonitorLegend } from '../charts/MonitorChart.jsx'
 import Timeline, { PART_LANES } from '../charts/Timeline.jsx'
-import { Failed, HealthBar, LifeBar, Loading, Panel, Pill, Used, healthPct } from './common.jsx'
+import { Failed, HealthBar, LifeBar, Loading, Panel, Pill, Used } from './common.jsx'
 import { PART_NAME, STATUS_CLASS, cap, flightsPhrase, fmt } from '../format.js'
 
 const CHART_WINDOW = 100
 
 function Banner({ d }) {
-  const pct = healthPct(d.health)
+  const pct = Math.round(d.parts_health ?? 0)
   return (
     <div className={`banner ${STATUS_CLASS[d.status]}`}>
       <div className="banner-head">
         <h3>{d.drone_id}</h3>
         <Pill status={d.status} />
-        <span className="banner-driver">Telemetry health: {pct}% (tightest margin: {d.health_driver || 'none'})</span>
+        <span className="banner-driver">Parts health: {pct}% (average life left of its 10 parts; most worn: {d.worst_part}, {Math.round(d.worst_left)}% left)</span>
       </div>
       <HealthBar status={d.status} pct={pct} big />
       <p>{cap(d.reason)}.</p>

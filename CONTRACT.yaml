@@ -318,3 +318,21 @@ tasks:
       succeeds; app/testme.sh serves the React dashboard on http://127.0.0.1:8000 with
       the fleet view, the drone pop-up, the Weibull tab and the guide, checked in a browser.
     result: "React dashboard (web/, built into app/static/) on a FastAPI API (app/api.py, 5 GET + 3 POST routes over qc.py) replaces Shiny; 96 pytest pass (11 new in test_api.py check every route against qc.py, 422 on constant data and all-censored lives), 6 vitest pass, npm run build ok, manifest is python-fastapi api:app; fleet tab, drone pop-up, Weibull tab and guide checked in a browser at 1360 px and 390 px with no console errors."
+
+  - id: H-15
+    title: Health bar = average replace-at life left of the drone's parts
+    points: "25 - Design: a health number the technician can read and a judge can check"
+    status: done
+    owner: "Claude + Daniel"
+    started_at: "2026-10-16 23:55"
+    owns: ["app/qc.py", "app/api.py", "web/src/", "app/static/", "app/manifest.json", "tests/test_reliability.py",
+           "tests/test_api.py", "SPEC.md", "docs/plan.md", "docs/how-it-works.md", "app/README.md"]
+    notes: >
+      Requested by Daniel on 2026-10-16: the old "Telemetry health" (room before the
+      nearest control limit) ignored part age and was read as part life. The bar now
+      averages each installed part's share of its B10 life left.
+    definition_of_done: >
+      qc.parts_health has a known-answer test (80, 40, 0 left -> 40) and edge cases
+      (overdue clipped to 0, no parts raises); the API test checks every drone's bar
+      equals the mean of its parts table; the cards and pop-up show "Parts health".
+    result: "qc.parts_health added (3 tests: known answer 40, clipping, empty refuses); API sends parts_health + most-worn part, tested against the parts table for all 10 drones; cards and pop-up show Parts health; chart_margin kept for card order only."

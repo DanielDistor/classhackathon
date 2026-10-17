@@ -199,3 +199,34 @@ def test_replacement_plan_on_the_fleet():
     assert plan["overdue"].equals(plan["remaining"] <= 0)
     assert plan["due"].equals(plan["flights_left"] <= WARN_FLIGHTS)
     assert plan.groupby("drone_id").size().to_dict() == {f"D-{i:02d}": 10 for i in range(1, 11)}
+
+
+# ---------------------------------------------------------------- parts health (the drone health bar)
+
+def _plan(rows):
+    return pd.DataFrame(rows, columns=["drone_id", "component_type", "position", "pct_used"])
+
+
+def test_parts_health_known_answer():
+    from app.qc import parts_health
+    # life left: 100-20 = 80, 100-60 = 40, 100-100 = 0  ->  mean 40; most worn = motor 3 (0 left)
+    plan = _plan([("D-01", "propeller", 1, 20.0), ("D-01", "battery", 2, 60.0), ("D-01", "motor", 3, 100.0),
+                  ("D-02", "motor", 1, 50.0)])
+    h = parts_health(plan).set_index("drone_id")
+    assert h.loc["D-01", "health"] == pytest.approx(40.0)
+    assert h.loc["D-01", "worst_part"] == "motor 3" and h.loc["D-01", "worst_left"] == 0
+    assert h.loc["D-02", "health"] == pytest.approx(50.0) and h.loc["D-01", "n_parts"] == 3
+
+
+def test_parts_health_clips_new_and_overdue_parts():
+    from app.qc import parts_health
+    # an overdue part (130% used) counts as 0 left, not -30; a brand-new part (0% used) as 100
+    h = parts_health(_plan([("D-01", "motor", 1, 130.0), ("D-01", "motor", 2, 0.0)])).iloc[0]
+    assert h["health"] == pytest.approx(50.0)
+    assert h["worst_left"] == 0
+
+
+def test_parts_health_refuses_no_parts():
+    from app.qc import parts_health
+    with pytest.raises(ValueError):
+        parts_health(_plan([]))

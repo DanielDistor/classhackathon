@@ -42,7 +42,7 @@ Done: H-02 (data). H-01: SPEC filled; only the team readback of SPEC section 4 i
 - Two datasets, not three (2026-10-16): `problem_fleet` holds every planted problem (D-07 wear and crash, D-03 prop strike, lot B batteries) and `healthy` is the comparison, because a single-problem fleet changed only one view and switching looked random. Statuses read Can fly / Warning / Do not fly in the app.
 
 - Parts past B10 are listed on the Part reliability tab, not folded into watch (2026-10-16): 51 parts are past B10 in this run-to-failure fleet, which would put nearly every drone on watch.
-- Health bar = room left before the nearest control limit on the drone's most-stretched chart (qc.chart_margin), 0 after a crash (2026-10-16).
+- Health bar = parts health: the average share of replace-at life (B10) left over the drone's 10 installed parts, 100 − % used clipped to [0, 100] (qc.parts_health, team, 2026-10-16). It replaced the room-before-the-control-limit measure (qc.chart_margin, still computed for the card order), which ignored part age and was mistaken for part life. The pop-up names the most-worn part, because an average can hide one.
 
 - Baseline = the first 30 flights per drone (team, 2026-10-16). D-06's healthy-fleet false alarm is kept and explained in the demo as the cost of a short baseline.
 - Data: one folder per dataset, two tables each (team, 2026-10-16).

@@ -17,8 +17,6 @@ export const HealthBar = ({ status, pct, big }) => (
   </div>
 )
 
-export const healthPct = (h) => (h == null ? 0 : Math.round(h * 100))
-
 export const Panel = ({ title, children, note }) => (
   <div className="panel">
     {title && <h4>{title}</h4>}

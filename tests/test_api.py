@@ -107,3 +107,13 @@ def test_dashboard_is_served_at_root():
     r = client.get("/")
     assert r.status_code == 200
     assert '<div id="root"></div>' in r.text
+
+
+def test_health_bar_is_the_average_part_life_left():
+    d = client.get("/api/fleet").json()
+    for row in d["status"]:
+        mine = [p for p in d["plan"] if p["drone_id"] == row["drone_id"]]
+        left = [min(100, max(0, 100 - p["pct_used"])) for p in mine]
+        assert row["parts_health"] == pytest.approx(sum(left) / len(left), abs=1e-4)
+    drone = client.get("/api/drones/D-02").json()
+    assert drone["worst_part"] == "motor 1"

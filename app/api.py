@@ -89,6 +89,9 @@ def fleet() -> dict:
     status = status.sort_values(["_order", "health", "drone_id"]).drop(columns="_order").reset_index(drop=True)
     by_type = qc.fit_by_type(components)
     plan = qc.replacement_plan(components, flights_raw, policy)
+    # The health bar: average replace-at life left over each drone's installed parts.
+    status = status.merge(qc.parts_health(plan).rename(columns={"health": "parts_health"})
+                          .drop(columns="n_parts"), on="drone_id", how="left")
     timeline = qc.maintenance_timeline(maintenance)
     return dict(flights=flights, maintenance=maintenance, components=components, policy=policy,
                 reference=reference, status=status, by_type=by_type, plan=plan, timeline=timeline,
@@ -164,8 +167,8 @@ def drone_view(drone_id: str) -> dict:
     return {
         "drone_id": drone_id,
         "status": row["status"], "reason": row["reason"],
-        "health": None if pd.isna(row["health"]) else float(row["health"]),
-        "health_driver": row["health_driver"],
+        "parts_health": None if pd.isna(row["parts_health"]) else float(row["parts_health"]),
+        "worst_part": row["worst_part"], "worst_left": float(row["worst_left"]),
         "n_flights": d["n_flights"], "n_baseline": qc.N_BASELINE,
         "parts": records(d["plan"][d["plan"]["drone_id"] == drone_id].sort_values("flights_left")),
         "timeline": records(d["timeline"][d["timeline"]["drone_id"] == drone_id]),

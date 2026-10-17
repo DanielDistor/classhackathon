@@ -844,3 +844,27 @@ def replacement_plan(components: pd.DataFrame, flights: pd.DataFrame, by_type: p
     cols = ["drone_id", "component_id", "component_type", "position", "lot", "age", "b10", "unit",
             "remaining", "pct_used", "flights_left", "days_left", "overdue", "due"]
     return live[cols].sort_values("days_left").reset_index(drop=True)
+
+
+def parts_health(plan: pd.DataFrame) -> pd.DataFrame:
+    """The drone health bar: the average share of replace-at life its installed parts have left.
+
+    For each part in replacement_plan(): life left = 100 - pct_used, clipped to [0, 100]
+    (a new part is 100, a part at or past its B10 replace-at age is 0). A drone's health is
+    the plain mean over its installed parts, every part weighted equally.
+
+    An average can hide one worn part (nine new parts and one at B10 still average 90),
+    so each row also names the most-worn part: worst_part and worst_left.
+
+    Returns one row per drone: drone_id, health (0-100), n_parts, worst_part, worst_left.
+    """
+    if plan.empty:
+        raise ValueError("no installed parts with a replace-at age: parts health is undefined")
+    p = plan.assign(left=(100 - plan["pct_used"]).clip(0, 100))
+    rows = []
+    for drone, g in p.groupby("drone_id"):
+        worst = g.loc[g["left"].idxmin()]
+        rows.append(dict(drone_id=drone, health=float(g["left"].mean()), n_parts=len(g),
+                         worst_part=f"{worst['component_type']} {int(worst['position'])}",
+                         worst_left=float(worst["left"])))
+    return pd.DataFrame(rows)

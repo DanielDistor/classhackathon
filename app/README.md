@@ -84,6 +84,7 @@ during the baseline), or the EWMA is beyond its limit now. *Warning* (`watch`): 
 | `fit_by_type(components)` | parts history | one Weibull fit per part type, with its unit |
 | `compare_lots(components, "battery")` | parts history | one fit per supplier lot |
 | `replacement_plan(components, flights, by_type)` | parts, flights, replace-at ages | per installed part: `pct_used`, `flights_left`, `days_left`, `overdue`, `due` |
+| `parts_health(plan)` | `replacement_plan()` output | per drone: `health` = mean over its parts of (100 − % of B10 used), clipped to 0–100 (the health bar), plus the most-worn part |
 
 Every function refuses bad input with a `ValueError` (the API turns it into a 422) instead of returning a
 misleading number: constant data, fewer than 20 baseline points, blanks, fewer than 3 failures for a

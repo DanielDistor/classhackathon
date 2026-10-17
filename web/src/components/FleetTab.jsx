@@ -1,6 +1,6 @@
 import DroneIcon from './DroneIcon.jsx'
 import Timeline from '../charts/Timeline.jsx'
-import { HealthBar, LifeBar, Panel, Pill, Used, healthPct } from './common.jsx'
+import { HealthBar, LifeBar, Panel, Pill, Used } from './common.jsx'
 import { PART_NAME, STATUS_CLASS, STATUS_SYMBOL, STATUS_WORD, cardText, flightsPhrase, plural } from '../format.js'
 
 function Summary({ d }) {
@@ -65,7 +65,7 @@ function DueSoon({ d }) {
 }
 
 function DroneCard({ r, parts, warnFlights, onOpen }) {
-  const pct = healthPct(r.health)
+  const pct = Math.round(r.parts_health ?? 0)
   const nDue = parts.filter((p) => p.due).length
   const next = [...parts].sort((a, b) => a.flights_left - b.flights_left)[0]
   return (
@@ -74,7 +74,7 @@ function DroneCard({ r, parts, warnFlights, onOpen }) {
       <div className="dc-top"><span className="dc-id">{r.drone_id}</span><Pill status={r.status} /></div>
       <DroneIcon status={r.status} />
       <div className="dc-health-wrap">
-        <div className="dc-health-label"><span>Telemetry health</span><b>{pct}%</b></div>
+        <div className="dc-health-label"><span>Parts health</span><b>{pct}%</b></div>
         <HealthBar status={r.status} pct={pct} />
       </div>
       {!next ? <div className="dc-part-alert ok">No parts history loaded</div>
@@ -101,8 +101,8 @@ export default function FleetTab({ d, onOpen }) {
       <p className="rule-note">
         <b>Can fly</b> = no open chart signal in the last {d.recent_flights} flights · <b>Warning</b> = a signal nobody
         has inspected yet (any of the 8 rules or the EWMA) · <b>Do not fly</b> = the latest flight is beyond 3σ or the
-        EWMA is beyond its limit now: inspect first · <b>Telemetry health</b> = room left before the nearest EWMA limit on
-        the drone's tightest chart.
+        EWMA is beyond its limit now: inspect first · <b>Parts health</b> = the average share of replace-at
+        life (B10) the drone's 10 parts have left: 100% = all new, 0% = all due.
       </p>
       <Panel title="Fleet maintenance timeline"
              note="Every drone on one row, flight number across. R = warned and replaced before the next flight, F = failed in flight and replaced, S = special cause found and fixed. No drone stops flying. Hover a marker for the reason.">
