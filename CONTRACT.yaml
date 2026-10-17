@@ -126,7 +126,7 @@ tasks:
   - id: H-06
     title: Deploy to the course Posit Connect server
     points: "protects the 25 working-tool points - judges must be able to open it"
-    status: in_progress
+    status: done
     owner: "Claude + DanielDistor"
     started_at: "2026-10-16 18:20"
     owns: [".github/workflows/", ".github/scripts/", "app/manifest.json", "app/.python-version"]
@@ -141,12 +141,12 @@ tasks:
     definition_of_done: >
       The workflow run is green, and the public URL answers HTTP 200 from a
       logged-out browser and returns the H-03 numbers for one test dataset.
-    result: "Prepared - app/manifest.json (python-shiny, app:app, 3.12), .python-version, pinned requirements, deployme.sh. Waiting on the publisher key from the organizers; steps in docs/build-plan.md Stage 3."
+    result: "Deployed by a teammate to Posit Connect: https://connect.systems-apps.com/content/60eb66a4-d370-4e6b-81e6-ae992820bd4e/ . Checked logged out: / 200 (same build as GitHub, index-CJS0nK9z.js), /api/health 200, Fleet A and B, a drone pop-up, /docs 200, the example download, and POST /api/upload (30 drones, 9,000 flights); live numbers match the code (tied parts may list in a different order)."
 
   - id: H-07
     title: README and function documentation
     points: "10 - Tool Documentation: excellent, easy-to-follow documentation"
-    status: in_progress
+    status: done
     owner: "Claude + Daniel"
     started_at: "2026-10-17 00:15"
     owns: ["README.md", "app/README.md"]
@@ -158,7 +158,7 @@ tasks:
       how each function or endpoint works, how to run it in one command, the
       live URL, and links demo/README.md. A teammate who did not write the
       code follows it from a fresh clone and it works.
-    result: "README.md is the tool README (problem, user, inputs, every statistic with its formula, datasets, API, one-command run, repo map, deploy); app/README.md documents all 28 public qc.py functions (inputs, parameters, returns, formulas), the constants and every API route with its parameters; a fresh clone of the public repo passes all 134 tests. Left: the live URL after H-06."
+    result: "README.md (problem, user, inputs, every statistic with its formula, datasets, API, one-command run, live URL, repo map) and app/README.md (all 28 qc.py functions, constants, every API route); a fresh clone of the public repo passes all 141 tests."
 
   - id: H-08
     title: Reproducible public repo, submitted on Devpost

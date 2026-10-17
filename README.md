@@ -10,7 +10,7 @@ and batteries to replace before they fail.
 > investigates after a crash. Technicians need a way to log wear and tear before and during each flight,
 > and to use it to manage and improve the fleet's reliability.
 
-**Live app:** not deployed yet (see [Deploy](#deploy)). **Walkthrough with every number:** [`demo/README.md`](demo/README.md).
+**Live app:** <https://connect.systems-apps.com/content/60eb66a4-d370-4e6b-81e6-ae992820bd4e/> (Posit Connect; API docs at [`/docs`](https://connect.systems-apps.com/content/60eb66a4-d370-4e6b-81e6-ae992820bd4e/docs)). **Walkthrough with every number:** [`demo/README.md`](demo/README.md).
 
 ## Run it
 
