@@ -23,7 +23,7 @@ Grading: working tool 25 · valid QC statistics 25 · design for a real user 25 
 
 Data comes before charts, statistics before the app, and the first deploy happens before midnight.
 
-**Status:** Stage 0 ✅ (waiting on everyone reading SPEC section 4) · Stage 1 ✅ · Stage 2 ✅ · Stage 3: app ✅, deploy waiting on the key · Stage 4 ✅ · **next: Stage 5** (and the deploy as soon as the key arrives)
+**Status:** Stage 0 ✅ (waiting on everyone reading SPEC section 4) · Stages 1–4 ✅ (deployed: live link in the README) · Stage 5 ✅ · Stage 6: docs ✅, demo walkthrough ✅, recording to do · **next: Stage 7** (freeze and submit)
 
 ### See the dashboard
 
@@ -106,9 +106,9 @@ Tell the group chat which stage is finished.
 - [x] `tests/`: the known answers in SPEC section 4, a constant-data case, and D-07 flagged before its crash
 - **Done:** 20 tests pass, and R's `qcc` package reproduces the same limits and signals (D-07 EWMA at flight 74, I chart at 83; D-03 at 80).
 
-### Stage 3 — Bare app and first deploy · 10:00 PM–12:00 AM · H-04 ✅, H-06 ⏳
-- [x] Minimal Shiny app: pick a dataset and a drone, see the charts and its go / watch / ground status. Run it: `cd app && ./testme.sh`, then open http://127.0.0.1:8000
-- [ ] Deploy to Posit Connect. **Blocked until we get the publisher key from the organizers.** Credentials never go in a committed file.
+### Stage 3 — Bare app and first deploy · 10:00 PM–12:00 AM · H-04 ✅, H-06 ✅
+- [x] Minimal Shiny app: pick a dataset and a drone, see the charts and its go / watch / ground status (since replaced by the React dashboard on a FastAPI API; run it with `./run.sh`)
+- [x] Deploy to Posit Connect (live link in the README; redeploy with `app/deployme.sh` after `app/manifestme.sh`). **Blocked until we get the publisher key from the organizers.** Credentials never go in a committed file.
   1. Put the two values in `app/.env` (gitignored, so check with `git status` that it doesn't show up):
      `CONNECT_SERVER=...` and `CONNECT_API_KEY=...`
   2. First deploy, from a laptop: `cd app && ./deployme.sh`, then open the URL it prints in a logged-out browser.
@@ -123,16 +123,16 @@ Tell the group chat which stage is finished.
 ### Sleep in shifts · 2:00–7:00 AM
 One person stays on light work: drafting the README or styling.
 
-### Stage 5 — Integrate and explain · Sat 7:00–10:00 AM · H-04 ← **next**
-- [ ] Reliability tab, a plain-English sentence next to every number, redeploy
-- [ ] p-chart of before-flight check failures, **only if time allows**
+### Stage 5 — Integrate and explain · Sat 7:00–10:00 AM · H-04 ✅
+- [x] Reliability tab, a plain-English sentence next to every number, redeploy (plus the retirement slider, Fleet B, the Cost & savings tab and the logbook upload: H-16 to H-25)
+- [ ] p-chart of before-flight check failures, **only if time allows** (not done)
 
 ### Stage 6 — Docs and demo · 10:00 AM–12:00 PM · H-05, H-07
-- [ ] Tool `README.md` plus function docs (inputs, parameters, outputs)
-- [ ] `demo/README.md` walks through each dataset with the numbers the tool shows
-- [ ] Record the demo: the tool catches D-07 before it crashes
+- [x] Tool `README.md` plus function docs (inputs, parameters, outputs); plain-language guide in `docs/how-it-works.md`
+- [x] `demo/README.md` walks through each dataset with the numbers the tool shows
+- [ ] Record the demo: a special cause caught on the chart, a worn part replaced before it fails, and the Cost & savings tab
 
-### Stage 7 — Freeze and submit · 12:00–1:00 PM · H-08
+### Stage 7 — Freeze and submit · 12:00–1:00 PM · H-08 ← **next**
 - [ ] A fresh clone runs and its tests pass, with no extra steps
 - [ ] Final deploy, then click through the live app
 - [ ] Submit on Devpost, then put the repo link and Devpost link on Canvas

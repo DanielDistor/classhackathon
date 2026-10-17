@@ -281,17 +281,28 @@ warning. The tool turns failures into warnings; it cannot promise there will nev
 
 ## 9. What the website shows, page by page
 
-Start it locally with `./run.sh` from the repo folder and open
-<http://127.0.0.1:8000>.
+Start it locally with `./run.sh` from the repo folder and open <http://127.0.0.1:8000>, or use the live
+app on Posit Connect (link in the [README](../README.md)).
 
-### The dashboard opens on the **Fleet health & replacements** tab
+### At the top of every dashboard tab
+
+- **Your own logbook** (upload box): load an Excel workbook (`flights` and `components` sheets, optional
+  `maintenance`) to check your own fleet; it appears on the **Combined** tab (below). An example workbook can
+  be downloaded from the same box.
+- **Fleet dropdown**: Fleet A or Fleet B, the two test datasets (section 3).
+- **Retirement slider**: retire parts at B1 to B30 instead of B10 (section 4a). Every tab updates. Beside it,
+  small bar charts show, per setting, how many parts were warned and replaced and how many of those were
+  caught worn by a chart; click a bar to jump to that setting.
+
+### The **Fleet health & replacements** tab (opens first)
 
 1. **Summary line.** How many drones *can fly*, have a *warning*, or should *not fly*; how many parts are
    due within 10 flights; and what happened over the 300 flights (parts warned and replaced, failures,
    special causes fixed).
-2. **Due soon.** As of each drone's latest flight, the parts that reach their replace-at age within the
-   next 10 flights ("have the part ready") or 30 flights ("coming up"). Each will be warned when it gets
-   there and replaced before the next flight; this list is the heads-up so the part is in stock.
+2. **Due soon** (a dropdown; its header gives the counts): as of each drone's latest flight, the parts that
+   reach their replace-at age within the next 10 flights ("have the part ready") or 30 flights ("coming up"),
+   soonest first. Each will be warned when it gets there and replaced before the next flight; this list is the
+   heads-up so the part is in stock.
 3. **Drone cards**, one per drone:
    - **Status:**
      - *Can fly*: no signal waiting to be dealt with.
@@ -313,8 +324,9 @@ Start it locally with `./run.sh` from the repo folder and open
    battery 1–2, plus "repairs"), flight number across, a letter over each event.
 3. **Installed parts**: each part's age against its replace-at age, the share of its life used, and how
    many flights it has left.
-4. **Control charts**, one per reading, showing the latest 100 flights (switch on *Show all flights* for
-   all 300):
+4. **Control chart**: pick the reading from a dropdown (motor temperature rise, vibration, or battery voltage
+   drop per minute); it shows the latest 100 flights (tick *All flights* for all 300). One line above it gives
+   the limits, the latest value and how often it signalled.
    - light blue line = each flight's reading;
    - orange line = the EWMA;
    - dashed lines = the drone's control limits;
@@ -324,18 +336,18 @@ Start it locally with `./run.sh` from the repo folder and open
    - orange ring = the EWMA beyond its limit;
    - thin vertical lines = the technician acted there and the chart restarted.
 
-   A table above the charts gives each reading's center, limits, latest value, and how often it signalled.
+5. **How to read the chart** (folded): the rules 2–8 patterns and what the shading and lines mean.
 
 ### The **Weibull reliability & replace-at ages** tab
 
-- **One card per part type**: the replace-at age the schedule uses (fitted before the log), and next to it
-  the same fit redone on all the data so far. As failures pile up, this estimate can move.
-- **Reliability curves**: for each part type, the fitted Weibull curve (the share of parts still working
-  at each age) laid over a Kaplan-Meier curve (the same thing read straight from the data with no model).
-  If they agree, the model fits. A red line marks B10.
-- **The fitted numbers** with 95% confidence intervals: shape β (above 1 means parts wear out, so
+- **One card per part type**: the replace-at age at the slider's setting (B_p, fitted on the history before
+  the log), in its own unit and in drone flights, with the shape β and scale η of the fit on all the data.
+- **Reliability curve** (pick the part type from a dropdown): the fitted Weibull curve (the share of parts
+  still working at each age) over a Kaplan-Meier curve (the same thing read straight from the data, no
+  model). If they agree, the model fits. A red dashed line marks the replace-at age.
+- **Fitted parameters** (folded) with 95% confidence intervals: shape β (above 1 means parts wear out, so
   replacing them early pays off), scale η, B10, and mean life.
-- **Replacement schedule**: every drone's 10 parts with flights left, folded per drone.
+- **Replacement schedule** (folded): every drone's 10 parts with flights left.
 
 
 ### The **Cost & savings** tab
@@ -352,10 +364,24 @@ Start it locally with `./run.sh` from the repo folder and open
   so there were no failures.
 - **Every setting in numbers** (folded): parts replaced, caught worn, failures and both costs per setting.
 
+### The **Combined** tab (only after an upload)
+
+Your uploaded logbook joined with Fleet A and Fleet B into one fleet: drones renamed by source (A01–A10,
+B01–B10, U01…), with the same drone cards, drone pop-ups and Weibull fits, now on all the parts together.
+The other tabs keep showing the test fleets unchanged.
+
 ### The **Guide & Data Reference** page (button at the top right)
 
-A short welcome page: what the tool does, the test fleet and the 17 problems that were put into it, the
-data files with example rows, and key terms.
+A one-screen welcome: the problem, what the dashboard does and how it works in three boxes, next to a
+picture of the drone and its five measured parts. Folded below: the test fleet chosen in the dropdown (its
+injected problems on a timeline, red = part replaced, brown = repaired with no new part), what is measured,
+one flight's readings, example rows from the data files, and key terms.
+
+### At the bottom of every page: **About**
+
+A navy footer with the team (Team Flight Control: Daniel Distor, Divyanshu Kekatpure, Duc Bui, Jonathan Ma,
+with NetIDs and GitHub links), the live app and code links, the methods and software credits, and a note
+that the data is simulated.
 
 ---
 
@@ -398,10 +424,13 @@ stopped flying.
 | Drones that stopped flying | 0 |
 | Status at the end | all 10 *can fly*; 3 parts due within 10 flights |
 
-**How we know the numbers are right:** 84 automated tests (`python -m pytest tests -q`). They check every
-formula against answers worked by hand, check that silly input (constant data, a single reading) is
-refused, check the Weibull fit recovers the true part lives, and check that, given only the CSV files, the
-tool signals on exactly the flights where the simulated technician acted, for all 30 drone-reading charts.
+**How we know the numbers are right:** 141 automated Python tests (`python -m pytest tests -q`) and 6
+front-end tests (`cd web && npm test`). They check every formula against answers worked by hand (control
+limits, EWMA, the 8 rules, B_p, Kaplan-Meier, the cost model), check that silly input (constant data, a single
+reading) is refused, check the Weibull fit recovers the true part lives, check that, given only the CSV files,
+the tool signals on exactly the flights where the simulated technician acted (all 30 drone-reading charts,
+in both fleets and at B1, B10 and B30), and check that the API returns exactly what `qc.py` computes. Fleet B
+passes the same checks.
 
 ---
 
@@ -425,11 +454,11 @@ tool signals on exactly the flights where the simulated technician acted, for al
 
 | File | What it does |
 |---|---|
-| [`data/simulate.py`](../data/simulate.py) | Makes the test fleet: part lifetimes, wear, special causes, and the simulated technician |
-| [`app/qc.py`](../app/qc.py) | **All the statistics**, as plain tested functions. `imr_limits` (limits), `spc_rules` (the 8 rules), `ewma_chart`, `monitor_chart` (everything for one reading of one drone, with the fleet check and the restarts), `fleet_status` (Can fly / Warning / Do not fly), `weibull_fit` and `fit_by_type` (part lives, B10), `km_curve` (Kaplan-Meier), `replacement_plan` (flights left per part), `maintenance_timeline` (R / F / S markers) |
-| [`app/api.py`](../app/api.py) | The REST API (FastAPI): loads the files, calls `qc.py`, returns the results as JSON under `/api/` (docs at `/docs`) and serves the website. No statistics of its own |
-| [`web/src/`](../web/src/) | The website (React): the dashboard, the drone pop-up, the Weibull tab and the guide page; charts and timelines drawn as SVG from what the API returns |
-| [`tests/`](../tests/) | The 84 tests |
+| [`data/simulate.py`](../data/simulate.py) | Makes both test fleets (Fleet A seed 5300, Fleet B seed 7100) and each one's 7 retirement runs: part lifetimes, wear, special causes, and the simulated technician |
+| [`app/qc.py`](../app/qc.py) | **All the statistics**, as plain tested functions. `imr_limits` (limits), `spc_rules` (the 8 rules), `ewma_chart`, `monitor_chart` (everything for one reading of one drone, with the fleet check and the restarts), `fleet_status` (Can fly / Warning / Do not fly), `weibull_fit` and `fit_by_type` (part lives, B10), `km_curve` (Kaplan-Meier), `replacement_plan` (flights left per part), `maintenance_timeline` (R / F / S markers, with repairs flagged), `retirement_cost` (the age-replacement cost model) |
+| [`app/api.py`](../app/api.py) | The REST API (FastAPI): loads the files (any fleet, any retirement setting, or an uploaded logbook), calls `qc.py`, returns the results as JSON under `/api/` (docs at `/docs`) and serves the website. No statistics of its own |
+| [`web/src/`](../web/src/) | The website (React): the slider and fleet dropdown, the Fleet, Weibull, Cost & savings and Combined tabs, the drone pop-up, the Guide page and the About footer; charts and timelines drawn as SVG from what the API returns |
+| [`tests/`](../tests/) | The 141 Python tests (`web/src/*.test.js`: the 6 front-end tests) |
 
 ---
 

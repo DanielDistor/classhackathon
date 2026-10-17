@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-17 13:05"
+updated: "2026-10-17 13:20"
 
 tasks:
   - id: H-01
@@ -534,3 +534,22 @@ tasks:
       npm run build and vitest pass; no About tab; the footer renders at the
       bottom of the dashboard and the Guide page with all four creators.
     result: "About tab removed; AboutFooter renders at the bottom of the Fleet, Weibull, Cost and Guide pages (checked: footer present in the lower half of each page with all four creators, no About tab). npm run build and vitest 6 passed."
+
+  - id: H-26
+    title: Bring docs/how-it-works.md up to date with the current dashboard
+    points: "Documentation (10): a newcomer can follow the whole tool"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-17 13:19"
+    owns: ["docs/how-it-works.md", "docs/build-plan.md"]
+    notes: >
+      Asked by Div on 2026-10-17: check every doc and update. README, app/README,
+      demo/README, data/README and SPEC were current; how-it-works section 9 (page
+      tour), 11 (test count) and 13 (code map) predated the upload box, Combined
+      tab, fleet dropdown and slider controls, one-chart dropdown, Weibull part
+      dropdown, Guide redesign and the About footer.
+    definition_of_done: >
+      Section 9 describes every control, tab, pop-up and the footer as they are
+      now; the test count is the current one (141 pytest, 6 vitest); the code map
+      lists the current files.
+    result: "how-it-works section 9 now covers the top controls (upload box, fleet dropdown, slider and trade-off bars), every tab incl. Combined, the one-chart dropdown, the Weibull part dropdown, the redesigned Guide page and the About footer; section 11 says 141 pytest + 6 vitest (both fleets, B1/B10/B30); section 13 lists the current files. build-plan status and checkboxes match the ledger (deployed; next Stage 7). README, app/README, demo/README, data/README and SPEC checked: already current."
