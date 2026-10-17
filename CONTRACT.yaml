@@ -158,7 +158,7 @@ tasks:
       how each function or endpoint works, how to run it in one command, the
       live URL, and links demo/README.md. A teammate who did not write the
       code follows it from a fresh clone and it works.
-    result: "README.md replaced with the tool's README (problem, user, inputs, every statistic with its formula, datasets, API routes, one-command run, repo map, deploy). Left: the live URL (after H-06) and a fresh-clone run by a teammate."
+    result: "README.md is the tool README (problem, user, inputs, every statistic with its formula, datasets, API, one-command run, repo map, deploy); app/README.md documents all 28 public qc.py functions (inputs, parameters, returns, formulas), the constants and every API route with its parameters; a fresh clone of the public repo passes all 134 tests. Left: the live URL after H-06."
 
   - id: H-08
     title: Reproducible public repo, submitted on Devpost
@@ -464,3 +464,21 @@ tasks:
       npm run build and vitest pass; pytest passes; the fleet tab and a drone
       pop-up render with the new spacing and wording on both datasets.
     result: "Summary strip shows warning / do-not-fly / parts due only; green Can fly pills and the no-open-signal lines are hidden for healthy drones (cards and pop-up); Parts health renamed to Health; section spacing widened (panels 22px, hangar 18px, cards 10px). npm run build ok (assets index-D8mpcuU0.js + index-BzDyOSte.css), vitest 6 passed, pytest 134 passed; manifest regenerated; the local app serves the new build."
+
+  - id: H-22
+    title: Upload your own logbook (Excel or CSV) and an example workbook
+    points: "25 - Working tool, 5 - Minimal requirements: the technician runs the tool on their own data"
+    status: done
+    owner: "Claude + Daniel"
+    started_at: "2026-10-17 00:40"
+    owns: ["app/api.py", "app/requirements.txt", "app/manifest.json", "app/static/", "web/src/components/UploadTab.jsx",
+           "web/src/App.jsx", "web/src/api.js", "web/src/base.css", "web/public/", "data/example_upload/",
+           "tests/test_upload.py", "README.md", "app/README.md", "data/README.md", "demo/README.md"]
+    notes: >
+      Requested by Daniel on 2026-10-17. An upload box at the top of the dashboard posts the
+      file to POST /api/upload, which runs the same qc.py functions as the test fleets.
+    definition_of_done: >
+      tests/test_upload.py passes (the example finds exactly its planted problems; CSV-only
+      works with notes; bad files and constant readings are refused); uploading the example in
+      the browser shows D-02 and D-03 Do not fly and D-01 propeller 1 due.
+    result: "Upload box above every tab, results shown under it (no separate tab); POST /api/upload (xlsx or csv, 10 MB cap); seeded example workbook (3 drones x 70 flights, README sheet); 5 new tests pass; checked in the browser: D-02 and D-03 Do not fly, D-01 propeller 1 due in 7 flights."

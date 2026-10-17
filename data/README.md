@@ -207,3 +207,22 @@ For checking the tool's numbers. A real fleet would not come with these.
   logged minute (and some overlap). The tool orders flights by time, then flight number, so this cannot
   reorder a chart; a real logbook would not have it.
 - `life_value` prints with one decimal for motors and props; battery cycles are whole numbers.
+
+## `example_upload/`: an example logbook to upload
+
+[`example_upload/example_logbook.xlsx`](example_upload/example_logbook.xlsx) is a small workbook for the
+dashboard's **Check your own logbook** box, made by [`example_upload/make_example.py`](example_upload/make_example.py)
+(seed 2031, identical every run). It shows the format a technician would fill in:
+
+| Sheet | Rows | What it holds |
+|---|---|---|
+| `README` | 15 | what each sheet and column means |
+| `flights` | 210 | 3 drones × 70 flights, Oct 1–18, 2026; the same 10 columns as `flights.csv` above |
+| `maintenance` | 1 | one propeller replaced on D-01 after flight 40 |
+| `components` | 60 | one past part and the installed part for every slot (4 motors, 4 propellers, 2 batteries per drone) |
+
+Planted: **D-02** prop strike on flight 64 (vibration +6 sd, then +1.5 sd from the chipped prop), **D-03** motor
+wear from flight 50 (temperature rise +0.25 °C per flight), **D-01** healthy readings with propeller 1 close to its
+replace-at age. Uploaded, the tool shows D-02 and D-03 as Do not fly, D-01 as Can fly, and D-01 propeller 1 due
+in about 7 flights (`tests/test_upload.py`).
+

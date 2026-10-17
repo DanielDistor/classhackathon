@@ -15,13 +15,14 @@ Run locally:  ./testme.sh   (or: uvicorn api:app --port 8000, from this folder)
 
 from __future__ import annotations
 
+import io
 import json
 from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -357,6 +358,83 @@ def weibull(body: Lives) -> dict:
         return qc.weibull_fit(body.life, body.status)._asdict()
     except ValueError as err:
         raise HTTPException(422, str(err)) from None
+
+
+# ---------------------------------------------------------------- your own logbook (upload)
+
+#: Largest upload accepted (bytes): a year of flights for a fleet is well under this.
+MAX_UPLOAD = 10 * 1024 * 1024
+
+
+def _read_logbook(name: str, raw: bytes) -> dict[str, pd.DataFrame]:
+    """The sheets of an uploaded logbook, by lower-case name. A CSV is the flights sheet alone."""
+    try:
+        if name.lower().endswith(".csv"):
+            return {"flights": pd.read_csv(io.BytesIO(raw))}
+        if name.lower().endswith((".xlsx", ".xlsm")):
+            sheets = pd.read_excel(io.BytesIO(raw), sheet_name=None, engine="openpyxl")
+            return {k.strip().lower(): v for k, v in sheets.items()}
+    except Exception as err:  # a corrupt or password-protected file, a bad CSV
+        raise HTTPException(422, f"could not read {name}: {err}") from None
+    raise HTTPException(422, "upload an Excel workbook (.xlsx) or a flights CSV (.csv)")
+
+
+@app.post("/api/upload")
+async def upload_logbook(file: UploadFile = File(..., description="an .xlsx with a 'flights' sheet "
+                                                  "(and optional 'maintenance' and 'components' sheets), or a flights .csv")) -> dict:
+    """Run the whole tool on your own logbook: every drone's status and control charts, and, with a
+    'components' sheet, the Weibull fits and each installed part's countdown. Same columns as data/fleet/
+    (data/README.md); the example is web/public/example_logbook.xlsx. Nothing is stored."""
+    raw = await file.read()
+    if len(raw) > MAX_UPLOAD:
+        raise HTTPException(413, f"the file is larger than {MAX_UPLOAD // 2**20} MB")
+    sheets = _read_logbook(file.filename or "", raw)
+    if "flights" not in sheets:
+        raise HTTPException(422, f"the workbook needs a sheet named 'flights' (found: {', '.join(sheets) or 'none'})")
+    notes = []
+    try:
+        flights_raw = qc.check_flights(sheets["flights"].dropna(how="all"))
+        flights = qc.add_derived(flights_raw)
+        maintenance = None
+        if "maintenance" in sheets and not sheets["maintenance"].dropna(how="all").empty:
+            maintenance = qc.check_maintenance(sheets["maintenance"].dropna(how="all"))
+        else:
+            notes.append("No maintenance sheet: the charts never restart, so every past signal stays open.")
+        status = qc.fleet_status(flights, maintenance)
+    except ValueError as err:
+        raise HTTPException(422, str(err)) from None
+
+    charts = {}
+    for drone in sorted(flights["drone_id"].unique()):
+        mine = []
+        for col, title, catches, unit, dec in DRONE_CHARTS:
+            s = qc.drone_series(flights, drone, col)
+            resets = qc.reset_flights(maintenance, drone, col)
+            try:
+                ch = qc.monitor_chart(s["value"], s["flight_no"], resets)
+            except ValueError as err:
+                mine.append({"column": col, "title": title, "unit": unit, "error": str(err)})
+                continue
+            mine.append({"column": col, "title": title, "catches": catches, "unit": unit, "decimals": dec,
+                         "resets": resets, "points": records(ch[CHART_COLUMNS])})
+        charts[drone] = mine
+
+    fits, plan = [], []
+    if "components" in sheets and not sheets["components"].dropna(how="all").empty:
+        try:
+            components = qc.check_components(sheets["components"].dropna(how="all"))
+            by_type = qc.fit_by_type(components)
+            fits = records(by_type)
+            if by_type["b10"].notna().any():
+                plan = records(qc.replacement_plan(components, flights_raw, by_type))
+        except ValueError as err:
+            notes.append(f"Parts history not used: {err}")
+    else:
+        notes.append("No components sheet: no Weibull fits or replace-at ages.")
+
+    return {"file": file.filename, "n_flights": len(flights), "n_drones": int(flights["drone_id"].nunique()),
+            "status": records(status), "charts": charts, "fits": fits, "plan": plan, "notes": notes,
+            "warn_flights": qc.WARN_FLIGHTS}
 
 
 # ---------------------------------------------------------------- the React app

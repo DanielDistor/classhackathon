@@ -22,6 +22,19 @@ export const getFleet = (retire, ds) => getJson(`api/fleet?retire=${retire}&data
 export const getDrone = (id, retire, ds) => getJson(`api/drones/${encodeURIComponent(id)}?retire=${retire}&dataset=${ds}`)
 export const getReliability = (retire, ds) => getJson(`api/reliability?retire=${retire}&dataset=${ds}`)
 export const getGuide = (ds) => getJson(`api/guide?dataset=${ds}`)
+
+/** POST api/upload: run the tool on the technician's own logbook (.xlsx or a flights .csv). */
+export async function uploadLogbook(file) {
+  const body = new FormData()
+  body.append('file', file)
+  const res = await fetch(`${API_URL}api/upload`, { method: 'POST', body })
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try { detail = (await res.json()).detail || detail } catch { /* not JSON */ }
+    throw new Error(detail)
+  }
+  return res.json()
+}
 // costs = { motor: [planned, failure], propeller: [...], battery: [...] } in dollars
 export const getCost = (ds, costs) => getJson(`api/cost?dataset=${ds}&` + Object.entries(costs)
   .map(([t, [cp, cf]]) => `cp_${t}=${cp}&cf_${t}=${cf}`).join('&'))

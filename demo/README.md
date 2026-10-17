@@ -104,6 +104,24 @@ caught, and no part fails in flight, so the method works beyond the one dataset 
 
 ---
 
+## Your own logbook: the upload box
+
+At the top of the dashboard, click **Download the example workbook**, then **Upload a file** and pick it. The
+results appear right under the box (**Close the results ×** hides them):
+
+| What you see | Value | How to read it |
+|---|---|---|
+| D-02 | **Do not fly**: vibration trend (EWMA) above its upper limit since flight 67 | The prop strike on flight 64 (a red ✕) and the chipped prop after it. Its vibration chart opens first |
+| D-03 | **Do not fly**: motor temperature rise trend (EWMA) above its upper limit since flight 56 | The motor started wearing at flight 50; the EWMA caught it 6 flights later |
+| D-01 | **Can fly** | Healthy readings |
+| Weibull from the parts sheet | B10 = 183 h (motors), 61 h (propellers), 180 cycles (batteries) | Fitted on that workbook's own 60 parts |
+| Due within 10 flights | D-01 propeller 1, 59 / 61 flight hours, **in 7 flights** | Order the part now |
+
+A file without the `maintenance` or `components` sheet still works; the tab says what was left out. A file with a
+missing column is refused with the column's name.
+
+---
+
 ## The checks behind these numbers
 
 ```bash

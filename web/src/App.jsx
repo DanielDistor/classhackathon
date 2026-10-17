@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import useApi from './useApi.js'
-import { getFleet, getRuns } from './api.js'
+import { getFleet, getRuns, uploadLogbook } from './api.js'
 import FleetTab from './components/FleetTab.jsx'
 import ReliabilityTab from './components/ReliabilityTab.jsx'
 import DroneModal from './components/DroneModal.jsx'
 import Guide from './components/Guide.jsx'
 import RetireControl from './components/RetireControl.jsx'
 import CostTab from './components/CostTab.jsx'
+import { UploadBar } from './components/UploadTab.jsx'
 import { Failed, Loading } from './components/common.jsx'
 
 const TABS = [['fleet', 'Fleet health & replacements'], ['weibull', 'Weibull reliability & replace-at ages'],
@@ -23,6 +24,16 @@ export default function App() {
   const [view, setView] = useState(readHash)
   const [retire, setRetire] = useState(10)
   const [dataset, setDataset] = useState('fleet')
+  const [upload, setUpload] = useState({ busy: false, error: null, data: null, n: 0 })
+  const onUpload = async (file) => {
+    setUpload((u) => ({ ...u, busy: true, error: null }))
+    try {
+      const data = await uploadLogbook(file)
+      setUpload((u) => ({ busy: false, error: null, data, n: u.n + 1 }))
+    } catch (error) {
+      setUpload((u) => ({ ...u, busy: false, error }))
+    }
+  }
   const runs = useApi(() => getRuns(dataset), `runs-${dataset}`)
   const fleet = useApi(() => getFleet(retire, dataset), `fleet-${dataset}-${retire}`)
 
@@ -47,6 +58,7 @@ export default function App() {
         <button className="btn-back" onClick={() => { go('guide'); window.scrollTo(0, 0) }}>Guide &amp; Data Reference</button>
       </div>
       <div className="dash">
+        <UploadBar upload={upload} onFile={onUpload} onClose={() => setUpload((u) => ({ ...u, data: null, error: null }))} />
         <div className="controls">
           {runs.data && <RetireControl runs={runs.data} retire={retire} onChange={setRetire}
                                        dataset={dataset} onDataset={setDataset} />}
