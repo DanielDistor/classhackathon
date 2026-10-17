@@ -9,6 +9,7 @@ import RetireControl from './components/RetireControl.jsx'
 import CostTab from './components/CostTab.jsx'
 import { UploadBar } from './components/UploadTab.jsx'
 import CombinedTab from './components/CombinedTab.jsx'
+import AboutTab from './components/AboutTab.jsx'
 import { Failed, Loading } from './components/common.jsx'
 
 const TABS = [['fleet', 'Fleet health & replacements'], ['weibull', 'Weibull reliability & replace-at ages'],
@@ -17,7 +18,7 @@ const TABS = [['fleet', 'Fleet health & replacements'], ['weibull', 'Weibull rel
 // The page lives in the URL hash (#guide, #weibull, #fleet/D-05, #combined/U01) so Back works and links can be shared.
 function readHash() {
   const [page, drone] = window.location.hash.replace(/^#/, '').split('/')
-  const tab = ['weibull', 'cost', 'combined'].includes(page) ? page : 'fleet'
+  const tab = ['weibull', 'cost', 'combined', 'about'].includes(page) ? page : 'fleet'
   return { page: page === 'guide' ? 'guide' : 'dashboard', tab, drone: drone || null }
 }
 
@@ -41,7 +42,7 @@ export default function App() {
   const resetUpload = () => { setUpload({ busy: false, error: null, info: null }); window.location.hash = 'fleet' }
   const combined = upload.info
   const onCombined = view.tab === 'combined' && combined
-  const tabs = combined ? [...TABS, ['combined', `Combined (${combined.n_drones} drones)`]] : TABS
+  const tabs = [...TABS, ...(combined ? [['combined', `Combined (${combined.n_drones} drones)`]] : []), ['about', 'About']]
   const runs = useApi(() => getRuns(dataset), `runs-${dataset}`)
   const fleet = useApi(() => getFleet(retire, dataset), `fleet-${dataset}-${retire}`)
 
@@ -84,6 +85,7 @@ export default function App() {
         {view.tab === 'cost' && <CostTab retire={retire} dataset={dataset} />}
         {onCombined && <CombinedTab info={combined} onOpen={(id) => go(`combined/${id}`)} />}
         {view.tab === 'combined' && !combined && <Failed error={new Error('Upload a logbook first: the Combined tab appears after an upload.')} />}
+        {view.tab === 'about' && <AboutTab />}
       </div>
       {view.drone && <DroneModal droneId={view.drone} retire={onCombined ? 10 : retire}
                                  dataset={onCombined ? combined.dataset : dataset} onClose={closeDrone} />}

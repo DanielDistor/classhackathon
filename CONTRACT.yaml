@@ -22,7 +22,7 @@
 # Delete the paths you do not use.
 
 spec: SPEC.md
-updated: "2026-10-17 12:38"
+updated: "2026-10-17 13:02"
 
 tasks:
   - id: H-01
@@ -501,3 +501,20 @@ tasks:
       still quotes the old prices or results (checked by search); the Cost tab
       renders with the new numbers.
     result: "Prices lowered (planned propeller 75, motor 280, battery 300; failure 6000) in the API and the dashboard; price boxes are typed text (digits and one decimal point, no arrows). Fleet A at B10: $21.26 cheapest without charts vs $3.56 with them, saves $53,093; Fleet B $25.59 (at 2%) vs $4.70, $62,660. demo/README, app/README, how-it-works and plan updated; search finds no old price or result. pytest 141 passed, vitest 6 passed; Cost tab renders with the new numbers."
+
+  - id: H-24
+    title: About tab - the creators, project links and credits
+    points: "Documentation: cite what you borrow; who built it"
+    status: done
+    owner: "Claude + Div"
+    started_at: "2026-10-17 13:00"
+    owns: ["web/src/", "app/static/", "app/manifest.json"]
+    notes: >
+      Asked by Div on 2026-10-17: a small, concise About tab with the four
+      creators (name, NetID, GitHub; no roles), the live app and repo links,
+      credits for the methods and software (and AI assistance), and a one-line
+      note that the data is simulated.
+    definition_of_done: >
+      npm run build and vitest pass; the About tab renders with all four names,
+      NetIDs and working GitHub links.
+    result: "About tab (last tab, about 107 words): team cards for Daniel Distor dd745, Divyanshu Kekatpure dmk323, Duc Bui dmb488, Jonathan Ma jjm498 with GitHub links (all four profiles and the repo answer HTTP 200), live app and repo links, methods and software credits incl. Claude Code, simulated-data note. npm run build and vitest 6 passed; tab renders."
